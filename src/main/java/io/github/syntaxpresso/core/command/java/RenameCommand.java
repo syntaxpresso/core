@@ -95,6 +95,8 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     }
   }
 
+  private void renameLocalVariableDeclaration(
+      TSFile file, TSNode declarationNode, String currentName, String newName) {
     // Rename in reverse order for the same reason.
     Optional<TSNode> classDeclarationInstantiationNode =
         this.javaService
@@ -108,7 +110,6 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
         this.javaService
             .getLocalVariableDeclarationService()
             .getVariableTypeNode(declarationNode, file, currentName);
-
     if (classDeclarationInstantiationNode.isPresent()) {
       file.updateSourceCode(classDeclarationInstantiationNode.get(), newName);
     }
@@ -122,7 +123,7 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
   }
 
   private List<TSFile> processClassRename(
-      Path cwd, TSFile file, TSNode node, String currentName, String newName) {
+      Path cwd, TSFile file, TSNode node, String packageName, String currentName, String newName) {
     List<TSFile> modifiedFiles = new ArrayList<>();
     Optional<String> packageScopeName = this.javaService.getPackageName(file);
     if (packageScopeName.isEmpty()) {
@@ -136,17 +137,27 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
       if (foundFile.getFile().getAbsolutePath().equals(this.filePath.toAbsolutePath().toString())) {
         continue;
       }
+      boolean isImported = this.isClassImported(file, currentName, packageName);
+      if (!isImported) {
+        continue;
+      }
       List<TSNode> usages = this.javaService.findClassUsagesInFile(foundFile, currentName);
       // Rename in reverse order to prevent bytes offset changes.
       usages.sort(Comparator.comparingInt(TSNode::getStartByte).reversed());
       for (TSNode usage : usages) {
+        System.out.println(
+            foundFile.getFile().getAbsolutePath() + " " + usage.getParent().toString());
         String usageName = foundFile.getTextFromRange(usage.getStartByte(), usage.getEndByte());
         // Skipe usage if doesn't have the same name as the previousName.
         if (!usageName.equals(currentName)) {
           continue;
         }
         if (usage.getParent().getType().contains("local_variable_declaration")) {
-          this.renameLocalVariableDeclarations(foundFile, usage.getParent(), currentName, newName);
+          this.renameLocalVariableDeclaration(foundFile, usage.getParent(), currentName, newName);
+          modifiedFiles.add(foundFile);
+        }
+        if (usage.getParent().getType().contains("field_declaration")) {
+          this.renameFieldDeclaration(foundFile, usage.getParent(), currentName, newName);
           modifiedFiles.add(foundFile);
         }
       }
@@ -162,9 +173,13 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     if (Strings.isNullOrEmpty(currentName)) {
       return null;
     }
+    Optional<String> packageName = this.javaService.getPackageName(file);
+    if (packageName.isEmpty()) {
+      return null;
+    }
     JavaIdentifierType identifierType = this.javaService.getIdentifierType(node);
     if (identifierType.equals(JavaIdentifierType.CLASS_NAME)) {
-      this.processClassRename(this.cwd, file, node, currentName, "NewName");
+      this.processClassRename(this.cwd, file, node, packageName.get(), currentName, "NewName");
     }
     return null;
   }
