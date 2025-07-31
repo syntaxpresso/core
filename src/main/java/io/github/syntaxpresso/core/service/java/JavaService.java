@@ -4,6 +4,8 @@ import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.extra.ScopeType;
+import io.github.syntaxpresso.core.service.java.extra.FieldDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
@@ -32,6 +34,8 @@ public class JavaService {
   private final PathHelper pathHelper;
   private final LocalVariableDeclarationService localVariableDeclarationService =
       new LocalVariableDeclarationService();
+  private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+  private final ImportDeclarationService importDeclarationService = new ImportDeclarationService();
 
   public boolean isJavaProject(File rootDir) {
     if (rootDir == null || !rootDir.isDirectory()) {
@@ -224,5 +228,20 @@ public class JavaService {
       }
     }
     return confirmedUsages;
+  }
+
+  public List<TSNode> findAllImportDeclarations(TSFile file) {
+    List<TSNode> importNodes = new ArrayList<>();
+    String importQuery = "(import_declaration) @import";
+    TSQuery query = new TSQuery(file.getParser().getLanguage(), importQuery);
+    TSQueryCursor cursor = new TSQueryCursor();
+    cursor.exec(query, file.getTree().getRootNode());
+    TSQueryMatch match = new TSQueryMatch();
+    while (cursor.nextMatch(match)) {
+      for (TSQueryCapture capture : match.getCaptures()) {
+        importNodes.add(capture.getNode());
+      }
+    }
+    return importNodes;
   }
 }
