@@ -71,7 +71,30 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     return false;
   }
 
+  private void renameFieldDeclaration(
       TSFile file, TSNode declarationNode, String currentName, String newName) {
+    Optional<TSNode> fieldInstantiationNode =
+        this.javaService
+            .getFieldDeclarationService()
+            .getFieldInstanceNode(declarationNode, file, currentName);
+    Optional<TSNode> fieldNameNode =
+        this.javaService.getFieldDeclarationService().getFieldNameNode(declarationNode, file);
+    Optional<TSNode> fieldTypeNode =
+        this.javaService
+            .getFieldDeclarationService()
+            .getFieldTypeNode(declarationNode, file, currentName);
+    if (fieldInstantiationNode.isPresent()) {
+      file.updateSourceCode(fieldInstantiationNode.get(), newName);
+    }
+    if (fieldNameNode.isPresent()) {
+      String newVariableName = StringHelper.pascalToCamel(newName);
+      file.updateSourceCode(fieldNameNode.get(), newVariableName);
+    }
+    if (fieldTypeNode.isPresent()) {
+      file.updateSourceCode(fieldTypeNode.get(), newName);
+    }
+  }
+
     // Rename in reverse order for the same reason.
     Optional<TSNode> classDeclarationInstantiationNode =
         this.javaService
