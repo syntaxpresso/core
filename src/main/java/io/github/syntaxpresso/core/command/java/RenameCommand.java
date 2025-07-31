@@ -50,7 +50,27 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     return allFiles;
   }
 
-  private void renameLocalVariableDeclarations(
+  private boolean isClassImported(TSFile file, String className, String packageName) {
+    Optional<String> currentFilePackageName = this.javaService.getPackageName(file);
+    if (currentFilePackageName.isPresent()) {
+      if (packageName.equals(currentFilePackageName.get())) {
+        return true;
+      }
+    }
+    List<TSNode> allImportNodes = this.javaService.findAllImportDeclarations(file);
+    for (TSNode importNode : allImportNodes) {
+      Optional<TSNode> scopedIdentifier =
+          this.javaService.getImportDeclarationService().getImportScopedIdentifier(importNode);
+      if (scopedIdentifier.isPresent()) {
+        String importScope = file.getTextFromNode(scopedIdentifier.get());
+        if (importScope.contains(packageName)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
       TSFile file, TSNode declarationNode, String currentName, String newName) {
     // Rename in reverse order for the same reason.
     Optional<TSNode> classDeclarationInstantiationNode =
