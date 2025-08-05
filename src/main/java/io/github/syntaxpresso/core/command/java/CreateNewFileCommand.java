@@ -13,14 +13,11 @@ import io.github.syntaxpresso.core.service.JavaService;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @RequiredArgsConstructor
-@Data
 @Command(name = "create-new-file", description = "Create a new Java file")
 public class CreateNewFileCommand implements Callable<DataTransferObject<CreateNewJavaFileResponse>> {
   private final JavaService javaService;
@@ -80,5 +77,4 @@ public class CreateNewFileCommand implements Callable<DataTransferObject<CreateN
         CreateNewJavaFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
     return DataTransferObject.success(response);
   }
-
 }
