@@ -1,11 +1,23 @@
 package io.github.syntaxpresso.core.command;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import io.github.syntaxpresso.core.command.java.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
-import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.JavaService;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,28 +25,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 @DisplayName("CreateNewFileTest Tests")
 class CreateNewFileTest {
 
     private JavaService javaService;
-    private CreateNewFileCommand command;
     private CommandLine cmd;
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     @BeforeEach
     void setUp() {
         javaService = mock(JavaService.class);
-        command = new CreateNewFileCommand(javaService);
-        cmd = new CommandLine(command);
+        cmd = new CommandLine(new CreateNewFileCommand(javaService));
     }
 
     @Nested
@@ -44,39 +46,61 @@ class CreateNewFileTest {
         @Test
         @DisplayName("should fail when --cwd is not provided")
         void execute_withoutCwd_shouldThrowException() {
-            String[] args = {"--packageName", "io.github", "--fileName", "MyClass.java", "--fileType", "CLASS"};
+            String[] args = {
+                    "--package-name", "io.github", "--file-name", "MyClass.java", "--file-type", "CLASS"
+            };
             assertThrows(CommandLine.MissingParameterException.class, () -> cmd.parseArgs(args));
         }
 
         @Test
         @DisplayName("should fail when --cwd does not exist")
         void execute_withNonExistentCwd_shouldThrowException() {
-            String nonExistentPath = "/invalid/path";
-            cmd.parseArgs("--cwd", nonExistentPath, "--packageName", "io.github", "--fileName", "MyClass.java", "--fileType", "CLASS");
-            assertThrows(
-                    IllegalArgumentException.class,
-                    () -> command.call(),
-                    "Current working directory does not exist.");
+            String[] args = {
+                    "--cwd",
+                    "/invalid/path",
+                    "--package-name",
+                    "io.github",
+                    "--file-name",
+                    "MyClass.java",
+                    "--file-type",
+                    "CLASS"
+            };
+            int exitCode = cmd.execute(args);
+            assertEquals(1, exitCode);
         }
 
         @Test
         @DisplayName("should fail when --packageName is empty")
         void execute_withEmptyPackageName_shouldThrowException() {
-            cmd.parseArgs("--cwd", tempDir.toString(), "--packageName", "", "--fileName", "MyClass.java", "--fileType", "CLASS");
-            assertThrows(
-                    IllegalArgumentException.class,
-                    () -> command.call(),
-                    "Package name invalid.");
+            String[] args = {
+                    "--cwd",
+                    tempDir.toString(),
+                    "--package-name",
+                    "",
+                    "--file-name",
+                    "MyClass.java",
+                    "--file-type",
+                    "CLASS"
+            };
+            int exitCode = cmd.execute(args);
+            assertEquals(1, exitCode);
         }
 
         @Test
         @DisplayName("should fail when --fileName is empty")
         void execute_withEmptyFileName_shouldThrowException() {
-            cmd.parseArgs("--cwd", tempDir.toString(), "--packageName", "io.github", "--fileName", "", "--fileType", "CLASS");
-            assertThrows(
-                    IllegalArgumentException.class,
-                    () -> command.call(),
-                    "File name invalid.");
+            String[] args = {
+                    "--cwd",
+                    tempDir.toString(),
+                    "--package-name",
+                    "io.github",
+                    "--file-name",
+                    "",
+                    "--file-type",
+                    "CLASS"
+            };
+            int exitCode = cmd.execute(args);
+            assertEquals(1, exitCode);
         }
     }
 
@@ -91,26 +115,24 @@ class CreateNewFileTest {
             Path targetPath = tempDir.resolve("src/main/java/io/github");
             Files.createDirectories(targetPath);
 
-            JavaFileTemplate template = mock(JavaFileTemplate.class);
-            when(template.getSourceContent("io.github", "MyClass"))
-                    .thenReturn("package io.github;\npublic class MyClass {}");
-
             when(javaService.findFilePath(any(), eq("io.github"), eq(SourceDirectoryType.MAIN)))
                     .thenReturn(Optional.of(targetPath));
 
             // Act
-            cmd.parseArgs(
-                    "--cwd", tempDir.toString(),
-                    "--packageName", "io.github",
-                    "--fileName", "MyClass.java",
-                    "--fileType", "CLASS", // Assuming JavaFileTemplate.CLASS maps to a string "CLASS"
-                    "--sourceDirectoryType", "MAIN" // Assuming SourceDirectoryType.MAIN maps to a string "MAIN"
-            );
-            // Manually set fileType as it's an enum and not directly parsed by picocli without custom converters
-            command.setFileType(template);
-            command.setSourceDirectoryType(SourceDirectoryType.MAIN);
-
-            DataTransferObject<CreateNewJavaFileResponse> result = command.call();
+            String[] args = {
+                    "--cwd",
+                    tempDir.toString(),
+                    "--package-name",
+                    "io.github",
+                    "--file-name",
+                    "MyClass.java",
+                    "--file-type",
+                    "CLASS",
+                    "--source-directory-type",
+                    "MAIN"
+            };
+            cmd.execute(args);
+            DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
 
             // Assert
             assertTrue(result.getSucceed());
@@ -121,23 +143,25 @@ class CreateNewFileTest {
 
         @Test
         @DisplayName("should return error if path not found by JavaService")
-        void call_shouldReturnErrorIfFilePathNotFound() throws Exception {
+        void call_shouldReturnErrorIfFilePathNotFound() {
             // Arrange
-            when(javaService.findFilePath(any(), anyString(), any()))
-                    .thenReturn(Optional.empty());
+            when(javaService.findFilePath(any(), any(), any())).thenReturn(Optional.empty());
 
             // Act
-            cmd.parseArgs(
-                    "--cwd", tempDir.toString(),
-                    "--packageName", "io.github",
-                    "--fileName", "MyClass.java",
-                    "--fileType", "CLASS",
-                    "--sourceDirectoryType", "MAIN"
-            );
-            command.setFileType(JavaFileTemplate.CLASS);
-            command.setSourceDirectoryType(SourceDirectoryType.MAIN);
-
-            DataTransferObject<CreateNewJavaFileResponse> result = command.call();
+            String[] args = {
+                    "--cwd",
+                    tempDir.toString(),
+                    "--package-name",
+                    "io.github",
+                    "--file-name",
+                    "MyClass.java",
+                    "--file-type",
+                    "CLASS",
+                    "--source-directory-type",
+                    "MAIN"
+            };
+            cmd.execute(args);
+            DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
 
             // Assert
             assertFalse(result.getSucceed());
