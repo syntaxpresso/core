@@ -16,6 +16,7 @@ dependencies {
     implementation("info.picocli:picocli:4.7.7")
     implementation("org.slf4j:slf4j-api:2.0.17")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.19.2")
+    implementation("net.java.dev.inflector:inflector:0.7.0")
 
     testImplementation(libs.junit.jupiter)
     testImplementation("org.slf4j:slf4j-simple:2.0.17")
@@ -24,6 +25,8 @@ dependencies {
     annotationProcessor("info.picocli:picocli-codegen:4.7.7")
 	
     compileOnly("org.projectlombok:lombok:1.18.38")
+    testImplementation("org.mockito:mockito-core:5.12.0")
+    testImplementation("org.mockito:mockito-junit-jupiter:5.12.0")
     testCompileOnly("org.projectlombok:lombok:1.18.38")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.38")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

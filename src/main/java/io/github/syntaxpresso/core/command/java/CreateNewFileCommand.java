@@ -1,5 +1,6 @@
 package io.github.syntaxpresso.core.command.java;
 
+import com.google.common.base.Strings;
 import com.google.common.io.Files;
 import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
 import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
@@ -8,6 +9,7 @@ import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.JavaService;
+
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -17,7 +19,7 @@ import picocli.CommandLine.Option;
 
 @RequiredArgsConstructor
 @Command(name = "create-new-file", description = "Create a new Java file")
-public class CreateNewFileCommand implements Callable<Void> {
+public class CreateNewFileCommand implements Callable<DataTransferObject<CreateNewJavaFileResponse>> {
   private final JavaService javaService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
@@ -46,7 +48,20 @@ public class CreateNewFileCommand implements Callable<Void> {
   private SourceDirectoryType sourceDirectoryType = SourceDirectoryType.MAIN;
 
   @Override
-  public Void call() throws Exception {
+  public DataTransferObject<CreateNewJavaFileResponse> call() throws Exception {
+    boolean cwdExists = java.nio.file.Files.exists(this.cwd);
+    if (!cwdExists) {
+      throw new IllegalArgumentException("Current working directory does not exist.");
+    }
+    boolean isPackageNameValid = Strings.isNullOrEmpty(this.packageName);
+    if(isPackageNameValid){
+      throw new IllegalArgumentException("Package name invalid.");
+    }
+    boolean isFileNameValid = Strings.isNullOrEmpty(this.fileName);
+    if(isFileNameValid){
+      throw new IllegalArgumentException("File name invalid.");
+    }
+
     String className = this.fileName.trim();
     className = Files.getNameWithoutExtension(className);
     String template = this.fileType.getSourceContent(this.packageName, className);
@@ -54,14 +69,12 @@ public class CreateNewFileCommand implements Callable<Void> {
     Optional<Path> filePath =
         this.javaService.findFilePath(this.cwd, this.packageName, this.sourceDirectoryType);
     if (filePath.isEmpty()) {
-      System.out.println(DataTransferObject.error("Unable to find file path."));
-      return null;
+      return DataTransferObject.error("Package name couldn't be determined.");
     }
     file.saveAs(
         filePath.get().resolve(className.concat(SupportedLanguage.JAVA.getFileExtension())));
     CreateNewJavaFileResponse response =
         CreateNewJavaFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
-    System.out.println(DataTransferObject.success(response));
-    return null;
+    return DataTransferObject.success(response);
   }
 }

@@ -128,7 +128,6 @@ public class TSFile {
    * Moves the file to a new destination.
    *
    * @param destination The destination directory or full file path.
-   * @return true if the move is successful.
    * @throws IOException If an I/O error occurs.
    * @throws IllegalStateException If the file has not been saved to disk yet.
    */
@@ -147,7 +146,6 @@ public class TSFile {
    * Renames the file in its current directory.
    *
    * @param newName The new name for the file.
-   * @return true if the rename is successful.
    * @throws IllegalStateException If the file has not been saved to disk yet.
    */
   public void rename(String newName) {
@@ -158,12 +156,17 @@ public class TSFile {
     if (parentDir == null) {
       throw new IllegalStateException("Unable to get parent directory");
     }
-    Path targetPath =
-        parentDir.resolve(
-            newName
-                + SupportedLanguage.fromLanguage(this.parser.getLanguage())
-                    .get()
-                    .getFileExtension());
+    Path targetPath;
+    if (newName.contains(".")) {
+      targetPath = parentDir.resolve(newName);
+    } else {
+      targetPath =
+          parentDir.resolve(
+              newName
+                  + SupportedLanguage.fromLanguage(this.parser.getLanguage())
+                      .get()
+                      .getFileExtension());
+    }
     this.file = targetPath.toFile();
   }
 
