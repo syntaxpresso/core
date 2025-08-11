@@ -6,10 +6,17 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
 import org.treesitter.TSNode;
 import org.treesitter.TSParser;
 import org.treesitter.TSPoint;
+import org.treesitter.TSQuery;
+import org.treesitter.TSQueryCapture;
+import org.treesitter.TSQueryCursor;
+import org.treesitter.TSQueryMatch;
 import org.treesitter.TSTree;
 
 @Getter
@@ -44,7 +51,7 @@ public class TSFile {
       String content = Files.readString(path, StandardCharsets.UTF_8);
       this.setData(content);
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new RuntimeException(e);
     }
   }
 
@@ -217,6 +224,12 @@ public class TSFile {
     return this.sourceCode.substring(startByte, endByte);
   }
 
+  /**
+   * Returns a substring from the source code that corresponds to the given node.
+   *
+   * @param node The node from which to extract text.
+   * @return The text of the node.
+   */
   public String getTextFromNode(TSNode node) {
     return this.getTextFromRange(node.getStartByte(), node.getEndByte());
   }
@@ -260,7 +273,64 @@ public class TSFile {
     return this.sourceCode;
   }
 
+  /**
+   * Returns the TSParser instance associated with this file.
+   *
+   * @return The TSParser instance.
+   */
   public TSParser getParser() {
     return this.parser;
+  }
+
+  /**
+   * Finds the first parent node of a given node that has a specific type.
+   *
+   * @param startNode The node from which to start searching upwards.
+   * @param parentType The type of the parent node to find (e.g., "method_declaration").
+   * @return An Optional containing the found parent TSNode, or empty if not found.
+   */
+  public Optional<TSNode> findParentNodeByType(TSNode startNode, String parentType) {
+    if (startNode == null || parentType == null || parentType.isBlank()) {
+      return Optional.empty();
+    }
+    TSNode currentNode = startNode;
+    while (currentNode != null) {
+      if (parentType.equals(currentNode.getType())) {
+        return Optional.of(currentNode);
+      }
+      currentNode = currentNode.getParent();
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Executes a Tree-sitter query on a specific node and returns the captured nodes.
+   *
+   * @param node The node to run the query on.
+   * @param query The Tree-sitter query string.
+   * @return A list of {@link TSNode} objects captured by the query.
+   */
+  public List<TSNode> query(TSNode node, String query) {
+    List<TSNode> foundNodes = new ArrayList<>();
+    TSQuery queryObj = new TSQuery(this.getParser().getLanguage(), query);
+    TSQueryCursor cursor = new TSQueryCursor();
+    cursor.exec(queryObj, this.getTree().getRootNode());
+    TSQueryMatch match = new TSQueryMatch();
+    while (cursor.nextMatch(match)) {
+      for (TSQueryCapture capture : match.getCaptures()) {
+        foundNodes.add(capture.getNode());
+      }
+    }
+    return foundNodes;
+  }
+
+  /**
+   * Executes a Tree-sitter query on the entire syntax tree and returns the captured nodes.
+   *
+   * @param query The Tree-sitter query string.
+   * @return A list of {@link TSNode} objects captured by the query.
+   */
+  public List<TSNode> query(String query) {
+    return this.query(this.getTree().getRootNode(), query);
   }
 }
