@@ -164,7 +164,8 @@ class JavaServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      Optional<String> packageName = javaService.getPackageName(file);
+      Optional<String> packageName =
+          javaService.getPackageDeclarationService().getPackageName(file);
       assertTrue(packageName.isPresent());
       assertEquals("com.example.myproject", packageName.get());
     }
@@ -178,7 +179,8 @@ class JavaServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      Optional<String> packageName = javaService.getPackageName(file);
+      Optional<String> packageName =
+          javaService.getPackageDeclarationService().getPackageName(file);
       assertFalse(packageName.isPresent());
     }
   }
