@@ -1,8 +1,15 @@
 package io.github.syntaxpresso.core.service.java.extra;
 
 import io.github.syntaxpresso.core.common.TSFile;
+import io.github.syntaxpresso.core.util.StringHelper;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.treesitter.TSNode;
+import org.treesitter.TSQuery;
+import org.treesitter.TSQueryCapture;
+import org.treesitter.TSQueryCursor;
+import org.treesitter.TSQueryMatch;
 
 public class FieldDeclarationService {
   /**
@@ -77,5 +84,78 @@ public class FieldDeclarationService {
       }
     }
     return Optional.empty();
+  }
+
+  /**
+   * Finds all usages of a field within a given file.
+   *
+   * @param file The file to search in.
+   * @param fieldName The name of the field to find usages for (camel case).
+   * @return A list of all nodes representing usages of the field.
+   */
+  public List<TSNode> findFieldUsages(TSFile file, String fieldName) {
+    List<TSNode> usages = new ArrayList<>();
+    String queryString =
+        "((expression_statement (assignment_expression left: (identifier) @usage)))"
+            + " ((expression_statement (assignment_expression left: (field_access field:"
+            + " (identifier) @usage))))((expression_statement (identifier) @usage))";
+    TSQuery query = new TSQuery(file.getParser().getLanguage(), queryString);
+    TSQueryCursor cursor = new TSQueryCursor();
+    cursor.exec(query, file.getTree().getRootNode());
+
+    TSQueryMatch match = new TSQueryMatch();
+    while (cursor.nextMatch(match))
+      // Iterate through each match found by the cursor.
+      // A match can have multiple captures, so we loop through them.
+      for (TSQueryCapture capture : match.getCaptures()) {
+        TSNode node = capture.getNode();
+        String nodeText = file.getTextFromNode(node);
+        if (nodeText.equals(fieldName)) {
+          usages.add(node);
+        }
+      }
+    return usages;
+  }
+
+  /**
+   * Renames a field declaration, including its type, name, and instantiation.
+   *
+   * @param file The file containing the source code.
+   * @param declarationNode The TSNode of the field declaration.
+   * @param currentName The current name of the field (PascalCase).
+   * @param newName The new name for the field (PascalCase).
+   */
+  public void renameFieldDeclaration(
+      TSFile file, TSNode declarationNode, String currentName, String newName) {
+    Optional<TSNode> fieldInstantiationNode =
+        this.getFieldInstanceNode(declarationNode, file, currentName);
+    Optional<TSNode> fieldNameNode = this.getFieldNameNode(declarationNode, file);
+    Optional<TSNode> fieldTypeNode = this.getFieldTypeNode(declarationNode, file, currentName);
+    if (fieldInstantiationNode.isPresent()) {
+      file.updateSourceCode(fieldInstantiationNode.get(), newName);
+    }
+    if (fieldNameNode.isPresent()) {
+      String newVariableName = StringHelper.pascalToCamel(newName);
+      file.updateSourceCode(fieldNameNode.get(), newVariableName);
+    }
+    if (fieldTypeNode.isPresent()) {
+      file.updateSourceCode(fieldTypeNode.get(), newName);
+    }
+  }
+
+  /**
+   * Renames all usages of a field in a file.
+   *
+   * @param file The file containing the source code.
+   * @param currentName The current name of the field (PascalCase).
+   * @param newName The new name for the field (PascalCase).
+   */
+  public void renameAllFieldUsages(TSFile file, String currentName, String newName) {
+    String camelCaseCurrentName = StringHelper.pascalToCamel(currentName);
+    String camelCaseNewName = StringHelper.pascalToCamel(newName);
+    List<TSNode> allFieldUsages = this.findFieldUsages(file, camelCaseCurrentName);
+    for (TSNode usage : allFieldUsages.reversed()) {
+      file.updateSourceCode(usage, camelCaseNewName);
+    }
   }
 }
