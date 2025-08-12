@@ -5,6 +5,7 @@ import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -23,7 +24,7 @@ public class GetMainClassCommand implements Callable<DataTransferObject<GetMainC
   private Path cwd;
 
   @Override
-  public DataTransferObject<GetMainClassResponse> call() throws Exception {
+  public DataTransferObject<GetMainClassResponse> call() throws IOException {
     boolean cwdExists = Files.exists(this.cwd);
     if (!cwdExists) {
       throw new IllegalArgumentException("Current working directory does not exist.");
@@ -33,7 +34,8 @@ public class GetMainClassCommand implements Callable<DataTransferObject<GetMainC
     for (TSFile file : allFiles) {
       boolean isMainClass = this.javaService.isMainClass(file);
       if (isMainClass) {
-        Optional<String> packageName = this.javaService.getPackageName(file);
+        Optional<String> packageName =
+            this.javaService.getPackageDeclarationService().getPackageName(file);
         if (packageName.isEmpty()) {
           return DataTransferObject.error(
               "Main class found, but package name couldn't be determined.");
