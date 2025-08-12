@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +26,7 @@ public class TSFile {
   private File file;
   private TSTree tree;
   private String sourceCode;
+  private Path newPath;
 
   /**
    * Creates a TSFile instance from a given programming language and source code string.
@@ -119,6 +121,11 @@ public class TSFile {
     if (this.file == null) {
       throw new IllegalStateException("File path is not set. Use saveAs(path) instead.");
     }
+    if (this.newPath != null) {
+      Files.move(this.file.toPath(), this.newPath, StandardCopyOption.REPLACE_EXISTING);
+      this.file = this.newPath.toFile();
+      this.newPath = null;
+    }
     Files.writeString(this.file.toPath(), this.sourceCode, StandardCharsets.UTF_8);
   }
 
@@ -129,7 +136,11 @@ public class TSFile {
    * @throws IOException If the file cannot be written.
    */
   public void saveAs(Path path) throws IOException {
-    this.file = Files.writeString(path, this.sourceCode, StandardCharsets.UTF_8).toFile();
+    if (this.file != null && this.newPath == null) {
+      this.newPath = path;
+    } else {
+      this.file = Files.writeString(path, this.sourceCode, StandardCharsets.UTF_8).toFile();
+    }
   }
 
   /**
@@ -139,7 +150,7 @@ public class TSFile {
    * @throws IOException If an I/O error occurs.
    * @throws IllegalStateException If the file has not been saved to disk yet.
    */
-  public void move(File destination) throws IOException {
+  public void move(File destination) {
     if (this.file == null) {
       throw new IllegalStateException("Cannot move a file that has not been saved yet.");
     }
@@ -147,7 +158,7 @@ public class TSFile {
     if (Files.isDirectory(targetPath)) {
       targetPath = targetPath.resolve(this.file.getName());
     }
-    this.file = targetPath.toFile();
+    this.newPath = targetPath;
   }
 
   /**
@@ -175,7 +186,7 @@ public class TSFile {
                       .get()
                       .getFileExtension());
     }
-    this.file = targetPath.toFile();
+    this.newPath = targetPath;
   }
 
   /**
