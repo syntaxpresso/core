@@ -5,6 +5,7 @@ import io.github.syntaxpresso.core.util.StringHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.treesitter.TSException;
 import org.treesitter.TSNode;
 import org.treesitter.TSQuery;
 import org.treesitter.TSQueryCapture;
@@ -71,8 +72,12 @@ public class FieldDeclarationService {
       return Optional.empty();
     }
     TSNode objectCreationNode = variableDeclaratorNode.getChildByFieldName("value");
-    if (objectCreationNode == null
-        || !"object_creation_expression".equals(objectCreationNode.getType())) {
+    try {
+      if (objectCreationNode == null
+          || !"object_creation_expression".equals(objectCreationNode.getType())) {
+        return Optional.empty();
+      }
+    } catch (TSException e) {
       return Optional.empty();
     }
     TSNode typeIdentifierNode = objectCreationNode.getChildByFieldName("type");
