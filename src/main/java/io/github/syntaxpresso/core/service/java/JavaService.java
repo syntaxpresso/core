@@ -2,11 +2,13 @@ package io.github.syntaxpresso.core.service.java;
 
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.TSFile;
+import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.extra.ScopeType;
 import io.github.syntaxpresso.core.service.java.extra.FieldDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.ImportDeclarationService;
-import io.github.syntaxpresso.core.service.java.extra.LocalVariableDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.MethodDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.PackageDeclarationService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.io.IOException;
@@ -32,11 +34,18 @@ import org.treesitter.TSQueryMatch;
 @RequiredArgsConstructor
 public class JavaService {
   private final PathHelper pathHelper;
-  private final LocalVariableDeclarationService localVariableDeclarationService =
-      new LocalVariableDeclarationService();
   private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
   private final ImportDeclarationService importDeclarationService = new ImportDeclarationService();
+  private final MethodDeclarationService methodDeclarationService = new MethodDeclarationService();
+  private final PackageDeclarationService packageDeclarationService =
+      new PackageDeclarationService();
 
+  /**
+   * Checks if a directory is a Java project.
+   *
+   * @param rootDir The root directory of the project.
+   * @return True if the directory is a Java project, false otherwise.
+   */
   public boolean isJavaProject(File rootDir) {
     if (rootDir == null || !rootDir.isDirectory()) {
       return false;
@@ -47,6 +56,14 @@ public class JavaService {
         || Files.isDirectory(rootDir.toPath().resolve("src/main/java"));
   }
 
+  /**
+   * Finds the file path for a given package name.
+   *
+   * @param rootDir The root directory of the project.
+   * @param packageName The name of the package.
+   * @param sourceDirectoryType The type of source directory.
+   * @return An optional containing the path to the file, or empty if not found.
+   */
   public Optional<Path> findFilePath(
       Path rootDir, String packageName, SourceDirectoryType sourceDirectoryType) {
     if (rootDir == null || !Files.isDirectory(rootDir)) {
@@ -84,6 +101,12 @@ public class JavaService {
     }
   }
 
+  /**
+   * Checks if a file contains a main class.
+   *
+   * @param file The file to check.
+   * @return True if the file contains a main class, false otherwise.
+   */
   public Boolean isMainClass(TSFile file) {
     String mainMethodQuery =
         "(class_declaration  body: (class_body    (method_declaration       (modifiers) @mods      "
@@ -126,22 +149,28 @@ public class JavaService {
     return false;
   }
 
-  public Optional<String> getPackageName(TSFile file) {
-    String packageQuery = "(package_declaration (scoped_identifier) @package_name)";
-    TSQuery query = new TSQuery(file.getParser().getLanguage(), packageQuery);
-    TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(query, file.getTree().getRootNode());
-    TSQueryMatch match = new TSQueryMatch();
-    if (cursor.nextMatch(match)) {
-      for (TSQueryCapture capture : match.getCaptures()) {
-        TSNode node = capture.getNode();
-        String packageName = file.getTextFromRange(node.getStartByte(), node.getEndByte());
-        return Optional.of(packageName);
-      }
+  /**
+   * Gets all Java files from the current working directory.
+   *
+   * @param cwd The current working directory.
+   * @return A list of all Java files.
+   */
+  public List<TSFile> getAllJavaFilesFromCwd(Path cwd) {
+    List<TSFile> allFiles = new ArrayList<>();
+    try {
+      allFiles = this.getPathHelper().findFilesByExtention(cwd, SupportedLanguage.JAVA);
+    } catch (IOException e) {
+      e.printStackTrace();
     }
-    return Optional.empty();
+    return allFiles;
   }
 
+  /**
+   * Gets the scope of a node.
+   *
+   * @param node The node to get the scope of.
+   * @return An optional containing the scope type, or empty if not found.
+   */
   public Optional<ScopeType> getNodeScope(TSNode node) {
     if (node == null) {
       return Optional.empty();
@@ -178,6 +207,12 @@ public class JavaService {
     return Optional.empty();
   }
 
+  /**
+   * Gets the identifier type of a node.
+   *
+   * @param node The node to get the identifier type of.
+   * @return The identifier type, or null if not found.
+   */
   public JavaIdentifierType getIdentifierType(TSNode node) {
     if (!"identifier".equals(node.getType())) {
       return null;
@@ -205,11 +240,26 @@ public class JavaService {
     }
   }
 
+  /**
+   * Gets the identifier type of a node at a given position.
+   *
+   * @param file The file to search in.
+   * @param line The line number of the node.
+   * @param column The column number of the node.
+   * @return The identifier type, or null if not found.
+   */
   public JavaIdentifierType getIdentifierType(TSFile file, int line, int column) {
     TSNode node = file.getNodeFromPosition(line, column);
     return this.getIdentifierType(node);
   }
 
+  /**
+   * Finds all usages of a class in a file.
+   *
+   * @param file The file to search in.
+   * @param className The name of the class to find usages of.
+   * @return A list of all nodes representing usages of the class.
+   */
   public List<TSNode> findClassUsagesInFile(TSFile file, String className) {
     List<TSNode> confirmedUsages = new ArrayList<>();
     String usageQuery = "[(type_identifier) @usage (class_declaration name: (identifier) @usage)]";
@@ -230,18 +280,50 @@ public class JavaService {
     return confirmedUsages;
   }
 
-  public List<TSNode> findAllImportDeclarations(TSFile file) {
-    List<TSNode> importNodes = new ArrayList<>();
-    String importQuery = "(import_declaration) @import";
-    TSQuery query = new TSQuery(file.getParser().getLanguage(), importQuery);
+  /**
+   * Renames a method parameter usage.
+   *
+   * @param file The file containing the source code.
+   * @param methodDeclarationNode The node of the method declaration.
+   * @param currentName The current name of the parameter.
+   * @param newName The new name of the parameter.
+   */
+  public void renameMethodParamUsage(
+      TSFile file, TSNode methodDeclarationNode, String currentName, String newName) {
+    if (!"method_declaration".equals(methodDeclarationNode.getType())) {
+      throw new IllegalArgumentException("Node is not a method_declaration");
+    }
+    TSNode bodyNode = methodDeclarationNode.getChildByFieldName("body");
+    if (bodyNode == null) {
+      return;
+    }
+    List<TSNode> nodesToRename = new ArrayList<>();
+    String queryStr = "(identifier) @id";
+    TSQuery query = new TSQuery(file.getParser().getLanguage(), queryStr);
     TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(query, file.getTree().getRootNode());
+    cursor.exec(query, bodyNode);
     TSQueryMatch match = new TSQueryMatch();
     while (cursor.nextMatch(match)) {
       for (TSQueryCapture capture : match.getCaptures()) {
-        importNodes.add(capture.getNode());
+        TSNode idNode = capture.getNode();
+        if (file.getTextFromNode(idNode).equals(currentName)) {
+          TSNode parent = idNode.getParent();
+          if (parent != null && "field_access".equals(parent.getType())) {
+            TSNode objectNode = parent.getChildByFieldName("object");
+            TSNode fieldNode = parent.getChildByFieldName("field");
+            if (objectNode != null
+                && "this".equals(objectNode.getType())
+                && idNode.equals(fieldNode)) {
+              continue;
+            }
+          }
+          nodesToRename.add(idNode);
+        }
       }
     }
-    return importNodes;
+    nodesToRename.sort((a, b) -> Integer.compare(b.getStartByte(), a.getStartByte()));
+    for (TSNode node : nodesToRename) {
+      file.updateSourceCode(node, newName);
+    }
   }
 }
