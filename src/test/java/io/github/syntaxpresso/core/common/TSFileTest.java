@@ -110,7 +110,9 @@ class TSFileTest {
       Path newPath = tempDir.resolve("NewFile.java");
       tsFile.updateSourceCode("public class OtherClass {}");
       tsFile.saveAs(newPath);
+      tsFile.save();
       assertTrue(Files.exists(newPath));
+      assertFalse(Files.exists(tempFile));
       String fileContent = Files.readString(newPath);
       assertEquals("public class OtherClass {}", fileContent);
       assertEquals(newPath.toFile(), tsFile.getFile());
@@ -122,20 +124,22 @@ class TSFileTest {
       Path newDir = tempDir.resolve("new_dir");
       Files.createDirectory(newDir);
       tsFile.move(newDir.toFile());
+      tsFile.save();
       Path newPath = newDir.resolve("MyClass.java");
-      // assertTrue(Files.exists(newPath));
-      // assertFalse(Files.exists(tempFile));
+      assertTrue(Files.exists(newPath));
+      assertFalse(Files.exists(tempFile));
       assertEquals(newPath.toFile(), tsFile.getFile());
     }
 
     @Test
     @DisplayName("should rename the file")
-    void rename_shouldChangeFileName() throws IOException {
+    void rename_shouldChangeFileName(@TempDir Path tempDir) throws IOException {
       tsFile.rename("Renamed.java");
+      tsFile.save();
       Path newPath = tempFile.getParent().resolve("Renamed.java");
-      // assertTrue(Files.exists(newPath));
-      // assertFalse(Files.exists(tempFile));
-      assertEquals(newPath.toFile().getAbsolutePath(), tsFile.getFile().getAbsolutePath());
+      assertTrue(Files.exists(newPath));
+      assertFalse(Files.exists(tempFile));
+      assertEquals(newPath.toFile(), tsFile.getFile());
     }
   }
 
