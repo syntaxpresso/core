@@ -42,7 +42,7 @@ public class ImportDeclarationService {
    * @param file The file to search in.
    * @return A list of all import declaration nodes.
    */
-  private List<TSNode> findAllImportDeclarations(TSFile file) {
+  public List<TSNode> findAllImportDeclarations(TSFile file) {
     List<TSNode> importNodes = new ArrayList<>();
     String importQuery = "(import_declaration) @import";
     TSQuery query = new TSQuery(file.getParser().getLanguage(), importQuery);
@@ -65,26 +65,21 @@ public class ImportDeclarationService {
    * @param packageName The name of the package.
    * @return True if the class is imported, false otherwise.
    */
-  public boolean isClassImported(TSFile file, String className, String packageName) {
-    Optional<String> currentFilePackageName =
-        this.getPackageDeclarationService().getPackageName(file);
-    // Checks if the class belongs to the same package. In this case,
-    // It's automatically imported and could be used.
-    if (currentFilePackageName.isPresent()) {
-      if (packageName.equals(currentFilePackageName.get())) {
-        return true;
+  public Optional<TSNode> getImportDeclarationNode(
+      TSFile file, String className, String packageName) {
+    List<TSNode> allImportDeclarationNodes = this.findAllImportDeclarations(file);
+    for (TSNode importDeclarationNode : allImportDeclarationNodes) {
+      Optional<TSNode> scopedIdentifier =
+          file.findChildNodeByType(importDeclarationNode, "scoped_identifier");
+      if (scopedIdentifier.isEmpty()) {
+        continue;
+      }
+      String scopeName = file.getTextFromNode(scopedIdentifier.get());
+      String importPackage = packageName + "." + className;
+      if (scopeName.equals(importPackage) || scopeName.equals(packageName)) {
+        return Optional.of(importDeclarationNode);
       }
     }
-    List<TSNode> allImportNodes = this.findAllImportDeclarations(file);
-    for (TSNode importNode : allImportNodes) {
-      Optional<TSNode> scopedIdentifier = this.getImportScopedIdentifier(importNode);
-      if (scopedIdentifier.isPresent()) {
-        String importScope = file.getTextFromNode(scopedIdentifier.get());
-        if (importScope.contains(packageName)) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return Optional.empty();
   }
 }
