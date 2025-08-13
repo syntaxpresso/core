@@ -51,11 +51,6 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
   private List<TSFile> processClassRename(
       Path cwd, TSFile file, TSNode node, String packageName, String currentName, String newName) {
     List<TSFile> modifiedFiles = new ArrayList<>();
-    Optional<String> packageScopeName =
-        this.javaService.getPackageDeclarationService().getPackageName(file);
-    if (packageScopeName.isEmpty()) {
-      return modifiedFiles;
-    }
     // Update class name and file name, if necessary.
     file.updateSourceCode(node, newName);
     if (this.shouldRenameFileName(file, currentName)) {
@@ -65,15 +60,20 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     // Parse all java files, but skip the current one, as it can't instantiate itself.
     List<TSFile> allJavaFiles = this.javaService.getAllJavaFilesFromCwd(cwd);
     for (TSFile foundFile : allJavaFiles) {
+      Optional<String> foundFilePackageName =
+          this.javaService.getPackageDeclarationService().getPackageName(foundFile);
+      if (foundFilePackageName.isEmpty()) {
+        continue;
+      }
       // Skip original file.
       if (foundFile.getFile().getAbsolutePath().equals(file.getFile().getAbsolutePath())) {
         continue;
       }
-      boolean isImported =
+      Optional<TSNode> importNode =
           this.javaService
               .getImportDeclarationService()
-              .isClassImported(file, currentName, packageName);
-      if (!isImported) {
+              .getImportDeclarationNode(foundFile, currentName, packageName);
+      if (importNode.isEmpty() && !foundFilePackageName.get().equals(packageName)) {
         continue;
       }
       List<TSNode> usages = this.javaService.findClassUsagesInFile(foundFile, currentName);
@@ -104,9 +104,14 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
           this.javaService
               .getMethodDeclarationService()
               .renameMethodParam(foundFile, usage.getParent(), currentName, newName);
-          modifiedFiles.add(foundFile);
         }
       }
+      if (!foundFilePackageName.get().equals(packageName)) {
+        this.javaService
+            .getImportDeclarationService()
+            .updateImport(foundFile, packageName + "." + currentName, packageName + "." + newName);
+      }
+      modifiedFiles.add(foundFile);
     }
     return modifiedFiles;
   }

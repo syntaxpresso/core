@@ -8,5 +8,9 @@ import picocli.CommandLine.Command;
 @Command(
     name = "java",
     description = "Parent command for all Java-specific operations.",
-    subcommands = {CreateNewFileCommand.class, GetMainClassCommand.class, RenameCommand.class})
+    subcommands = {
+      CreateNewFileCommand.class,
+      GetMainClassCommand.class,
+      RenameCommand.class,
+    })
 public class JavaCommand {}
