@@ -1,5 +1,6 @@
 package io.github.syntaxpresso.core.common;
 
+import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import java.io.File;
 import java.io.IOException;
@@ -301,7 +302,7 @@ public class TSFile {
    * @return An Optional containing the found parent TSNode, or empty if not found.
    */
   public Optional<TSNode> findParentNodeByType(TSNode startNode, String parentType) {
-    if (startNode == null || parentType == null || parentType.isBlank()) {
+    if (startNode == null || Strings.isNullOrEmpty(parentType)) {
       return Optional.empty();
     }
     TSNode currentNode = startNode;
@@ -310,6 +311,27 @@ public class TSFile {
         return Optional.of(currentNode);
       }
       currentNode = currentNode.getParent();
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Finds the first child node of a given node that has a specific type.
+   *
+   * @param startNode The node from which to start searching downwards.
+   * @param childType The type of the child node to find (e.g., "method_declaration").
+   * @return An Optional containing the found child TSNode, or empty if not found.
+   */
+  public Optional<TSNode> findChildNodeByType(TSNode startNode, String childType) {
+    if (Strings.isNullOrEmpty(childType) || startNode == null) {
+      return Optional.empty();
+    }
+    TSNode currentNode = startNode;
+    while (currentNode != null) {
+      currentNode = currentNode.getNamedChild(0);
+      if (currentNode.getType().equals(childType)) {
+        return Optional.of(currentNode);
+      }
     }
     return Optional.empty();
   }
