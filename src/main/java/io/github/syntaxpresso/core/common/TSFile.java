@@ -9,8 +9,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import lombok.Getter;
 import org.treesitter.TSNode;
 import org.treesitter.TSParser;
@@ -364,30 +366,32 @@ public class TSFile {
 
   /**
    * Executes a Tree-sitter query on a specific node and returns the captured nodes.
+   * Duplicates are automatically removed while preserving insertion order.
    *
    * @param node The node to run the query on.
    * @param query The Tree-sitter query string.
-   * @return A list of {@link TSNode} objects captured by the query.
+   * @return A list of unique {@link TSNode} objects captured by the query.
    */
   public List<TSNode> query(TSNode node, String query) {
-    List<TSNode> foundNodes = new ArrayList<>();
+    Set<TSNode> foundNodes = new LinkedHashSet<>();
     TSQuery queryObj = new TSQuery(this.getParser().getLanguage(), query);
     TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(queryObj, this.getTree().getRootNode());
+    cursor.exec(queryObj, node);
     TSQueryMatch match = new TSQueryMatch();
     while (cursor.nextMatch(match)) {
       for (TSQueryCapture capture : match.getCaptures()) {
         foundNodes.add(capture.getNode());
       }
     }
-    return foundNodes;
+    return new ArrayList<>(foundNodes);
   }
 
   /**
    * Executes a Tree-sitter query on the entire syntax tree and returns the captured nodes.
+   * Duplicates are automatically removed while preserving insertion order.
    *
    * @param query The Tree-sitter query string.
-   * @return A list of {@link TSNode} objects captured by the query.
+   * @return A list of unique {@link TSNode} objects captured by the query.
    */
   public List<TSNode> query(String query) {
     return this.query(this.getTree().getRootNode(), query);
