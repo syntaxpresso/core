@@ -181,6 +181,26 @@ public class LocalVariableDeclarationService {
   }
 
   /**
+   * Checks if a type represents a collection (List, Set, ArrayList, etc.).
+   *
+   * @param typeText The type text to check.
+   * @return true if the type is a collection type, false otherwise.
+   */
+  private boolean isCollectionType(String typeText) {
+    if (typeText == null) {
+      return false;
+    }
+    return typeText.startsWith("List<")
+        || typeText.startsWith("Set<")
+        || typeText.startsWith("ArrayList<")
+        || typeText.startsWith("LinkedList<")
+        || typeText.startsWith("HashSet<")
+        || typeText.startsWith("LinkedHashSet<")
+        || typeText.startsWith("TreeSet<")
+        || typeText.startsWith("Collection<");
+  }
+
+  /**
    * Renames a local variable declaration, including its type, name, and instantiation.
    *
    * @param file The file containing the source code.
@@ -194,7 +214,6 @@ public class LocalVariableDeclarationService {
     List<TSNode> localVariableNodes =
         this.findAllLocalVariableDeclarations(methodDeclarationNode, file);
     for (TSNode localVariableNode : localVariableNodes.reversed()) {
-      System.out.println(file.getTextFromNode(localVariableNode));
       Optional<TSNode> localVariableTypeNode =
           this.getVariableTypeNode(localVariableNode, file, currentName);
       if (localVariableTypeNode.isEmpty()) {
@@ -207,11 +226,21 @@ public class LocalVariableDeclarationService {
         file.updateSourceCode(localVariableInstanceNode.get(), newName);
       }
       if (localVariableNameNode.isPresent()) {
+        boolean isCollectionType = this.isCollectionType(file.getTextFromNode(localVariableNode));
         String currentLocalVariableName = file.getTextFromNode(localVariableNameNode.get());
+        if (isCollectionType) {
+          String pluralizedCurrentName = StringHelper.pluralizeCamelCase(currentName);
+          if (currentLocalVariableName.equals(StringHelper.pascalToCamel(pluralizedCurrentName))) {
+            String pluralizedNewName = StringHelper.pluralizeCamelCase(newName);
+            file.updateSourceCode(
+                localVariableNameNode.get(), StringHelper.pascalToCamel(pluralizedNewName));
+          }
+        }
         if (currentLocalVariableName.equals(StringHelper.pascalToCamel(currentName))) {
           file.updateSourceCode(localVariableNameNode.get(), StringHelper.pascalToCamel(newName));
         }
       }
+      System.out.println(file.getTextFromNode(localVariableTypeNode.get()));
       file.updateSourceCode(localVariableTypeNode.get(), newName);
     }
   }

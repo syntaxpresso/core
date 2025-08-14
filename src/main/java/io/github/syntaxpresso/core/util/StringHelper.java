@@ -77,4 +77,29 @@ public class StringHelper {
     }
     return camelCaseStr;
   }
+
+  /**
+   * Checks if a camelCase string is in plural form.
+   *
+   * @param camelCaseStr The camelCase string to check.
+   * @return true if the string appears to be plural, false otherwise.
+   */
+  public static boolean isPluralCamelCase(String camelCaseStr) {
+    if (Strings.isNullOrEmpty(camelCaseStr)) {
+      return false;
+    }
+    // Split camelCase to get the last word
+    String[] words = camelCaseStr.split("(?=\\p{Upper})");
+    if (words.length > 0) {
+      String lastWord = words[words.length - 1].toLowerCase();
+      
+      // Check if the pluralized form of the singular would match this word
+      // This is more reliable than trying to detect if a word is already plural
+      String withoutS = lastWord.endsWith("s") ? lastWord.substring(0, lastWord.length() - 1) : lastWord;
+      String pluralOfSingular = Noun.pluralOf(withoutS).toLowerCase();
+      
+      return lastWord.equals(pluralOfSingular);
+    }
+    return false;
+  }
 }
