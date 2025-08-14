@@ -337,6 +337,17 @@ public class TSFile {
   }
 
   /**
+   * Finds the first child node of a given node that has a specific type.
+   *
+   * @param childType The type of the child node to find (e.g., "method_declaration").
+   * @return An Optional containing the found child TSNode, or empty if not found.
+   */
+  public Optional<TSNode> findChildNodeByType(String childType) {
+    TSNode startNode = this.getTree().getRootNode();
+    return this.findChildNodeByType(startNode, childType);
+  }
+
+  /**
    * Checks if a node is within the bounds of another node.
    *
    * @param node The node to check.
