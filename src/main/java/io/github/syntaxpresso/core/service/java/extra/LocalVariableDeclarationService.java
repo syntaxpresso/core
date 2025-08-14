@@ -3,15 +3,9 @@ package io.github.syntaxpresso.core.service.java.extra;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.util.StringHelper;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.treesitter.TSNode;
-import org.treesitter.TSQuery;
-import org.treesitter.TSQueryCursor;
-import org.treesitter.TSQueryMatch;
 
 public class LocalVariableDeclarationService {
 
@@ -31,19 +25,7 @@ public class LocalVariableDeclarationService {
         || !"method_declaration".equals(methodDeclarationNode.getType())) {
       return Collections.emptyList();
     }
-    LinkedHashSet<TSNode> localVariables = new LinkedHashSet<>();
-    TSQuery query = new TSQuery(file.getParser().getLanguage(), LOCAL_VARIABLE_DECLARATION_QUERY);
-    TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(query, methodDeclarationNode);
-    TSQueryMatch match = new TSQueryMatch();
-    while (cursor.nextMatch(match)) {
-      for (var capture : match.getCaptures()) {
-        localVariables.add(capture.getNode());
-      }
-    }
-    return localVariables.stream()
-        .sorted(Comparator.comparingInt(TSNode::getStartByte))
-        .collect(Collectors.toList());
+    return file.query(methodDeclarationNode, LOCAL_VARIABLE_DECLARATION_QUERY);
   }
 
   /**
