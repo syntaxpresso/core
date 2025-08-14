@@ -2,10 +2,12 @@ package io.github.syntaxpresso.core.service.java.extra;
 
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.util.StringHelper;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.treesitter.TSNode;
 import org.treesitter.TSQuery;
 import org.treesitter.TSQueryCursor;
@@ -17,44 +19,48 @@ public class LocalVariableDeclarationService {
       "(local_variable_declaration) @local_variable";
 
   /**
-   * Finds all local variable declarations within a method.
+   * Finds all local variable declarations within a method. Results are unique and ordered by node's
+   * start byte.
    *
-   * @param methodNode The TSNode of the method declaration.
-   * @param tsFile The TSFile containing the source code.
-   * @return A list of all local variable declaration nodes.
+   * @param methodDeclarationNode The TSNode of the method declaration.
+   * @param file The TSFile containing the source code.
+   * @return A list of unique local variable declaration nodes ordered by start byte.
    */
-  public List<TSNode> findAllLocalVariableDeclarations(TSNode methodNode, TSFile tsFile) {
-    if (methodNode == null || !"method_declaration".equals(methodNode.getType())) {
+  public List<TSNode> findAllLocalVariableDeclarations(TSNode methodDeclarationNode, TSFile file) {
+    if (methodDeclarationNode == null
+        || !"method_declaration".equals(methodDeclarationNode.getType())) {
       return Collections.emptyList();
     }
-    List<TSNode> localVariables = new ArrayList<>();
-    TSQuery query = new TSQuery(tsFile.getParser().getLanguage(), LOCAL_VARIABLE_DECLARATION_QUERY);
+    LinkedHashSet<TSNode> localVariables = new LinkedHashSet<>();
+    TSQuery query = new TSQuery(file.getParser().getLanguage(), LOCAL_VARIABLE_DECLARATION_QUERY);
     TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(query, methodNode);
+    cursor.exec(query, methodDeclarationNode);
     TSQueryMatch match = new TSQueryMatch();
     while (cursor.nextMatch(match)) {
       for (var capture : match.getCaptures()) {
         localVariables.add(capture.getNode());
       }
     }
-    return localVariables;
+    return localVariables.stream()
+        .sorted(Comparator.comparingInt(TSNode::getStartByte))
+        .collect(Collectors.toList());
   }
 
   /**
    * Finds the type node within a local variable declaration that matches a given name.
    *
-   * @param declarationNode The TSNode for the local_variable_declaration.
+   * @param localVariableDeclarationNode The TSNode for the local_variable_declaration.
    * @param file The TSFile containing the source code.
    * @param typeName The name of the type to find.
    * @return An Optional containing the found TSNode, or empty.
    */
   public Optional<TSNode> getVariableTypeNode(
-      TSNode declarationNode, TSFile file, String typeName) {
-    if (declarationNode == null
-        || !"local_variable_declaration".equals(declarationNode.getType())) {
+      TSNode localVariableDeclarationNode, TSFile file, String typeName) {
+    if (localVariableDeclarationNode == null
+        || !"local_variable_declaration".equals(localVariableDeclarationNode.getType())) {
       return Optional.empty();
     }
-    List<TSNode> typeNodes = file.query(declarationNode, "(type_identifier) @type");
+    List<TSNode> typeNodes = file.query(localVariableDeclarationNode, "(type_identifier) @type");
     for (TSNode typeNode : typeNodes) {
       String typeNodeName = file.getTextFromNode(typeNode);
       if (typeName.equals(typeNodeName)) {
@@ -67,16 +73,16 @@ public class LocalVariableDeclarationService {
   /**
    * Extracts the variable name from a local_variable_declaration node.
    *
-   * @param declarationNode The TSNode representing the local_variable_declaration.
+   * @param localVariableDeclarationNode The TSNode representing the local_variable_declaration.
    * @param file The TSFile containing the source code.
    * @return An Optional containing the variable name node, or empty if not found.
    */
-  public Optional<TSNode> getVariableNameNode(TSNode declarationNode, TSFile file) {
-    if (declarationNode == null
-        || !"local_variable_declaration".equals(declarationNode.getType())) {
+  public Optional<TSNode> getVariableNameNode(TSNode localVariableDeclarationNode, TSFile file) {
+    if (localVariableDeclarationNode == null
+        || !"local_variable_declaration".equals(localVariableDeclarationNode.getType())) {
       return Optional.empty();
     }
-    TSNode variableDeclaratorNode = declarationNode.getChildByFieldName("declarator");
+    TSNode variableDeclaratorNode = localVariableDeclarationNode.getChildByFieldName("declarator");
     if (variableDeclaratorNode == null) {
       return Optional.empty();
     }
@@ -87,63 +93,29 @@ public class LocalVariableDeclarationService {
    * Extracts the instantiated class name's node from an object_creation_expression within a
    * local_variable_declaration node.
    *
-   * @param declarationNode The TSNode representing the local_variable_declaration.
+   * @param localVariableDeclarationNode The TSNode representing the local_variable_declaration.
    * @param file The TSFile containing the source code.
-   * @param className The name of the class being instantiated.
+   * @param typeName The name of the class being instantiated.
    * @return An Optional containing the instantiated class name node, or empty if not found.
    */
   public Optional<TSNode> getVariableInstanceNode(
-      TSNode declarationNode, TSFile file, String className) {
-    if (declarationNode == null
-        || !"local_variable_declaration".equals(declarationNode.getType())) {
+      TSNode localVariableDeclarationNode, TSFile file, String typeName) {
+    if (localVariableDeclarationNode == null
+        || !"local_variable_declaration".equals(localVariableDeclarationNode.getType())) {
       return Optional.empty();
     }
-    TSNode variableDeclaratorNode = declarationNode.getChildByFieldName("declarator");
+    TSNode variableDeclaratorNode = localVariableDeclarationNode.getChildByFieldName("declarator");
     if (variableDeclaratorNode == null) {
       return Optional.empty();
     }
-    TSNode objectCreationNode = variableDeclaratorNode.getChildByFieldName("value");
-    if (objectCreationNode == null
-        || !"object_creation_expression".equals(objectCreationNode.getType())) {
-      return Optional.empty();
-    }
-    TSNode typeIdentifierNode = objectCreationNode.getChildByFieldName("type");
-    if (typeIdentifierNode != null) {
-      String foundClassName =
-          file.getTextFromRange(typeIdentifierNode.getStartByte(), typeIdentifierNode.getEndByte());
-      if (className.equals(foundClassName)) {
-        return Optional.of(typeIdentifierNode);
+    List<TSNode> typeNodes = file.query(variableDeclaratorNode, "(type_identifier) @type");
+    for (TSNode typeNode : typeNodes) {
+      String typeNodeName = file.getTextFromNode(typeNode);
+      if (typeName.equals(typeNodeName)) {
+        return Optional.of(typeNode);
       }
     }
     return Optional.empty();
-  }
-
-  /**
-   * Renames a local variable declaration, including its type, name, and instantiation.
-   *
-   * @param file The file containing the source code.
-   * @param declarationNode The TSNode of the local variable declaration.
-   * @param currentName The current name of the variable (PascalCase).
-   * @param newName The new name for the variable (PascalCase).
-   */
-  public void renameLocalVariableDeclaration(
-      TSFile file, TSNode declarationNode, String currentName, String newName) {
-    // Rename in reverse order for the same reason.
-    Optional<TSNode> classDeclarationInstantiationNode =
-        this.getVariableInstanceNode(declarationNode, file, currentName);
-    Optional<TSNode> classDeclarationVariableNode = this.getVariableNameNode(declarationNode, file);
-    Optional<TSNode> classDeclarationTypeNode =
-        this.getVariableTypeNode(declarationNode, file, currentName);
-    if (classDeclarationInstantiationNode.isPresent()) {
-      file.updateSourceCode(classDeclarationInstantiationNode.get(), newName);
-    }
-    if (classDeclarationInstantiationNode.isPresent()) {
-      String newVariableName = StringHelper.pascalToCamel(newName);
-      file.updateSourceCode(classDeclarationVariableNode.get(), newVariableName);
-    }
-    if (classDeclarationTypeNode.isPresent()) {
-      file.updateSourceCode(classDeclarationTypeNode.get(), newName);
-    }
   }
 
   /**
@@ -198,12 +170,49 @@ public class LocalVariableDeclarationService {
       if (nameNode.isPresent()
           && !nameNode.get().isNull()
           && varName.equals(file.getTextFromNode(nameNode.get()))) {
-        // Check if this identifier comes after the local variable declaration
-        if (identifierNode.getStartByte() > localVar.getEndByte()) {
-          return true; // It's a local variable usage
+        // Check if this identifier comes before the local variable declaration
+        if (identifierNode.getStartByte() < localVar.getStartByte()) {
+          return false; // It's before the declaration, so not a usage
         }
+        return true; // It's after or at the declaration, so it's a usage
       }
     }
     return false;
+  }
+
+  /**
+   * Renames a local variable declaration, including its type, name, and instantiation.
+   *
+   * @param file The file containing the source code.
+   * @param methodDeclarationNode The TSNode of the local variable declaration.
+   * @param currentName The current name of the variable (PascalCase).
+   * @param newName The new name for the variable (PascalCase).
+   */
+  public void renameLocalVariables(
+      TSFile file, TSNode methodDeclarationNode, String currentName, String newName) {
+    // Rename in reverse order for the same reason.
+    List<TSNode> localVariableNodes =
+        this.findAllLocalVariableDeclarations(methodDeclarationNode, file);
+    for (TSNode localVariableNode : localVariableNodes.reversed()) {
+      System.out.println(file.getTextFromNode(localVariableNode));
+      Optional<TSNode> localVariableTypeNode =
+          this.getVariableTypeNode(localVariableNode, file, currentName);
+      if (localVariableTypeNode.isEmpty()) {
+        continue;
+      }
+      Optional<TSNode> localVariableNameNode = this.getVariableNameNode(localVariableNode, file);
+      Optional<TSNode> localVariableInstanceNode =
+          this.getVariableInstanceNode(localVariableNode, file, currentName);
+      if (localVariableInstanceNode.isPresent()) {
+        file.updateSourceCode(localVariableInstanceNode.get(), newName);
+      }
+      if (localVariableNameNode.isPresent()) {
+        String currentLocalVariableName = file.getTextFromNode(localVariableNameNode.get());
+        if (currentLocalVariableName.equals(StringHelper.pascalToCamel(currentName))) {
+          file.updateSourceCode(localVariableNameNode.get(), StringHelper.pascalToCamel(newName));
+        }
+      }
+      file.updateSourceCode(localVariableTypeNode.get(), newName);
+    }
   }
 }
