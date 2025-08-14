@@ -337,6 +337,21 @@ public class TSFile {
   }
 
   /**
+   * Checks if a node is within the bounds of another node.
+   *
+   * @param node The node to check.
+   * @param container The container node.
+   * @return True if node is within container's bounds.
+   */
+  public boolean isNodeWithin(TSNode node, TSNode container) {
+    if (node == null || node.isNull() || container == null || container.isNull()) {
+      return false;
+    }
+    return node.getStartByte() >= container.getStartByte()
+        && node.getEndByte() <= container.getEndByte();
+  }
+
+  /**
    * Executes a Tree-sitter query on a specific node and returns the captured nodes.
    *
    * @param node The node to run the query on.
