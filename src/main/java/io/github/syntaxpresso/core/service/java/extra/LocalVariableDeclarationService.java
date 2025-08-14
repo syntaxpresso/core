@@ -240,7 +240,6 @@ public class LocalVariableDeclarationService {
           file.updateSourceCode(localVariableNameNode.get(), StringHelper.pascalToCamel(newName));
         }
       }
-      System.out.println(file.getTextFromNode(localVariableTypeNode.get()));
       file.updateSourceCode(localVariableTypeNode.get(), newName);
     }
   }
