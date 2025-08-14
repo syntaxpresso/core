@@ -87,7 +87,7 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
         }
         if (usage.getParent().getType().contains("local_variable_declaration")) {
           this.javaService
-              .getMethodDeclarationService()
+              .getLocalVariableDeclarationService()
               .renameLocalVariableDeclaration(foundFile, usage.getParent(), currentName, newName);
           modifiedFiles.add(foundFile);
         }
@@ -102,8 +102,8 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
         }
         if (usage.getParent().getType().equals("formal_parameter")) {
           this.javaService
-              .getMethodDeclarationService()
-              .renameMethodParam(foundFile, usage.getParent(), currentName, newName);
+              .getFormalParameterService()
+              .renameMethodParamWithResult(foundFile, usage.getParent(), currentName, newName);
         }
       }
       if (!foundFilePackageName.get().equals(packageName)) {

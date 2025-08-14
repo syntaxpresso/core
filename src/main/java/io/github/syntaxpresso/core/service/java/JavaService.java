@@ -7,6 +7,8 @@ import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.extra.ScopeType;
 import io.github.syntaxpresso.core.service.java.extra.FieldDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.ImportDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.FormalParameterService;
+import io.github.syntaxpresso.core.service.java.extra.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.MethodDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.PackageDeclarationService;
 import io.github.syntaxpresso.core.util.PathHelper;
@@ -36,7 +38,9 @@ public class JavaService {
   private final PathHelper pathHelper;
   private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
   private final ImportDeclarationService importDeclarationService = new ImportDeclarationService();
-  private final MethodDeclarationService methodDeclarationService = new MethodDeclarationService();
+  private final LocalVariableDeclarationService localVariableDeclarationService = new LocalVariableDeclarationService();
+  private final FormalParameterService formalParameterService = new FormalParameterService(localVariableDeclarationService);
+  private final MethodDeclarationService methodDeclarationService = new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
   private final PackageDeclarationService packageDeclarationService =
       new PackageDeclarationService();
 
