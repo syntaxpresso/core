@@ -9,10 +9,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import org.treesitter.TSNode;
 import org.treesitter.TSParser;
@@ -365,8 +367,8 @@ public class TSFile {
   }
 
   /**
-   * Executes a Tree-sitter query on a specific node and returns the captured nodes.
-   * Duplicates are automatically removed while preserving insertion order.
+   * Executes a Tree-sitter query on a specific node and returns the captured nodes. Duplicates are
+   * automatically removed while preserving insertion order.
    *
    * @param node The node to run the query on.
    * @param query The Tree-sitter query string.
@@ -383,7 +385,10 @@ public class TSFile {
         foundNodes.add(capture.getNode());
       }
     }
-    return new ArrayList<>(foundNodes);
+    return new ArrayList<>(foundNodes)
+        .stream()
+            .sorted(Comparator.comparingInt(TSNode::getStartByte))
+            .collect(Collectors.toList());
   }
 
   /**
