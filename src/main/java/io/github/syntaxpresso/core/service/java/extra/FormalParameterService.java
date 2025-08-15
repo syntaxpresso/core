@@ -1,7 +1,6 @@
 package io.github.syntaxpresso.core.service.java.extra;
 
 import io.github.syntaxpresso.core.common.TSFile;
-import io.github.syntaxpresso.core.util.StringHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,6 +17,47 @@ public class FormalParameterService {
   private final VariableNamingService variableNamingService;
 
   private static final String FORMAL_PARAMETER_QUERY = "(formal_parameter) @param";
+
+  private record ParameterInfo(
+      TSNode parameterNode,
+      TSNode typeNode,
+      TSNode nameNode,
+      String typeText,
+      String parameterName,
+      boolean isCollectionType) {}
+
+  /**
+   * Extracts parameter information from a formal parameter node.
+   *
+   * @param formalParameterNode The formal parameter node.
+   * @param file The TSFile containing the source code.
+   * @param currentName The current type name to match.
+   * @return Optional containing parameter information, or empty if extraction fails.
+   */
+  private Optional<ParameterInfo> extractParameterInfo(
+      TSNode formalParameterNode, TSFile file, String currentName) {
+    Optional<TSNode> parameterTypeNode =
+        getParameterTypeNode(formalParameterNode, file, currentName);
+    if (parameterTypeNode.isEmpty()) {
+      return Optional.empty();
+    }
+    Optional<TSNode> parameterNameNode = getParameterNameNode(formalParameterNode, file);
+    if (parameterNameNode.isEmpty()) {
+      return Optional.empty();
+    }
+    TSNode typeNode = formalParameterNode.getChildByFieldName("type");
+    String typeText = typeNode != null ? file.getTextFromNode(typeNode) : "";
+    boolean isCollectionType = variableNamingService.isCollectionType(typeText);
+    String currentParameterName = file.getTextFromNode(parameterNameNode.get());
+    return Optional.of(
+        new ParameterInfo(
+            formalParameterNode,
+            parameterTypeNode.get(),
+            parameterNameNode.get(),
+            typeText,
+            currentParameterName,
+            isCollectionType));
+  }
 
   /**
    * Finds all formal parameters of a method.
@@ -116,7 +156,6 @@ public class FormalParameterService {
         || methodDeclarationNode.isNull()) {
       return false;
     }
-
     // Check if it's a field access (this.paramName)
     TSNode parent = identifierNode.getParent();
     if (parent != null && "field_access".equals(parent.getType())) {
@@ -125,7 +164,6 @@ public class FormalParameterService {
         return false; // this.paramName is a field access, not parameter usage
       }
     }
-
     // Exclude if it's a local variable declaration or usage
     if (localVariableDeclarationService.isLocalVariableDeclaration(identifierNode)) {
       return false;
@@ -134,7 +172,6 @@ public class FormalParameterService {
         identifierNode, methodDeclarationNode, paramName, file)) {
       return false;
     }
-
     // Check if it matches any formal parameter name
     List<TSNode> formalParams = findAllFormalParameters(file, methodDeclarationNode, currentName);
     for (TSNode param : formalParams) {
@@ -145,7 +182,6 @@ public class FormalParameterService {
         return true; // It's after the parameter declaration, so it's a usage
       }
     }
-
     return false;
   }
 
@@ -180,7 +216,7 @@ public class FormalParameterService {
         List<TSNode> identifiers = file.query(bodyNode, "(identifier) @id");
         for (TSNode identifier : identifiers) {
           String identifierText = file.getTextFromNode(identifier);
-          if (parameterName.equals(StringHelper.pascalToCamel(identifierText))
+          if (parameterName.equals(identifierText)
               && isFormalParameterUsage(
                   file, methodDeclarationNode, identifier, parameterName, currentName)) {
             parameterUsages.add(identifier);
@@ -204,54 +240,37 @@ public class FormalParameterService {
   public void renameFormalParameters(
       TSFile file, TSNode methodDeclarationNode, String currentName, String newName) {
     List<TSNode> formalParameterNodes =
-        this.findAllFormalParameters(file, methodDeclarationNode, currentName);
-    for (TSNode formalParameterNode : formalParameterNodes.reversed()) {
-      Optional<TSNode> parameterTypeNode =
-          this.getParameterTypeNode(formalParameterNode, file, currentName);
-      if (parameterTypeNode.isEmpty()) {
-        continue;
-      }
-      Optional<TSNode> parameterNameNode = this.getParameterNameNode(formalParameterNode, file);
-      if (parameterNameNode.isPresent()) {
-        TSNode typeNode = formalParameterNode.getChildByFieldName("type");
-        String typeText = typeNode != null ? file.getTextFromNode(typeNode) : "";
-        boolean isCollectionType = variableNamingService.isCollectionType(typeText);
-        String currentParameterName = file.getTextFromNode(parameterNameNode.get());
-        // Rename parameter usages
-        List<TSNode> paramUsages =
-            this.findAllFormalParameterUsages(file, methodDeclarationNode, currentName);
-        for (TSNode usage : paramUsages.reversed()) {
-          String usageText = file.getTextFromNode(usage);
-          String newUsageName =
-              variableNamingService.generateNewVariableName(
-                  usageText, currentName, newName, isCollectionType);
-          if (!usageText.equals(newUsageName)) {
-            file.updateSourceCode(usage, newUsageName);
-          }
+        findAllFormalParameters(file, methodDeclarationNode, currentName);
+    // Extract parameter info once
+    List<ParameterInfo> parameterInfos =
+        formalParameterNodes.stream()
+            .map(node -> extractParameterInfo(node, file, currentName))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(Collectors.toList());
+    // First pass: rename usages (in reverse order to preserve byte positions)
+    for (ParameterInfo info : parameterInfos.reversed()) {
+      List<TSNode> paramUsages =
+          findAllFormalParameterUsages(file, methodDeclarationNode, currentName);
+      for (TSNode usage : paramUsages.reversed()) {
+        String usageText = file.getTextFromNode(usage);
+        String newUsageName =
+            variableNamingService.generateNewVariableName(
+                usageText, currentName, newName, info.isCollectionType());
+        if (!usageText.equals(newUsageName)) {
+          file.updateSourceCode(usage, newUsageName);
         }
       }
     }
-    for (TSNode formalParameterNode : formalParameterNodes.reversed()) {
-      Optional<TSNode> parameterTypeNode =
-          this.getParameterTypeNode(formalParameterNode, file, currentName);
-      if (parameterTypeNode.isEmpty()) {
-        continue;
+    // Second pass: rename declarations (in reverse order to preserve byte positions)
+    for (ParameterInfo info : parameterInfos.reversed()) {
+      String newParameterName =
+          variableNamingService.generateNewVariableName(
+              info.parameterName(), currentName, newName, info.isCollectionType());
+      if (!info.parameterName().equals(newParameterName)) {
+        file.updateSourceCode(info.nameNode(), newParameterName);
       }
-      Optional<TSNode> parameterNameNode = this.getParameterNameNode(formalParameterNode, file);
-      if (parameterNameNode.isPresent()) {
-        TSNode typeNode = formalParameterNode.getChildByFieldName("type");
-        String typeText = typeNode != null ? file.getTextFromNode(typeNode) : "";
-        boolean isCollectionType = variableNamingService.isCollectionType(typeText);
-        String currentParameterName = file.getTextFromNode(parameterNameNode.get());
-        // Rename parameter declaration
-        String newParameterName =
-            variableNamingService.generateNewVariableName(
-                currentParameterName, currentName, newName, isCollectionType);
-        if (!currentParameterName.equals(newParameterName)) {
-          file.updateSourceCode(parameterNameNode.get(), newParameterName);
-        }
-        file.updateSourceCode(parameterTypeNode.get(), newName);
-      }
+      file.updateSourceCode(info.typeNode(), newName);
     }
   }
 }
