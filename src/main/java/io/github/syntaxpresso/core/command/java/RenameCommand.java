@@ -54,6 +54,8 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     file.updateSourceCode(node, newName);
     if (this.shouldRenameFileName(file, currentName)) {
       file.rename(newName);
+    }
+    if (file.isModified()) {
       modifiedFiles.add(file);
     }
     // Parse all java files, but skip the current one, as it can't instantiate itself.
@@ -89,7 +91,9 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
             .getImportDeclarationService()
             .updateImport(foundFile, packageName + "." + currentName, packageName + "." + newName);
       }
-      modifiedFiles.add(foundFile);
+      if (foundFile.isModified()) {
+        modifiedFiles.add(foundFile);
+      }
     }
     return modifiedFiles;
   }
