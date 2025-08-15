@@ -13,7 +13,8 @@ import io.github.syntaxpresso.core.command.java.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
-import io.github.syntaxpresso.core.service.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.extra.PackageDeclarationService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.nio.file.Path;
@@ -31,6 +32,7 @@ import picocli.CommandLine;
 public class GetMainClassTest {
     private JavaService javaService;
     private PathHelper pathHelper;
+    private PackageDeclarationService packageDeclarationService;
     private GetMainClassCommand command;
     private CommandLine cmd;
 
@@ -38,7 +40,9 @@ public class GetMainClassTest {
     void setUp() {
         javaService = mock(JavaService.class);
         pathHelper = mock(PathHelper.class);
+        packageDeclarationService = mock(PackageDeclarationService.class);
         when(javaService.getPathHelper()).thenReturn(pathHelper);
+        when(javaService.getPackageDeclarationService()).thenReturn(packageDeclarationService);
         command = new GetMainClassCommand(javaService);
         cmd = new CommandLine(command);
     }
@@ -79,7 +83,7 @@ public class GetMainClassTest {
             when(mainClassFile.getFile()).thenReturn(file);
             when(pathHelper.findFilesByExtention(any(), any())).thenReturn(List.of(mainClassFile));
             when(javaService.isMainClass(mainClassFile)).thenReturn(true);
-            when(javaService.getPackageName(mainClassFile)).thenReturn(Optional.of("com.example"));
+            when(packageDeclarationService.getPackageName(mainClassFile)).thenReturn(Optional.of("com.example"));
 
             // Act
             cmd.parseArgs("--cwd", tempDir.toString());
@@ -117,7 +121,7 @@ public class GetMainClassTest {
             when(mainClassFile.getFile()).thenReturn(tempDir.resolve("Main.java").toFile());
             when(pathHelper.findFilesByExtention(any(), any())).thenReturn(List.of(mainClassFile));
             when(javaService.isMainClass(mainClassFile)).thenReturn(true);
-            when(javaService.getPackageName(mainClassFile)).thenReturn(Optional.empty());
+            when(packageDeclarationService.getPackageName(mainClassFile)).thenReturn(Optional.empty());
 
             // Act
             cmd.parseArgs("--cwd", tempDir.toString());
