@@ -32,6 +32,7 @@ public class TSFile {
   private TSTree tree;
   private String sourceCode;
   private Path newPath;
+  private boolean modified = false;
 
   /**
    * Creates a TSFile instance from a given programming language and source code string.
@@ -82,6 +83,7 @@ public class TSFile {
    */
   public void updateSourceCode(String newSourceCode) {
     this.setData(newSourceCode);
+    this.modified = true;
   }
 
   /**
@@ -98,6 +100,7 @@ public class TSFile {
     String newContent =
         new StringBuilder(this.sourceCode).replace(startByte, endByte, newText).toString();
     this.setData(newContent);
+    this.modified = true;
   }
 
   /**
@@ -132,6 +135,7 @@ public class TSFile {
       this.newPath = null;
     }
     Files.writeString(this.file.toPath(), this.sourceCode, StandardCharsets.UTF_8);
+    this.modified = false;
   }
 
   /**
@@ -164,6 +168,7 @@ public class TSFile {
       targetPath = targetPath.resolve(this.file.getName());
     }
     this.newPath = targetPath;
+    this.modified = true;
   }
 
   /**
@@ -192,6 +197,7 @@ public class TSFile {
                       .getFileExtension());
     }
     this.newPath = targetPath;
+    this.modified = true;
   }
 
   /**
@@ -400,5 +406,23 @@ public class TSFile {
    */
   public List<TSNode> query(String query) {
     return this.query(this.getTree().getRootNode(), query);
+  }
+
+  /**
+   * Checks if the file has been modified since the last save.
+   *
+   * @return True if the file has unsaved changes.
+   */
+  public boolean isModified() {
+    return this.modified;
+  }
+
+  /**
+   * Checks if the file has unsaved changes.
+   *
+   * @return True if the file has unsaved changes.
+   */
+  public boolean hasUnsavedChanges() {
+    return this.modified;
   }
 }
