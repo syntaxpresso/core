@@ -15,6 +15,7 @@ import org.treesitter.TSNode;
 public class FormalParameterService {
 
   private final LocalVariableDeclarationService localVariableDeclarationService;
+  private final VariableNamingService variableNamingService;
 
   private static final String FORMAL_PARAMETER_QUERY = "(formal_parameter) @param";
 
@@ -173,13 +174,13 @@ public class FormalParameterService {
         continue;
       }
       String parameterName = file.getTextFromNode(parameterNameNode.get());
-
       // Find usages in method body
       TSNode bodyNode = methodDeclarationNode.getChildByFieldName("body");
       if (bodyNode != null && "block".equals(bodyNode.getType())) {
         List<TSNode> identifiers = file.query(bodyNode, "(identifier) @id");
         for (TSNode identifier : identifiers) {
-          if (parameterName.equals(file.getTextFromNode(identifier))
+          String identifierText = file.getTextFromNode(identifier);
+          if (parameterName.equals(StringHelper.pascalToCamel(identifierText))
               && isFormalParameterUsage(
                   file, methodDeclarationNode, identifier, parameterName, currentName)) {
             parameterUsages.add(identifier);
@@ -190,26 +191,6 @@ public class FormalParameterService {
     return parameterUsages.stream()
         .sorted(Comparator.comparingInt(TSNode::getStartByte))
         .collect(Collectors.toList());
-  }
-
-  /**
-   * Checks if a type represents a collection (List, Set, ArrayList, etc.).
-   *
-   * @param typeText The type text to check.
-   * @return true if the type is a collection type, false otherwise.
-   */
-  private boolean isCollectionType(String typeText) {
-    if (typeText == null) {
-      return false;
-    }
-    return typeText.startsWith("List<")
-        || typeText.startsWith("Set<")
-        || typeText.startsWith("ArrayList<")
-        || typeText.startsWith("LinkedList<")
-        || typeText.startsWith("HashSet<")
-        || typeText.startsWith("LinkedHashSet<")
-        || typeText.startsWith("TreeSet<")
-        || typeText.startsWith("Collection<");
   }
 
   /**
@@ -232,36 +213,45 @@ public class FormalParameterService {
       }
       Optional<TSNode> parameterNameNode = this.getParameterNameNode(formalParameterNode, file);
       if (parameterNameNode.isPresent()) {
-        boolean isCollectionType = this.isCollectionType(file.getTextFromNode(formalParameterNode));
+        TSNode typeNode = formalParameterNode.getChildByFieldName("type");
+        String typeText = typeNode != null ? file.getTextFromNode(typeNode) : "";
+        boolean isCollectionType = variableNamingService.isCollectionType(typeText);
         String currentParameterName = file.getTextFromNode(parameterNameNode.get());
+        // Rename parameter usages
         List<TSNode> paramUsages =
             this.findAllFormalParameterUsages(file, methodDeclarationNode, currentName);
         for (TSNode usage : paramUsages.reversed()) {
           String usageText = file.getTextFromNode(usage);
-          if (isCollectionType) {
-            String pluralizedCurrentName = StringHelper.pluralizeCamelCase(currentName);
-            if (usageText.equals(StringHelper.pascalToCamel(pluralizedCurrentName))) {
-              String pluralizedNewName = StringHelper.pluralizeCamelCase(newName);
-              file.updateSourceCode(usage, StringHelper.pascalToCamel(pluralizedNewName));
-            }
+          String newUsageName =
+              variableNamingService.generateNewVariableName(
+                  usageText, currentName, newName, isCollectionType);
+          if (!usageText.equals(newUsageName)) {
+            file.updateSourceCode(usage, newUsageName);
           }
-          if (usageText.equals(StringHelper.pascalToCamel(currentName))) {
-            file.updateSourceCode(usage, StringHelper.pascalToCamel(newName));
-          }
-        }
-        if (isCollectionType) {
-          String pluralizedCurrentName = StringHelper.pluralizeCamelCase(currentName);
-          if (currentParameterName.equals(StringHelper.pascalToCamel(pluralizedCurrentName))) {
-            String pluralizedNewName = StringHelper.pluralizeCamelCase(newName);
-            file.updateSourceCode(
-                parameterNameNode.get(), StringHelper.pascalToCamel(pluralizedNewName));
-          }
-        }
-        if (currentParameterName.equals(StringHelper.pascalToCamel(currentName))) {
-          file.updateSourceCode(parameterNameNode.get(), StringHelper.pascalToCamel(newName));
         }
       }
-      file.updateSourceCode(parameterTypeNode.get(), newName);
+    }
+    for (TSNode formalParameterNode : formalParameterNodes.reversed()) {
+      Optional<TSNode> parameterTypeNode =
+          this.getParameterTypeNode(formalParameterNode, file, currentName);
+      if (parameterTypeNode.isEmpty()) {
+        continue;
+      }
+      Optional<TSNode> parameterNameNode = this.getParameterNameNode(formalParameterNode, file);
+      if (parameterNameNode.isPresent()) {
+        TSNode typeNode = formalParameterNode.getChildByFieldName("type");
+        String typeText = typeNode != null ? file.getTextFromNode(typeNode) : "";
+        boolean isCollectionType = variableNamingService.isCollectionType(typeText);
+        String currentParameterName = file.getTextFromNode(parameterNameNode.get());
+        // Rename parameter declaration
+        String newParameterName =
+            variableNamingService.generateNewVariableName(
+                currentParameterName, currentName, newName, isCollectionType);
+        if (!currentParameterName.equals(newParameterName)) {
+          file.updateSourceCode(parameterNameNode.get(), newParameterName);
+        }
+        file.updateSourceCode(parameterTypeNode.get(), newName);
+      }
     }
   }
 }
