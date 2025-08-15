@@ -10,11 +10,7 @@ import org.treesitter.TSNode;
 @RequiredArgsConstructor
 @Getter
 public class MethodDeclarationService {
-  // TODO: Create ClassDeclarationService.
-  // TODO: Create methods to find methoddeclaration by name and to rename.
-
   private static final String METHOD_DECLARATION_QUERY = "(method_declaration) @method";
-
   private final FormalParameterService formalParameterService;
   private final LocalVariableDeclarationService localVariableDeclarationService;
 
@@ -66,12 +62,14 @@ public class MethodDeclarationService {
     }
     // Get the full method text and check if it matches main method patterns
     String methodText = file.getTextFromNode(methodNode);
-    
+
     // Check if it's a main method by looking for the common patterns:
     // 1. public static void main(String[] args)
-    // 2. public static void main(String... args)  
+    // 2. public static void main(String... args)
     // Allow for different parameter names and spacing
-    return methodText.matches("(?s).*public\\s+static\\s+void\\s+main\\s*\\(\\s*String\\s*\\[\\s*\\]\\s+\\w+\\s*\\).*") ||
-           methodText.matches("(?s).*public\\s+static\\s+void\\s+main\\s*\\(\\s*String\\s*\\.\\s*\\.\\s*\\.\\s+\\w+\\s*\\).*");
+    return methodText.matches(
+            "(?s).*public\\s+static\\s+void\\s+main\\s*\\(\\s*String\\s*\\[\\s*\\]\\s+\\w+\\s*\\).*")
+        || methodText.matches(
+            "(?s).*public\\s+static\\s+void\\s+main\\s*\\(\\s*String\\s*\\.\\s*\\.\\s*\\.\\s+\\w+\\s*\\).*");
   }
 }
