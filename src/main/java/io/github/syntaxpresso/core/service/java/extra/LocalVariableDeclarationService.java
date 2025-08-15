@@ -204,4 +204,18 @@ public class LocalVariableDeclarationService {
       file.updateSourceCode(localVariableTypeNode.get(), newName);
     }
   }
+
+  /**
+   * Renames all local variables of the specified type across all methods in a file.
+   *
+   * @param file The file containing the source code.
+   * @param currentName The current name of the variable type (PascalCase).
+   * @param newName The new name for the variable type (PascalCase).
+   */
+  public void renameLocalVariablesInFile(TSFile file, String currentName, String newName) {
+    List<TSNode> methodDeclarationNodes = file.query("(method_declaration) @method");
+    for (TSNode methodDeclarationNode : methodDeclarationNodes) {
+      renameLocalVariables(file, methodDeclarationNode, currentName, newName);
+    }
+  }
 }

@@ -273,4 +273,18 @@ public class FormalParameterService {
       file.updateSourceCode(info.typeNode(), newName);
     }
   }
+
+  /**
+   * Renames all formal parameters of the specified type across all methods in a file.
+   *
+   * @param file The file containing the source code.
+   * @param currentName The current name of the parameter type (PascalCase).
+   * @param newName The new name for the parameter type (PascalCase).
+   */
+  public void renameFormalParametersInFile(TSFile file, String currentName, String newName) {
+    List<TSNode> methodDeclarationNodes = file.query("(method_declaration) @method");
+    for (TSNode methodDeclarationNode : methodDeclarationNodes) {
+      renameFormalParameters(file, methodDeclarationNode, currentName, newName);
+    }
+  }
 }
