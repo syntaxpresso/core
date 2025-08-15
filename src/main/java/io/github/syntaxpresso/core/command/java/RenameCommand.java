@@ -10,7 +10,6 @@ import io.github.syntaxpresso.core.service.java.JavaService;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -76,36 +75,15 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
       if (importNode.isEmpty() && !foundFilePackageName.get().equals(packageName)) {
         continue;
       }
-      List<TSNode> usages = this.javaService.findClassUsagesInFile(foundFile, currentName);
-      // Rename in reverse order to prevent bytes offset changes.
-      usages.sort(Comparator.comparingInt(TSNode::getStartByte).reversed());
-      for (TSNode usage : usages) {
-        String usageName = foundFile.getTextFromRange(usage.getStartByte(), usage.getEndByte());
-        // Skipe usage if doesn't have the same name as the previousName.
-        if (!usageName.equals(currentName)) {
-          continue;
-        }
-        if (usage.getParent().getType().contains("local_variable_declaration")) {
-          this.javaService
-              .getLocalVariableDeclarationService()
-              .renameLocalVariableDeclaration(foundFile, usage.getParent(), currentName, newName);
-          modifiedFiles.add(foundFile);
-        }
-        if (usage.getParent().getType().contains("field_declaration")) {
-          this.javaService
-              .getFieldDeclarationService()
-              .renameFieldDeclaration(foundFile, usage.getParent(), currentName, newName);
-          this.javaService
-              .getFieldDeclarationService()
-              .renameAllFieldUsages(foundFile, currentName, newName);
-          modifiedFiles.add(foundFile);
-        }
-        if (usage.getParent().getType().equals("formal_parameter")) {
-          this.javaService
-              .getFormalParameterService()
-              .renameMethodParamWithResult(foundFile, usage.getParent(), currentName, newName);
-        }
-      }
+      this.javaService
+          .getMethodDeclarationService()
+          .renameLocalVariables(foundFile, currentName, newName);
+      this.javaService
+          .getMethodDeclarationService()
+          .renameFormalParameters(foundFile, currentName, newName);
+      this.javaService
+          .getFieldDeclarationService()
+          .renameClassFields(foundFile, currentName, newName);
       if (!foundFilePackageName.get().equals(packageName)) {
         this.javaService
             .getImportDeclarationService()
