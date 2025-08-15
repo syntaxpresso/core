@@ -2,13 +2,12 @@ package io.github.syntaxpresso.core.common;
 
 import io.github.syntaxpresso.core.command.java.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.java.GetMainClassCommand;
-import io.github.syntaxpresso.core.service.JavaService;
-import io.github.syntaxpresso.core.util.PathHelper;
+import io.github.syntaxpresso.core.command.java.RenameCommand;
+import io.github.syntaxpresso.core.service.java.JavaService;
 import picocli.CommandLine.IFactory;
 
 public class CommandFactory implements IFactory {
-  private final PathHelper pathHelper = new PathHelper();
-  private final JavaService javaService = new JavaService(pathHelper);
+  private final JavaService javaService = new JavaService();
 
   @Override
   @SuppressWarnings("unchecked")
@@ -18,6 +17,9 @@ public class CommandFactory implements IFactory {
     }
     if (cls == GetMainClassCommand.class) {
       return (K) new GetMainClassCommand(javaService);
+    }
+    if (cls == RenameCommand.class) {
+      return (K) new RenameCommand(javaService);
     }
     return cls.getDeclaredConstructor().newInstance();
   }

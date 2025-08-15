@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.util.PathHelper;
+import io.github.syntaxpresso.core.service.java.JavaService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,14 +20,11 @@ import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("JavaService Tests")
 class JavaServiceTest {
-
   private JavaService javaService;
-  private PathHelper pathHelper;
 
   @BeforeEach
   void setUp() {
-    pathHelper = new PathHelper();
-    this.javaService = new JavaService(pathHelper);
+    this.javaService = new JavaService();
   }
 
   @Nested
@@ -110,7 +107,6 @@ class JavaServiceTest {
   @Nested
   @DisplayName("isMainClass()")
   class IsMainClassTests {
-
     @Test
     @DisplayName("should return true for a class with a main method")
     void isMainClass_whenClassIsMain_shouldReturnTrue() {
@@ -151,19 +147,18 @@ class JavaServiceTest {
   @Nested
   @DisplayName("getPackageName()")
   class GetPackageNameTests {
-
     @Test
     @DisplayName("should return package name when declared")
     void getPackageName_whenPackageIsDeclared_shouldReturnPackageName() {
       String sourceCode =
           """
           package com.example.myproject;
-
           class MyClass {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      Optional<String> packageName = javaService.getPackageName(file);
+      Optional<String> packageName =
+          javaService.getProgramService().getPackageDeclarationService().getPackageName(file);
       assertTrue(packageName.isPresent());
       assertEquals("com.example.myproject", packageName.get());
     }
@@ -177,7 +172,8 @@ class JavaServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      Optional<String> packageName = javaService.getPackageName(file);
+      Optional<String> packageName =
+          javaService.getProgramService().getPackageDeclarationService().getPackageName(file);
       assertFalse(packageName.isPresent());
     }
   }

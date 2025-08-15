@@ -12,10 +12,8 @@ import org.treesitter.TreeSitterJava;
 @Getter
 public enum SupportedLanguage {
   JAVA(new TreeSitterJava(), ".java");
-
   private final TSLanguage language;
   private final String fileExtension;
-
   private static final Map<TSLanguage, SupportedLanguage> languageMap =
       Stream.of(values())
           .collect(Collectors.toMap(SupportedLanguage::getLanguage, Function.identity()));

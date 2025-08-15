@@ -17,7 +17,6 @@ import lombok.SneakyThrows;
 public class DataTransferObject<T> {
   private static final ObjectMapper objectMapper =
       new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-
   private Boolean succeed;
   private T data;
   private String errorReason;

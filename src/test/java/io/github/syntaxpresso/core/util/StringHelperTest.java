@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 @DisplayName("StringHelper Tests")
 class StringHelperTest {
-
   @Nested
   @DisplayName("isPascalCase()")
   class IsPascalCaseTests {

@@ -1,15 +1,28 @@
 package io.github.syntaxpresso.core.common;
 
+import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import org.treesitter.TSNode;
 import org.treesitter.TSParser;
 import org.treesitter.TSPoint;
+import org.treesitter.TSQuery;
+import org.treesitter.TSQueryCapture;
+import org.treesitter.TSQueryCursor;
+import org.treesitter.TSQueryMatch;
 import org.treesitter.TSTree;
 
 @Getter
@@ -18,6 +31,8 @@ public class TSFile {
   private File file;
   private TSTree tree;
   private String sourceCode;
+  private Path newPath;
+  private boolean modified = false;
 
   /**
    * Creates a TSFile instance from a given programming language and source code string.
@@ -44,7 +59,7 @@ public class TSFile {
       String content = Files.readString(path, StandardCharsets.UTF_8);
       this.setData(content);
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new RuntimeException(e);
     }
   }
 
@@ -68,21 +83,24 @@ public class TSFile {
    */
   public void updateSourceCode(String newSourceCode) {
     this.setData(newSourceCode);
+    this.modified = true;
   }
 
   /**
    * Updates a specific range of the source code and re-parses the content.
    *
-   * @param start The starting index of the text to replace.
-   * @param end The ending index of the text to replace.
+   * @param startByte The starting index of the text to replace.
+   * @param endByte The ending index of the text to replace.
    * @param newText The new text to insert.
    */
-  public void updateSourceCode(int start, int end, String newText) {
+  public void updateSourceCode(int startByte, int endByte, String newText) {
     if (this.sourceCode == null) {
       throw new IllegalStateException("Source code has not been initialized.");
     }
-    String newContent = new StringBuilder(this.sourceCode).replace(start, end, newText).toString();
+    String newContent =
+        new StringBuilder(this.sourceCode).replace(startByte, endByte, newText).toString();
     this.setData(newContent);
+    this.modified = true;
   }
 
   /**
@@ -111,7 +129,13 @@ public class TSFile {
     if (this.file == null) {
       throw new IllegalStateException("File path is not set. Use saveAs(path) instead.");
     }
+    if (this.newPath != null) {
+      Files.move(this.file.toPath(), this.newPath, StandardCopyOption.REPLACE_EXISTING);
+      this.file = this.newPath.toFile();
+      this.newPath = null;
+    }
     Files.writeString(this.file.toPath(), this.sourceCode, StandardCharsets.UTF_8);
+    this.modified = false;
   }
 
   /**
@@ -121,7 +145,11 @@ public class TSFile {
    * @throws IOException If the file cannot be written.
    */
   public void saveAs(Path path) throws IOException {
-    this.file = Files.writeString(path, this.sourceCode, StandardCharsets.UTF_8).toFile();
+    if (this.file != null && this.newPath == null) {
+      this.newPath = path;
+    } else {
+      this.file = Files.writeString(path, this.sourceCode, StandardCharsets.UTF_8).toFile();
+    }
   }
 
   /**
@@ -131,7 +159,7 @@ public class TSFile {
    * @throws IOException If an I/O error occurs.
    * @throws IllegalStateException If the file has not been saved to disk yet.
    */
-  public void move(File destination) throws IOException {
+  public void move(File destination) {
     if (this.file == null) {
       throw new IllegalStateException("Cannot move a file that has not been saved yet.");
     }
@@ -139,7 +167,8 @@ public class TSFile {
     if (Files.isDirectory(targetPath)) {
       targetPath = targetPath.resolve(this.file.getName());
     }
-    this.file = targetPath.toFile();
+    this.newPath = targetPath;
+    this.modified = true;
   }
 
   /**
@@ -167,7 +196,8 @@ public class TSFile {
                       .get()
                       .getFileExtension());
     }
-    this.file = targetPath.toFile();
+    this.newPath = targetPath;
+    this.modified = true;
   }
 
   /**
@@ -217,6 +247,16 @@ public class TSFile {
   }
 
   /**
+   * Returns a substring from the source code that corresponds to the given node.
+   *
+   * @param node The node from which to extract text.
+   * @return The text of the node.
+   */
+  public String getTextFromNode(TSNode node) {
+    return this.getTextFromRange(node.getStartByte(), node.getEndByte());
+  }
+
+  /**
    * Returns the file associated with this object.
    *
    * @return The file.
@@ -255,7 +295,134 @@ public class TSFile {
     return this.sourceCode;
   }
 
+  /**
+   * Returns the TSParser instance associated with this file.
+   *
+   * @return The TSParser instance.
+   */
   public TSParser getParser() {
     return this.parser;
+  }
+
+  /**
+   * Finds the first parent node of a given node that has a specific type.
+   *
+   * @param startNode The node from which to start searching upwards.
+   * @param parentType The type of the parent node to find (e.g., "method_declaration").
+   * @return An Optional containing the found parent TSNode, or empty if not found.
+   */
+  public Optional<TSNode> findParentNodeByType(TSNode startNode, String parentType) {
+    if (startNode == null || Strings.isNullOrEmpty(parentType)) {
+      return Optional.empty();
+    }
+    TSNode currentNode = startNode;
+    while (currentNode != null) {
+      if (parentType.equals(currentNode.getType())) {
+        return Optional.of(currentNode);
+      }
+      currentNode = currentNode.getParent();
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Finds the first child node of a given node that has a specific type.
+   *
+   * @param startNode The node from which to start searching downwards.
+   * @param childType The type of the child node to find (e.g., "method_declaration").
+   * @return An Optional containing the found child TSNode, or empty if not found.
+   */
+  public Optional<TSNode> findChildNodeByType(TSNode startNode, String childType) {
+    if (Strings.isNullOrEmpty(childType) || startNode == null) {
+      return Optional.empty();
+    }
+    TSNode currentNode = startNode;
+    while (currentNode != null) {
+      currentNode = currentNode.getNamedChild(0);
+      if (currentNode.getType().equals(childType)) {
+        return Optional.of(currentNode);
+      }
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Finds the first child node of a given node that has a specific type.
+   *
+   * @param childType The type of the child node to find (e.g., "method_declaration").
+   * @return An Optional containing the found child TSNode, or empty if not found.
+   */
+  public Optional<TSNode> findChildNodeByType(String childType) {
+    TSNode startNode = this.getTree().getRootNode();
+    return this.findChildNodeByType(startNode, childType);
+  }
+
+  /**
+   * Checks if a node is within the bounds of another node.
+   *
+   * @param node The node to check.
+   * @param container The container node.
+   * @return True if node is within container's bounds.
+   */
+  public boolean isNodeWithin(TSNode node, TSNode container) {
+    if (node == null || node.isNull() || container == null || container.isNull()) {
+      return false;
+    }
+    return node.getStartByte() >= container.getStartByte()
+        && node.getEndByte() <= container.getEndByte();
+  }
+
+  /**
+   * Executes a Tree-sitter query on a specific node and returns the captured nodes. Duplicates are
+   * automatically removed while preserving insertion order.
+   *
+   * @param node The node to run the query on.
+   * @param query The Tree-sitter query string.
+   * @return A list of unique {@link TSNode} objects captured by the query.
+   */
+  public List<TSNode> query(TSNode node, String query) {
+    Set<TSNode> foundNodes = new LinkedHashSet<>();
+    TSQuery queryObj = new TSQuery(this.getParser().getLanguage(), query);
+    TSQueryCursor cursor = new TSQueryCursor();
+    cursor.exec(queryObj, node);
+    TSQueryMatch match = new TSQueryMatch();
+    while (cursor.nextMatch(match)) {
+      for (TSQueryCapture capture : match.getCaptures()) {
+        foundNodes.add(capture.getNode());
+      }
+    }
+    return new ArrayList<>(foundNodes)
+        .stream()
+            .sorted(Comparator.comparingInt(TSNode::getStartByte))
+            .collect(Collectors.toList());
+  }
+
+  /**
+   * Executes a Tree-sitter query on the entire syntax tree and returns the captured nodes.
+   * Duplicates are automatically removed while preserving insertion order.
+   *
+   * @param query The Tree-sitter query string.
+   * @return A list of unique {@link TSNode} objects captured by the query.
+   */
+  public List<TSNode> query(String query) {
+    return this.query(this.getTree().getRootNode(), query);
+  }
+
+  /**
+   * Checks if the file has been modified since the last save.
+   *
+   * @return True if the file has unsaved changes.
+   */
+  public boolean isModified() {
+    return this.modified;
+  }
+
+  /**
+   * Checks if the file has unsaved changes.
+   *
+   * @return True if the file has unsaved changes.
+   */
+  public boolean hasUnsavedChanges() {
+    return this.modified;
   }
 }
