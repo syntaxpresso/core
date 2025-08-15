@@ -1,13 +1,16 @@
 package io.github.syntaxpresso.core.service.java.extra;
 
 import io.github.syntaxpresso.core.common.TSFile;
-import io.github.syntaxpresso.core.util.StringHelper;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
+@RequiredArgsConstructor
 public class LocalVariableDeclarationService {
+
+  private final VariableNamingService variableNamingService;
 
   private static final String LOCAL_VARIABLE_DECLARATION_QUERY =
       "(local_variable_declaration) @local_variable";
@@ -163,26 +166,6 @@ public class LocalVariableDeclarationService {
   }
 
   /**
-   * Checks if a type represents a collection (List, Set, ArrayList, etc.).
-   *
-   * @param typeText The type text to check.
-   * @return true if the type is a collection type, false otherwise.
-   */
-  private boolean isCollectionType(String typeText) {
-    if (typeText == null) {
-      return false;
-    }
-    return typeText.startsWith("List<")
-        || typeText.startsWith("Set<")
-        || typeText.startsWith("ArrayList<")
-        || typeText.startsWith("LinkedList<")
-        || typeText.startsWith("HashSet<")
-        || typeText.startsWith("LinkedHashSet<")
-        || typeText.startsWith("TreeSet<")
-        || typeText.startsWith("Collection<");
-  }
-
-  /**
    * Renames a local variable declaration, including its type, name, and instantiation.
    *
    * @param file The file containing the source code.
@@ -208,18 +191,14 @@ public class LocalVariableDeclarationService {
         file.updateSourceCode(localVariableInstanceNode.get(), newName);
       }
       if (localVariableNameNode.isPresent()) {
-        boolean isCollectionType = this.isCollectionType(file.getTextFromNode(localVariableNode));
+        boolean isCollectionType =
+            variableNamingService.isCollectionType(file.getTextFromNode(localVariableNode));
         String currentLocalVariableName = file.getTextFromNode(localVariableNameNode.get());
-        if (isCollectionType) {
-          String pluralizedCurrentName = StringHelper.pluralizeCamelCase(currentName);
-          if (currentLocalVariableName.equals(StringHelper.pascalToCamel(pluralizedCurrentName))) {
-            String pluralizedNewName = StringHelper.pluralizeCamelCase(newName);
-            file.updateSourceCode(
-                localVariableNameNode.get(), StringHelper.pascalToCamel(pluralizedNewName));
-          }
-        }
-        if (currentLocalVariableName.equals(StringHelper.pascalToCamel(currentName))) {
-          file.updateSourceCode(localVariableNameNode.get(), StringHelper.pascalToCamel(newName));
+        String newLocalVariableName =
+            variableNamingService.generateNewVariableName(
+                currentLocalVariableName, currentName, newName, isCollectionType);
+        if (!currentLocalVariableName.equals(newLocalVariableName)) {
+          file.updateSourceCode(localVariableNameNode.get(), newLocalVariableName);
         }
       }
       file.updateSourceCode(localVariableTypeNode.get(), newName);

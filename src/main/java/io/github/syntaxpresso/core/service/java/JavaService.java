@@ -6,11 +6,12 @@ import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.extra.ScopeType;
 import io.github.syntaxpresso.core.service.java.extra.FieldDeclarationService;
-import io.github.syntaxpresso.core.service.java.extra.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.FormalParameterService;
+import io.github.syntaxpresso.core.service.java.extra.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.MethodDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.PackageDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.VariableNamingService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.io.IOException;
@@ -36,11 +37,15 @@ import org.treesitter.TSQueryMatch;
 @RequiredArgsConstructor
 public class JavaService {
   private final PathHelper pathHelper;
+  private final VariableNamingService variableNamingService = new VariableNamingService();
   private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
   private final ImportDeclarationService importDeclarationService = new ImportDeclarationService();
-  private final LocalVariableDeclarationService localVariableDeclarationService = new LocalVariableDeclarationService();
-  private final FormalParameterService formalParameterService = new FormalParameterService(localVariableDeclarationService);
-  private final MethodDeclarationService methodDeclarationService = new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
+  private final LocalVariableDeclarationService localVariableDeclarationService =
+      new LocalVariableDeclarationService(variableNamingService);
+  private final FormalParameterService formalParameterService =
+      new FormalParameterService(localVariableDeclarationService, variableNamingService);
+  private final MethodDeclarationService methodDeclarationService =
+      new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
   private final PackageDeclarationService packageDeclarationService =
       new PackageDeclarationService();
 
