@@ -20,10 +20,9 @@
 - **Services**: Business logic in `*.service` packages, use constructor injection
 - **Testing**: JUnit 5 with `@DisplayName`, `@Nested` classes, Mockito for mocking
 - **CLI**: Uses Picocli framework with `@CommandLine.Command` annotations
-- **Formatting**: Prevent empty lines inside methods and functions
+- **Formatting**: Prevent empty lines inside methods and functions; when invoking class fields, use "this"
 
 ## Key Dependencies
 
 - Tree-sitter for parsing, Picocli for CLI, Jackson for JSON, Guava utilities
 - Test: JUnit 5, Mockito, use `@TempDir` for file system tests
-
