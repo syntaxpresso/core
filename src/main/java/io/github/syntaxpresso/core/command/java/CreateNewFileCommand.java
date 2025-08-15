@@ -52,7 +52,7 @@ public class CreateNewFileCommand
   public DataTransferObject<CreateNewJavaFileResponse> call() throws IOException {
     boolean cwdExists = java.nio.file.Files.exists(this.cwd);
     if (!cwdExists) {
-      DataTransferObject.error("Current working directory does not exist.");
+      throw new IllegalArgumentException("Current working directory does not exist.");
     }
     boolean isPackageNameValid = Strings.isNullOrEmpty(this.packageName);
     if (isPackageNameValid) {

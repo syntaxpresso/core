@@ -14,7 +14,7 @@ import io.github.syntaxpresso.core.command.java.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
-import io.github.syntaxpresso.core.service.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
