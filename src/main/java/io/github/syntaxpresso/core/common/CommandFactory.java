@@ -4,12 +4,10 @@ import io.github.syntaxpresso.core.command.java.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.java.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.java.RenameCommand;
 import io.github.syntaxpresso.core.service.java.JavaService;
-import io.github.syntaxpresso.core.util.PathHelper;
 import picocli.CommandLine.IFactory;
 
 public class CommandFactory implements IFactory {
-  private final PathHelper pathHelper = new PathHelper();
-  private final JavaService javaService = new JavaService(pathHelper);
+  private final JavaService javaService = new JavaService();
 
   @Override
   @SuppressWarnings("unchecked")
