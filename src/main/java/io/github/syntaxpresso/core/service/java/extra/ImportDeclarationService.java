@@ -1,15 +1,10 @@
 package io.github.syntaxpresso.core.service.java.extra;
 
 import io.github.syntaxpresso.core.common.TSFile;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
 import org.treesitter.TSNode;
-import org.treesitter.TSQuery;
-import org.treesitter.TSQueryCapture;
-import org.treesitter.TSQueryCursor;
-import org.treesitter.TSQueryMatch;
 
 @Getter
 public class ImportDeclarationService {
@@ -43,18 +38,7 @@ public class ImportDeclarationService {
    * @return A list of all import declaration nodes.
    */
   public List<TSNode> findAllImportDeclarations(TSFile file) {
-    List<TSNode> importNodes = new ArrayList<>();
-    String importQuery = "(import_declaration) @import";
-    TSQuery query = new TSQuery(file.getParser().getLanguage(), importQuery);
-    TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(query, file.getTree().getRootNode());
-    TSQueryMatch match = new TSQueryMatch();
-    while (cursor.nextMatch(match)) {
-      for (TSQueryCapture capture : match.getCaptures()) {
-        importNodes.add(capture.getNode());
-      }
-    }
-    return importNodes;
+    return file.query("(import_declaration) @import");
   }
 
   /**
@@ -94,7 +78,6 @@ public class ImportDeclarationService {
     List<TSNode> allImportDeclarationNodes = findAllImportDeclarations(file);
     for (TSNode importDeclarationNode : allImportDeclarationNodes) {
       String importText = file.getTextFromNode(importDeclarationNode);
-
       if (importStatement.endsWith(".*")) {
         // For wildcard imports, check if the import text contains the wildcard
         if (importText.contains(importStatement)) {
@@ -128,20 +111,16 @@ public class ImportDeclarationService {
     if (importExists(file, fullImport) || importExists(file, wildcardImport)) {
       return;
     }
-
     List<TSNode> existingImports = findAllImportDeclarations(file);
     Optional<TSNode> packageNode = this.packageDeclarationService.getPackageDeclarationNode(file);
-
     if (existingImports.isEmpty() && packageNode.isPresent()) {
       // Package exists but no imports - insert after package with proper spacing
       TSNode packageDeclaration = packageNode.get();
       int packageEnd = packageDeclaration.getEndByte();
       String sourceCode = file.getSourceCode();
-
       // Find position right after the first newline (start of blank line or content)
       int firstNewline = sourceCode.indexOf('\n', packageEnd);
       if (firstNewline == -1) firstNewline = sourceCode.length();
-
       // Insert import preserving the blank line structure
       String importStatement = "\nimport " + fullImport + ";\n";
       file.updateSourceCode(firstNewline + 1, firstNewline + 1, importStatement);
@@ -185,20 +164,16 @@ public class ImportDeclarationService {
     if (importExists(file, wildcardImport)) {
       return;
     }
-
     List<TSNode> existingImports = findAllImportDeclarations(file);
     Optional<TSNode> packageNode = this.packageDeclarationService.getPackageDeclarationNode(file);
-
     if (existingImports.isEmpty() && packageNode.isPresent()) {
       // Package exists but no imports - insert after package with proper spacing
       TSNode packageDeclaration = packageNode.get();
       int packageEnd = packageDeclaration.getEndByte();
       String sourceCode = file.getSourceCode();
-
       // Find position right after the first newline (start of blank line or content)
       int firstNewline = sourceCode.indexOf('\n', packageEnd);
       if (firstNewline == -1) firstNewline = sourceCode.length();
-
       // Insert import preserving the blank line structure
       String importStatement = "\nimport " + wildcardImport + ";\n";
       file.updateSourceCode(firstNewline + 1, firstNewline + 1, importStatement);
