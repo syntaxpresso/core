@@ -8,7 +8,6 @@ import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
-import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,12 +22,10 @@ import org.junit.jupiter.api.io.TempDir;
 class JavaServiceTest {
 
   private JavaService javaService;
-  private PathHelper pathHelper;
 
   @BeforeEach
   void setUp() {
-    pathHelper = new PathHelper();
-    this.javaService = new JavaService(pathHelper);
+    this.javaService = new JavaService();
   }
 
   @Nested
