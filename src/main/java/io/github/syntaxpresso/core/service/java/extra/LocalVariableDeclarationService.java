@@ -192,10 +192,10 @@ public class LocalVariableDeclarationService {
       }
       if (localVariableNameNode.isPresent()) {
         boolean isCollectionType =
-            variableNamingService.isCollectionType(file.getTextFromNode(localVariableNode));
+            this.variableNamingService.isCollectionType(file.getTextFromNode(localVariableNode));
         String currentLocalVariableName = file.getTextFromNode(localVariableNameNode.get());
         String newLocalVariableName =
-            variableNamingService.generateNewVariableName(
+            this.variableNamingService.generateNewVariableName(
                 currentLocalVariableName, currentName, newName, isCollectionType);
         if (!currentLocalVariableName.equals(newLocalVariableName)) {
           file.updateSourceCode(localVariableNameNode.get(), newLocalVariableName);
@@ -215,7 +215,7 @@ public class LocalVariableDeclarationService {
   public void renameLocalVariablesInFile(TSFile file, String currentName, String newName) {
     List<TSNode> methodDeclarationNodes = file.query("(method_declaration) @method");
     for (TSNode methodDeclarationNode : methodDeclarationNodes) {
-      renameLocalVariables(file, methodDeclarationNode, currentName, newName);
+      this.renameLocalVariables(file, methodDeclarationNode, currentName, newName);
     }
   }
 }

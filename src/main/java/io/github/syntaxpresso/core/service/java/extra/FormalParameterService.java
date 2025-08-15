@@ -47,7 +47,7 @@ public class FormalParameterService {
     }
     TSNode typeNode = formalParameterNode.getChildByFieldName("type");
     String typeText = typeNode != null ? file.getTextFromNode(typeNode) : "";
-    boolean isCollectionType = variableNamingService.isCollectionType(typeText);
+    boolean isCollectionType = this.variableNamingService.isCollectionType(typeText);
     String currentParameterName = file.getTextFromNode(parameterNameNode.get());
     return Optional.of(
         new ParameterInfo(
@@ -165,10 +165,10 @@ public class FormalParameterService {
       }
     }
     // Exclude if it's a local variable declaration or usage
-    if (localVariableDeclarationService.isLocalVariableDeclaration(identifierNode)) {
+    if (this.localVariableDeclarationService.isLocalVariableDeclaration(identifierNode)) {
       return false;
     }
-    if (localVariableDeclarationService.isLocalVariableUsage(
+    if (this.localVariableDeclarationService.isLocalVariableUsage(
         identifierNode, methodDeclarationNode, paramName, file)) {
       return false;
     }
@@ -255,7 +255,7 @@ public class FormalParameterService {
       for (TSNode usage : paramUsages.reversed()) {
         String usageText = file.getTextFromNode(usage);
         String newUsageName =
-            variableNamingService.generateNewVariableName(
+            this.variableNamingService.generateNewVariableName(
                 usageText, currentName, newName, info.isCollectionType());
         if (!usageText.equals(newUsageName)) {
           file.updateSourceCode(usage, newUsageName);
@@ -265,7 +265,7 @@ public class FormalParameterService {
     // Second pass: rename declarations (in reverse order to preserve byte positions)
     for (ParameterInfo info : parameterInfos.reversed()) {
       String newParameterName =
-          variableNamingService.generateNewVariableName(
+          this.variableNamingService.generateNewVariableName(
               info.parameterName(), currentName, newName, info.isCollectionType());
       if (!info.parameterName().equals(newParameterName)) {
         file.updateSourceCode(info.nameNode(), newParameterName);

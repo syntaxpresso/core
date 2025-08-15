@@ -10,6 +10,8 @@ import org.treesitter.TSNode;
 @RequiredArgsConstructor
 @Getter
 public class MethodDeclarationService {
+  // TODO: Create ClassDeclarationService.
+  // TODO: Create methods to find methoddeclaration by name and to rename.
 
   private static final String METHOD_DECLARATION_QUERY = "(method_declaration) @method";
 
@@ -37,7 +39,7 @@ public class MethodDeclarationService {
    * @param newName The new name for the parameter type (PascalCase).
    */
   public void renameFormalParameters(TSFile file, String currentName, String newName) {
-    formalParameterService.renameFormalParametersInFile(file, currentName, newName);
+    this.formalParameterService.renameFormalParametersInFile(file, currentName, newName);
   }
 
   /**
@@ -48,6 +50,6 @@ public class MethodDeclarationService {
    * @param newName The new name for the variable type (PascalCase).
    */
   public void renameLocalVariables(TSFile file, String currentName, String newName) {
-    localVariableDeclarationService.renameLocalVariablesInFile(file, currentName, newName);
+    this.localVariableDeclarationService.renameLocalVariablesInFile(file, currentName, newName);
   }
 }

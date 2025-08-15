@@ -167,7 +167,7 @@ public class JavaService {
   public List<TSFile> getAllJavaFilesFromCwd(Path cwd) {
     List<TSFile> allFiles = new ArrayList<>();
     try {
-      allFiles = this.getPathHelper().findFilesByExtention(cwd, SupportedLanguage.JAVA);
+      allFiles = this.pathHelper.findFilesByExtention(cwd, SupportedLanguage.JAVA);
     } catch (IOException e) {
       e.printStackTrace();
     }
