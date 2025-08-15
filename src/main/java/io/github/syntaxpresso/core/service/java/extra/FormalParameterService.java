@@ -5,43 +5,18 @@ import io.github.syntaxpresso.core.util.StringHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
-import org.treesitter.TSQuery;
-import org.treesitter.TSQueryCursor;
-import org.treesitter.TSQueryMatch;
 
 @RequiredArgsConstructor
 public class FormalParameterService {
 
   private final LocalVariableDeclarationService localVariableDeclarationService;
 
-  private static final String FORMAL_PARAMETERS_QUERY = "(formal_parameters) @params";
-
-  @Data
-  public static class ParameterRenameContext {
-    private final TSNode formalParameterNode;
-    private final TSNode methodDeclarationNode;
-    private final TSNode paramNameNode;
-    private final TSNode paramTypeNode;
-    private final String currentParamName;
-    private final String currentParamType;
-    private final String newTypeName;
-    private final String newVariableName;
-    private final boolean shouldRenameVariable;
-  }
-
-  @Data
-  public static class RenameResult {
-    private final boolean success;
-    private final List<TSNode> renamedNodes;
-  }
+  private static final String FORMAL_PARAMETER_QUERY = "(formal_parameter) @param";
 
   /**
    * Finds all formal parameters of a method.
@@ -50,43 +25,55 @@ public class FormalParameterService {
    * @param tsFile The TSFile containing the source code.
    * @return A list of all formal parameter nodes.
    */
-  public List<TSNode> findAllFormalParameters(TSNode methodNode, TSFile tsFile) {
+  public List<TSNode> findAllFormalParameters(TSFile file, TSNode methodNode, String typeName) {
     if (methodNode == null || !"method_declaration".equals(methodNode.getType())) {
       return Collections.emptyList();
     }
-    TSQuery query = new TSQuery(tsFile.getParser().getLanguage(), FORMAL_PARAMETERS_QUERY);
-    TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(query, methodNode);
-    TSQueryMatch match = new TSQueryMatch();
-    if (cursor.nextMatch(match)) {
-      return IntStream.range(0, match.getCaptures()[0].getNode().getNamedChildCount())
-          .mapToObj(i -> match.getCaptures()[0].getNode().getNamedChild(i))
-          .filter(node -> "formal_parameter".equals(node.getType()))
-          .collect(Collectors.toList());
+    List<TSNode> foundParams = new ArrayList<>();
+    List<TSNode> allParams = file.query(methodNode, FORMAL_PARAMETER_QUERY);
+    for (TSNode param : allParams) {
+      List<TSNode> typeNodes = file.query(param, "(type_identifier) @type");
+      for (TSNode typeNode : typeNodes) {
+        String typeNodeName = file.getTextFromNode(typeNode);
+        if (typeName.equals(typeNodeName)) {
+          foundParams.add(param);
+        }
+      }
     }
-    return Collections.emptyList();
+    return foundParams;
   }
 
   /**
-   * Gets the type identifier node of a formal parameter.
+   * Finds the type node within a formal parameter that matches a given name.
    *
-   * @param formalParameterNode The TSNode of the formal parameter.
-   * @return An Optional containing the type identifier node, or empty if not found.
+   * @param formalParameterNode The TSNode for the formal_parameter.
+   * @param file The TSFile containing the source code.
+   * @param typeName The name of the type to find.
+   * @return An Optional containing the found TSNode, or empty.
    */
-  public Optional<TSNode> getFormalParamTypeIdentifierNode(TSNode formalParameterNode) {
+  public Optional<TSNode> getParameterTypeNode(
+      TSNode formalParameterNode, TSFile file, String typeName) {
     if (formalParameterNode == null || !"formal_parameter".equals(formalParameterNode.getType())) {
       return Optional.empty();
     }
-    return Optional.ofNullable(formalParameterNode.getChildByFieldName("type"));
+    List<TSNode> typeNodes = file.query(formalParameterNode, "(type_identifier) @type");
+    for (TSNode typeNode : typeNodes) {
+      String typeNodeName = file.getTextFromNode(typeNode);
+      if (typeName.equals(typeNodeName)) {
+        return Optional.of(typeNode);
+      }
+    }
+    return Optional.empty();
   }
 
   /**
-   * Gets the name identifier node of a formal parameter.
+   * Extracts the parameter name from a formal_parameter node.
    *
-   * @param formalParameterNode The TSNode of the formal parameter.
-   * @return An Optional containing the name identifier node, or empty if not found.
+   * @param formalParameterNode The TSNode representing the formal_parameter.
+   * @param file The TSFile containing the source code.
+   * @return An Optional containing the parameter name node, or empty if not found.
    */
-  public Optional<TSNode> getFormalParamNameIdentifierNode(TSNode formalParameterNode) {
+  public Optional<TSNode> getParameterNameNode(TSNode formalParameterNode, TSFile file) {
     if (formalParameterNode == null || !"formal_parameter".equals(formalParameterNode.getType())) {
       return Optional.empty();
     }
@@ -94,228 +81,187 @@ public class FormalParameterService {
   }
 
   /**
-   * Validates and creates a context for parameter renaming.
+   * Checks if an identifier is part of a formal parameter declaration.
+   *
+   * @param identifierNode The identifier node to check.
+   * @return True if this identifier is declaring a formal parameter.
    */
-  private Optional<ParameterRenameContext> createRenameContext(
-      TSFile file, TSNode formalParameterNode, String currentName, String newName, boolean force) {
-    // Validation
-    if (formalParameterNode == null || formalParameterNode.isNull() 
-        || !"formal_parameter".equals(formalParameterNode.getType())) {
-      return Optional.empty();
-    }
-
-    Optional<TSNode> methodDeclarationNode = file.findParentNodeByType(formalParameterNode, "method_declaration");
-    if (methodDeclarationNode.isEmpty()) {
-      return Optional.empty();
-    }
-
-    Optional<TSNode> paramNameNode = getFormalParamNameIdentifierNode(formalParameterNode);
-    Optional<TSNode> paramTypeNode = getFormalParamTypeIdentifierNode(formalParameterNode);
-    if (paramNameNode.isEmpty() || paramTypeNode.isEmpty()) {
-      return Optional.empty();
-    }
-
-    String currentParamName = file.getTextFromNode(paramNameNode.get());
-    String currentParamType = file.getTextFromNode(paramTypeNode.get());
-    
-    // Check if the parameter type matches what we're trying to rename
-    if (!currentParamType.equals(currentName)) {
-      return Optional.empty();
-    }
-
-    String expectedVariableName = StringHelper.pascalToCamel(currentName);
-    boolean shouldRenameVariable = currentParamName.equals(expectedVariableName) || force;
-
-    return Optional.of(new ParameterRenameContext(
-        formalParameterNode,
-        methodDeclarationNode.get(),
-        paramNameNode.get(),
-        paramTypeNode.get(),
-        currentParamName,
-        currentParamType,
-        newName,
-        StringHelper.pascalToCamel(newName),
-        shouldRenameVariable
-    ));
-  }
-
-  /**
-   * Checks if an identifier node represents a parameter usage (not a local variable or field).
-   */
-  private boolean isParameterUsage(
-      TSNode identifierNode, TSNode methodDeclarationNode, String paramName, TSFile file) {
+  public boolean isFormalParameterDeclaration(TSNode identifierNode) {
     if (identifierNode == null || identifierNode.isNull()) {
       return false;
     }
     TSNode parent = identifierNode.getParent();
-    // Exclude field access with 'this'
-    if (parent != null && !parent.isNull() && "field_access".equals(parent.getType())) {
+    return parent != null && !parent.isNull() && "formal_parameter".equals(parent.getType());
+  }
+
+  /**
+   * Checks if an identifier represents usage of a formal parameter.
+   *
+   * @param identifierNode The identifier node to check.
+   * @param methodDeclarationNode The method declaration node.
+   * @param paramName The parameter name to check.
+   * @param file The TSFile for text extraction.
+   * @return True if this is a formal parameter usage.
+   */
+  public boolean isFormalParameterUsage(
+      TSFile file,
+      TSNode methodDeclarationNode,
+      TSNode identifierNode,
+      String paramName,
+      String currentName) {
+    if (identifierNode == null
+        || identifierNode.isNull()
+        || methodDeclarationNode == null
+        || methodDeclarationNode.isNull()) {
+      return false;
+    }
+
+    // Check if it's a field access (this.paramName)
+    TSNode parent = identifierNode.getParent();
+    if (parent != null && "field_access".equals(parent.getType())) {
       TSNode objectNode = parent.getChildByFieldName("object");
-      if (objectNode != null
-          && !objectNode.isNull()
-          && "this".equals(file.getTextFromNode(objectNode))) {
-        return false; // this.paramName is a field access, not parameter
+      if (objectNode != null && "this".equals(file.getTextFromNode(objectNode))) {
+        return false; // this.paramName is a field access, not parameter usage
       }
     }
-    // Exclude local variable declarations
+
+    // Exclude if it's a local variable declaration or usage
     if (localVariableDeclarationService.isLocalVariableDeclaration(identifierNode)) {
       return false;
     }
-    // Exclude if it's a local variable usage
-    if (localVariableDeclarationService.isLocalVariableUsage(identifierNode, methodDeclarationNode, paramName, file)) {
+    if (localVariableDeclarationService.isLocalVariableUsage(
+        identifierNode, methodDeclarationNode, paramName, file)) {
       return false;
     }
-    return true; // It's a parameter usage
-  }
 
-  /**
-   * Checks if a node is within the bounds of another node.
-   *
-   * @param node The node to check.
-   * @param container The container node.
-   * @return True if node is within container's bounds.
-   */
-  private boolean isNodeWithin(TSNode node, TSNode container) {
-    if (node == null || node.isNull() || container == null || container.isNull()) {
-      return false;
-    }
-    return node.getStartByte() >= container.getStartByte()
-        && node.getEndByte() <= container.getEndByte();
-  }
-
-  /**
-   * Collects all nodes that need to be renamed for a parameter.
-   */
-  private List<TSNode> collectNodesToRename(ParameterRenameContext context, TSFile file) {
-    List<TSNode> nodesToRename = new ArrayList<>();
-    
-    // Always rename the parameter type
-    nodesToRename.add(context.getParamTypeNode());
-    
-    // Only rename parameter name and usages if appropriate
-    if (context.isShouldRenameVariable()) {
-      nodesToRename.add(context.getParamNameNode());
-      
-      // Find and add parameter usages in the method body
-      List<TSNode> usages = findParameterUsagesInMethodBody(
-          context.getMethodDeclarationNode(), 
-          context.getCurrentParamName(), 
-          file
-      );
-      nodesToRename.addAll(usages);
-    }
-    
-    // Remove duplicates while preserving order and sort by byte position (reverse)
-    return nodesToRename.stream()
-        .collect(Collectors.toCollection(LinkedHashSet::new))
-        .stream()
-        .sorted(Comparator.comparingInt(TSNode::getStartByte).reversed())
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * Finds all parameter usages within a method body.
-   */
-  private List<TSNode> findParameterUsagesInMethodBody(
-      TSNode methodDeclarationNode, String paramName, TSFile file) {
-    if (methodDeclarationNode == null || methodDeclarationNode.isNull()) {
-      return Collections.emptyList();
-    }
-    // Get the method body (block node)
-    TSNode bodyNode = methodDeclarationNode.getChildByFieldName("body");
-    if (bodyNode == null || bodyNode.isNull() || !"block".equals(bodyNode.getType())) {
-      return Collections.emptyList();
-    }
-    List<TSNode> identifierNodes = file.query(bodyNode, "(identifier) @id");
-    return identifierNodes.stream()
-        .filter(idNode -> idNode != null && !idNode.isNull())
-        .filter(idNode -> isNodeWithin(idNode, bodyNode))
-        .filter(idNode -> paramName.equals(file.getTextFromNode(idNode)))
-        .filter(idNode -> isParameterUsage(idNode, methodDeclarationNode, paramName, file))
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * Performs the actual renaming of nodes.
-   */
-  private RenameResult performRename(ParameterRenameContext context, List<TSNode> nodesToRename, TSFile file) {
-    List<TSNode> renamedNodes = new ArrayList<>();
-    
-    for (TSNode node : nodesToRename) {
-      if (node.equals(context.getParamTypeNode())) {
-        // Type node gets PascalCase
-        file.updateSourceCode(node, context.getNewTypeName());
-      } else {
-        // Variable name and usages get camelCase
-        file.updateSourceCode(node, context.getNewVariableName());
+    // Check if it matches any formal parameter name
+    List<TSNode> formalParams = findAllFormalParameters(file, methodDeclarationNode, currentName);
+    for (TSNode param : formalParams) {
+      Optional<TSNode> nameNode = getParameterNameNode(param, file);
+      if (nameNode.isPresent()
+          && paramName.equals(file.getTextFromNode(nameNode.get()))
+          && identifierNode.getStartByte() >= param.getEndByte()) {
+        return true; // It's after the parameter declaration, so it's a usage
       }
-      renamedNodes.add(node);
     }
-    
-    return new RenameResult(!renamedNodes.isEmpty(), renamedNodes);
+
+    return false;
   }
 
   /**
-   * Renames a method parameter and all its usages within the method body. This method ONLY renames:
-   * 1. The parameter type in the method signature 
-   * 2. The parameter name in the method signature (if it matches naming convention or force is true) 
-   * 3. Parameter usages within the method body 
-   * It does NOT rename field declarations or field accesses.
+   * Finds all formal parameter usages by currentName within a method body.
+   *
+   * @param file The TSFile containing the source code.
+   * @param methodDeclarationNode The TSNode of the method declaration.
+   * @param currentName The current name of the parameter type to find usages for.
+   * @return A list of TSNode identifiers representing formal parameter usages.
+   */
+  public List<TSNode> findAllFormalParameterUsages(
+      TSFile file, TSNode methodDeclarationNode, String currentName) {
+    if (methodDeclarationNode == null
+        || !"method_declaration".equals(methodDeclarationNode.getType())) {
+      return Collections.emptyList();
+    }
+    List<TSNode> parameterUsages = new ArrayList<>();
+    // Get all formal parameters with the specified type
+    List<TSNode> formalParameters =
+        findAllFormalParameters(file, methodDeclarationNode, currentName);
+    // For each formal parameter, find its usages in the method body
+    for (TSNode formalParameter : formalParameters) {
+      Optional<TSNode> parameterNameNode = getParameterNameNode(formalParameter, file);
+      if (parameterNameNode.isEmpty()) {
+        continue;
+      }
+      String parameterName = file.getTextFromNode(parameterNameNode.get());
+
+      // Find usages in method body
+      TSNode bodyNode = methodDeclarationNode.getChildByFieldName("body");
+      if (bodyNode != null && "block".equals(bodyNode.getType())) {
+        List<TSNode> identifiers = file.query(bodyNode, "(identifier) @id");
+        for (TSNode identifier : identifiers) {
+          if (parameterName.equals(file.getTextFromNode(identifier))
+              && isFormalParameterUsage(
+                  file, methodDeclarationNode, identifier, parameterName, currentName)) {
+            parameterUsages.add(identifier);
+          }
+        }
+      }
+    }
+    return parameterUsages.stream()
+        .sorted(Comparator.comparingInt(TSNode::getStartByte))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Checks if a type represents a collection (List, Set, ArrayList, etc.).
+   *
+   * @param typeText The type text to check.
+   * @return true if the type is a collection type, false otherwise.
+   */
+  private boolean isCollectionType(String typeText) {
+    if (typeText == null) {
+      return false;
+    }
+    return typeText.startsWith("List<")
+        || typeText.startsWith("Set<")
+        || typeText.startsWith("ArrayList<")
+        || typeText.startsWith("LinkedList<")
+        || typeText.startsWith("HashSet<")
+        || typeText.startsWith("LinkedHashSet<")
+        || typeText.startsWith("TreeSet<")
+        || typeText.startsWith("Collection<");
+  }
+
+  /**
+   * Renames formal parameters, including their types, names, and usages.
    *
    * @param file The file containing the source code.
-   * @param formalParameterNode The TSNode of the formal parameter.
+   * @param methodDeclarationNode The TSNode of the method declaration.
    * @param currentName The current name of the parameter type (PascalCase).
    * @param newName The new name for the parameter type (PascalCase).
-   * @param force If true, renames variable even if it doesn't follow type naming convention.
-   * @return RenameResult containing success status and list of renamed nodes.
    */
-  public RenameResult renameMethodParamWithResult(
-      TSFile file, TSNode formalParameterNode, String currentName, String newName, boolean force) {
-    
-    Optional<ParameterRenameContext> contextOpt = createRenameContext(file, formalParameterNode, currentName, newName, force);
-    if (contextOpt.isEmpty()) {
-      return new RenameResult(false, Collections.emptyList());
+  public void renameFormalParameters(
+      TSFile file, TSNode methodDeclarationNode, String currentName, String newName) {
+    List<TSNode> formalParameterNodes =
+        this.findAllFormalParameters(file, methodDeclarationNode, currentName);
+    for (TSNode formalParameterNode : formalParameterNodes.reversed()) {
+      Optional<TSNode> parameterTypeNode =
+          this.getParameterTypeNode(formalParameterNode, file, currentName);
+      if (parameterTypeNode.isEmpty()) {
+        continue;
+      }
+      Optional<TSNode> parameterNameNode = this.getParameterNameNode(formalParameterNode, file);
+      if (parameterNameNode.isPresent()) {
+        boolean isCollectionType = this.isCollectionType(file.getTextFromNode(formalParameterNode));
+        String currentParameterName = file.getTextFromNode(parameterNameNode.get());
+        List<TSNode> paramUsages =
+            this.findAllFormalParameterUsages(file, methodDeclarationNode, currentName);
+        for (TSNode usage : paramUsages.reversed()) {
+          String usageText = file.getTextFromNode(usage);
+          if (isCollectionType) {
+            String pluralizedCurrentName = StringHelper.pluralizeCamelCase(currentName);
+            if (usageText.equals(StringHelper.pascalToCamel(pluralizedCurrentName))) {
+              String pluralizedNewName = StringHelper.pluralizeCamelCase(newName);
+              file.updateSourceCode(usage, StringHelper.pascalToCamel(pluralizedNewName));
+            }
+          }
+          if (usageText.equals(StringHelper.pascalToCamel(currentName))) {
+            file.updateSourceCode(usage, StringHelper.pascalToCamel(newName));
+          }
+        }
+        if (isCollectionType) {
+          String pluralizedCurrentName = StringHelper.pluralizeCamelCase(currentName);
+          if (currentParameterName.equals(StringHelper.pascalToCamel(pluralizedCurrentName))) {
+            String pluralizedNewName = StringHelper.pluralizeCamelCase(newName);
+            file.updateSourceCode(
+                parameterNameNode.get(), StringHelper.pascalToCamel(pluralizedNewName));
+          }
+        }
+        if (currentParameterName.equals(StringHelper.pascalToCamel(currentName))) {
+          file.updateSourceCode(parameterNameNode.get(), StringHelper.pascalToCamel(newName));
+        }
+      }
+      file.updateSourceCode(parameterTypeNode.get(), newName);
     }
-    
-    ParameterRenameContext context = contextOpt.get();
-    List<TSNode> nodesToRename = collectNodesToRename(context, file);
-    
-    return performRename(context, nodesToRename, file);
-  }
-
-  /**
-   * Renames a method parameter and all its usages within the method body with default behavior.
-   *
-   * @param file The file containing the source code.
-   * @param formalParameterNode The TSNode of the formal parameter.
-   * @param currentName The current name of the parameter type (PascalCase).
-   * @param newName The new name for the parameter type (PascalCase).
-   * @return RenameResult containing success status and list of renamed nodes.
-   */
-  public RenameResult renameMethodParamWithResult(
-      TSFile file, TSNode formalParameterNode, String currentName, String newName) {
-    return renameMethodParamWithResult(file, formalParameterNode, currentName, newName, false);
-  }
-
-  /**
-   * Legacy method for backward compatibility. 
-   * @deprecated Use renameMethodParamWithResult for better error handling and result information.
-   */
-  @Deprecated
-  public boolean renameMethodParam(
-      TSFile file, TSNode formalParameterNode, String currentName, String newName, boolean force,
-      LocalVariableDeclarationService localVariableService) {
-    return renameMethodParamWithResult(file, formalParameterNode, currentName, newName, force).isSuccess();
-  }
-
-  /**
-   * Legacy method for backward compatibility.
-   * @deprecated Use renameMethodParamWithResult for better error handling and result information.
-   */
-  @Deprecated
-  public boolean renameMethodParam(
-      TSFile file, TSNode formalParameterNode, String currentName, String newName,
-      LocalVariableDeclarationService localVariableService) {
-    return renameMethodParamWithResult(file, formalParameterNode, currentName, newName, false).isSuccess();
   }
 }
