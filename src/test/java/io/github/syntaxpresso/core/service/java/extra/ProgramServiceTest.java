@@ -21,37 +21,21 @@ class ProgramServiceTest {
 
   @BeforeEach
   void setUp() {
-    FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
-    VariableNamingService variableNamingService = new VariableNamingService();
-    LocalVariableDeclarationService localVariableDeclarationService = 
-        new LocalVariableDeclarationService(variableNamingService);
-    FormalParameterService formalParameterService = 
-        new FormalParameterService(localVariableDeclarationService, variableNamingService);
-    MethodDeclarationService methodDeclarationService = 
-        new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
-    ClassDeclarationService classDeclarationService = 
-        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
-    ImportDeclarationService importDeclarationService = new ImportDeclarationService();
-    PackageDeclarationService packageDeclarationService = new PackageDeclarationService();
-    
-    programService = new ProgramService(
-        importDeclarationService, 
-        packageDeclarationService, 
-        classDeclarationService
-    );
+    programService = new ProgramService();
 
-    String javaCode = """
+    String javaCode =
+        """
         package io.github.syntaxpresso.core;
-        
+
         import java.util.List;
         import java.nio.file.Path;
-        
+
         @Data
         @Getter
         public class Test {
           private String value;
           private File file;
-          
+
           @Override
           public void run(File name, List<File> files, int id) {
             File x = new File();
@@ -115,3 +99,4 @@ class ProgramServiceTest {
     assertEquals(1, methods.size());
   }
 }
+

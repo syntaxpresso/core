@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 
 @DisplayName("VariableNamingService Tests")
 class VariableNamingServiceTest {
-
   private VariableNamingService variableNamingService;
 
   @BeforeEach
@@ -20,7 +19,6 @@ class VariableNamingServiceTest {
   @Nested
   @DisplayName("isCollectionType() tests")
   class IsCollectionTypeTests {
-
     @Test
     @DisplayName("Should return true for List types")
     void shouldReturnTrueForListTypes() {
@@ -63,7 +61,6 @@ class VariableNamingServiceTest {
   @Nested
   @DisplayName("generateVariableName() tests")
   class GenerateVariableNameTests {
-
     @Test
     @DisplayName("Should generate singular camelCase name for non-collection types")
     void shouldGenerateSingularCamelCaseNameForNonCollectionTypes() {
@@ -82,16 +79,17 @@ class VariableNamingServiceTest {
   @Nested
   @DisplayName("shouldRenameVariable() tests")
   class ShouldRenameVariableTests {
-
     @Test
-    @DisplayName("Should return true when variable name matches expected pattern for non-collection")
+    @DisplayName(
+        "Should return true when variable name matches expected pattern for non-collection")
     void shouldReturnTrueWhenVariableNameMatchesExpectedPatternForNonCollection() {
       assertTrue(variableNamingService.shouldRenameVariable("user", "User", false));
       assertTrue(variableNamingService.shouldRenameVariable("orderItem", "OrderItem", false));
     }
 
     @Test
-    @DisplayName("Should return true when variable name matches expected plural pattern for collection")
+    @DisplayName(
+        "Should return true when variable name matches expected plural pattern for collection")
     void shouldReturnTrueWhenVariableNameMatchesExpectedPluralPatternForCollection() {
       assertTrue(variableNamingService.shouldRenameVariable("users", "User", true));
       assertTrue(variableNamingService.shouldRenameVariable("orderItems", "OrderItem", true));
@@ -108,26 +106,29 @@ class VariableNamingServiceTest {
   @Nested
   @DisplayName("generateNewVariableName() tests")
   class GenerateNewVariableNameTests {
-
     @Test
     @DisplayName("Should generate new variable name when rename is needed for non-collection")
     void shouldGenerateNewVariableNameWhenRenameIsNeededForNonCollection() {
-      String result = variableNamingService.generateNewVariableName("user", "User", "Customer", false);
+      String result =
+          variableNamingService.generateNewVariableName("user", "User", "Customer", false);
       assertEquals("customer", result);
     }
 
     @Test
     @DisplayName("Should generate new variable name when rename is needed for collection")
     void shouldGenerateNewVariableNameWhenRenameIsNeededForCollection() {
-      String result = variableNamingService.generateNewVariableName("users", "User", "Customer", true);
+      String result =
+          variableNamingService.generateNewVariableName("users", "User", "Customer", true);
       assertEquals("customers", result);
     }
 
     @Test
     @DisplayName("Should return current name when no rename is needed")
     void shouldReturnCurrentNameWhenNoRenameIsNeeded() {
-      String result = variableNamingService.generateNewVariableName("customName", "User", "Customer", false);
+      String result =
+          variableNamingService.generateNewVariableName("customName", "User", "Customer", false);
       assertEquals("customName", result);
     }
   }
 }
+

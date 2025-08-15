@@ -1,7 +1,6 @@
 package io.github.syntaxpresso.core.service.java.extra;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.syntaxpresso.core.common.TSFile;
@@ -15,7 +14,6 @@ import org.treesitter.TSNode;
 
 @DisplayName("ClassDeclarationService Tests")
 class ClassDeclarationServiceTest {
-
   private ClassDeclarationService classDeclarationService;
   private TSFile testFile;
 
@@ -23,39 +21,31 @@ class ClassDeclarationServiceTest {
   void setUp() {
     FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
     VariableNamingService variableNamingService = new VariableNamingService();
-    LocalVariableDeclarationService localVariableDeclarationService = 
+    LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService(variableNamingService);
-    FormalParameterService formalParameterService = 
+    FormalParameterService formalParameterService =
         new FormalParameterService(localVariableDeclarationService, variableNamingService);
-    MethodDeclarationService methodDeclarationService = 
+    MethodDeclarationService methodDeclarationService =
         new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
-    
-    classDeclarationService = new ClassDeclarationService(
-        fieldDeclarationService, 
-        methodDeclarationService
-    );
-
-    String javaCode = """
+    classDeclarationService =
+        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+    String javaCode =
+        """
         package io.github.test;
-        
         public class MyClass {
           private String name;
           private int count;
-          
           public void doSomething() {
             System.out.println("Hello");
           }
-          
           public int getCount() {
             return count;
           }
-          
           public static void main(String[] args) {
             System.out.println("Main method");
           }
         }
         """;
-
     testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
   }
 
@@ -106,21 +96,10 @@ class ClassDeclarationServiceTest {
   void findMethodsByName_shouldReturnCorrectMethods() {
     Optional<TSNode> classNode = classDeclarationService.findClassByName(testFile, "MyClass");
     assertTrue(classNode.isPresent());
-    List<TSNode> mainMethods = classDeclarationService.findMethodsByName(testFile, classNode.get(), "main");
+    List<TSNode> mainMethods =
+        classDeclarationService.findMethodsByName(testFile, classNode.get(), "main");
     assertEquals(1, mainMethods.size());
   }
-
-  // @Test
-  // @DisplayName("should check if class has main method")
-  // void hasMainMethod_shouldReturnTrue() {
-  //   Optional<TSNode> classNode = classDeclarationService.findClassByName(testFile, "MyClass");
-  //   assertTrue(classNode.isPresent());
-  //   // For now, just check that the method runs without exception
-  //   // The main method detection logic might need refinement
-  //   boolean hasMain = classDeclarationService.hasMainMethod(testFile, classNode.get());
-  //   // We expect it to be true, but if the detection logic needs work, we'll accept either result
-  //   // assertTrue(hasMain);  // Commenting out until main method detection is refined
-  // }
 
   @Test
   @DisplayName("should rename class")
@@ -129,9 +108,11 @@ class ClassDeclarationServiceTest {
     assertTrue(classNode.isPresent());
     classDeclarationService.renameClass(testFile, classNode.get(), "RenamedClass");
     // After modifying the source code, we need to find the class again since the tree has changed
-    Optional<TSNode> renamedClassNode = classDeclarationService.findClassByName(testFile, "RenamedClass");
+    Optional<TSNode> renamedClassNode =
+        classDeclarationService.findClassByName(testFile, "RenamedClass");
     assertTrue(renamedClassNode.isPresent());
-    Optional<String> newName = classDeclarationService.getClassName(testFile, renamedClassNode.get());
+    Optional<String> newName =
+        classDeclarationService.getClassName(testFile, renamedClassNode.get());
     assertTrue(newName.isPresent());
     assertEquals("RenamedClass", newName.get());
   }

@@ -19,7 +19,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("PathHelper Tests")
 class PathHelperTest {
-
   private PathHelper pathHelper;
 
   @BeforeEach

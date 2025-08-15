@@ -20,7 +20,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("JavaService Tests")
 class JavaServiceTest {
-
   private JavaService javaService;
 
   @BeforeEach
@@ -108,7 +107,6 @@ class JavaServiceTest {
   @Nested
   @DisplayName("isMainClass()")
   class IsMainClassTests {
-
     @Test
     @DisplayName("should return true for a class with a main method")
     void isMainClass_whenClassIsMain_shouldReturnTrue() {
@@ -149,20 +147,18 @@ class JavaServiceTest {
   @Nested
   @DisplayName("getPackageName()")
   class GetPackageNameTests {
-
     @Test
     @DisplayName("should return package name when declared")
     void getPackageName_whenPackageIsDeclared_shouldReturnPackageName() {
       String sourceCode =
           """
           package com.example.myproject;
-
           class MyClass {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
       Optional<String> packageName =
-          javaService.getPackageDeclarationService().getPackageName(file);
+          javaService.getProgramService().getPackageDeclarationService().getPackageName(file);
       assertTrue(packageName.isPresent());
       assertEquals("com.example.myproject", packageName.get());
     }
@@ -177,7 +173,7 @@ class JavaServiceTest {
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
       Optional<String> packageName =
-          javaService.getPackageDeclarationService().getPackageName(file);
+          javaService.getProgramService().getPackageDeclarationService().getPackageName(file);
       assertFalse(packageName.isPresent());
     }
   }

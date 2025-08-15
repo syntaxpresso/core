@@ -15,14 +15,12 @@ import org.treesitter.TSNode;
 
 @DisplayName("TSFile Tests")
 class TSFileTest {
-
   private final String initialContent = "public class MyClass {}";
   private final SupportedLanguage language = SupportedLanguage.JAVA;
 
   @Nested
   @DisplayName("Constructor Tests")
   class ConstructorTests {
-
     @Test
     @DisplayName("should create TSFile from a string")
     void constructor_fromString_shouldSucceed() {
@@ -260,8 +258,6 @@ class TSFileTest {
       assertTrue(fileWithPath.isModified());
     }
   }
-
-
 
   @Nested
   @DisplayName("History Integration Tests")
