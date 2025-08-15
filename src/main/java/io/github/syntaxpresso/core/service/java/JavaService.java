@@ -5,15 +5,7 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.extra.ScopeType;
-import io.github.syntaxpresso.core.service.java.extra.ClassDeclarationService;
-import io.github.syntaxpresso.core.service.java.extra.FieldDeclarationService;
-import io.github.syntaxpresso.core.service.java.extra.FormalParameterService;
-import io.github.syntaxpresso.core.service.java.extra.ImportDeclarationService;
-import io.github.syntaxpresso.core.service.java.extra.LocalVariableDeclarationService;
-import io.github.syntaxpresso.core.service.java.extra.MethodDeclarationService;
-import io.github.syntaxpresso.core.service.java.extra.PackageDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.ProgramService;
-import io.github.syntaxpresso.core.service.java.extra.VariableNamingService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.io.IOException;
@@ -22,35 +14,17 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import lombok.Data;
+import lombok.Getter;
 import org.treesitter.TSNode;
 import org.treesitter.TSQuery;
 import org.treesitter.TSQueryCapture;
 import org.treesitter.TSQueryCursor;
 import org.treesitter.TSQueryMatch;
 
-@Data
+@Getter
 public class JavaService {
   private final PathHelper pathHelper = new PathHelper();
-  private final VariableNamingService variableNamingService = new VariableNamingService();
-  private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
-  private final ImportDeclarationService importDeclarationService = new ImportDeclarationService();
-  private final LocalVariableDeclarationService localVariableDeclarationService =
-      new LocalVariableDeclarationService(this.variableNamingService);
-  private final FormalParameterService formalParameterService =
-      new FormalParameterService(this.localVariableDeclarationService, this.variableNamingService);
-  private final MethodDeclarationService methodDeclarationService =
-      new MethodDeclarationService(
-          this.formalParameterService, this.localVariableDeclarationService);
-  private final PackageDeclarationService packageDeclarationService =
-      new PackageDeclarationService();
-  private final ClassDeclarationService classDeclarationService =
-      new ClassDeclarationService(this.fieldDeclarationService, this.methodDeclarationService);
-  private final ProgramService programService =
-      new ProgramService(
-          this.importDeclarationService,
-          this.packageDeclarationService,
-          this.classDeclarationService);
+  private final ProgramService programService = new ProgramService();
 
   /**
    * Checks if a directory is a Java project.
@@ -302,24 +276,6 @@ public class JavaService {
   }
 
   /**
-   * Gets the program service for high-level program operations.
-   *
-   * @return The program service.
-   */
-  public ProgramService getProgramService() {
-    return this.programService;
-  }
-
-  /**
-   * Gets the class declaration service for class-level operations.
-   *
-   * @return The class declaration service.
-   */
-  public ClassDeclarationService getClassDeclarationService() {
-    return this.classDeclarationService;
-  }
-
-  /**
    * Finds all classes in a file using the new hierarchical structure.
    *
    * @param file The TSFile containing the source code.
@@ -348,7 +304,7 @@ public class JavaService {
    * @return A list of field declaration nodes.
    */
   public List<TSNode> getFieldsFromClass(TSFile file, TSNode classNode) {
-    return this.classDeclarationService.getClassFields(file, classNode);
+    return this.getProgramService().getClassDeclarationService().getClassFields(file, classNode);
   }
 
   /**
@@ -359,6 +315,6 @@ public class JavaService {
    * @return A list of method declaration nodes.
    */
   public List<TSNode> getMethodsFromClass(TSFile file, TSNode classNode) {
-    return this.classDeclarationService.getClassMethods(file, classNode);
+    return this.getProgramService().getClassDeclarationService().getClassMethods(file, classNode);
   }
 }

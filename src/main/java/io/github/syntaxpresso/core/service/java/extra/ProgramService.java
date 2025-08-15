@@ -3,16 +3,25 @@ package io.github.syntaxpresso.core.service.java.extra;
 import io.github.syntaxpresso.core.common.TSFile;
 import java.util.List;
 import java.util.Optional;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
 @RequiredArgsConstructor
-@Getter
 public class ProgramService {
-  private final ImportDeclarationService importDeclarationService;
-  private final PackageDeclarationService packageDeclarationService;
-  private final ClassDeclarationService classDeclarationService;
+  private final VariableNamingService variableNamingService = new VariableNamingService();
+  private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+  private final ImportDeclarationService importDeclarationService = new ImportDeclarationService();
+  private final PackageDeclarationService packageDeclarationService =
+      new PackageDeclarationService();
+  private final LocalVariableDeclarationService localVariableDeclarationService =
+      new LocalVariableDeclarationService(this.variableNamingService);
+  private final FormalParameterService formalParameterService =
+      new FormalParameterService(this.localVariableDeclarationService, this.variableNamingService);
+  private final MethodDeclarationService methodDeclarationService =
+      new MethodDeclarationService(
+          this.formalParameterService, this.localVariableDeclarationService);
+  private final ClassDeclarationService classDeclarationService =
+      new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
 
   /**
    * Gets the package name from the program.
@@ -148,6 +157,21 @@ public class ProgramService {
    * @return A list of all method declaration nodes in the program.
    */
   public List<TSNode> getAllMethods(TSFile file) {
-    return this.classDeclarationService.getMethodDeclarationService().findAllMethodDeclarations(file);
+    return this.classDeclarationService
+        .getMethodDeclarationService()
+        .findAllMethodDeclarations(file);
+  }
+
+  public ImportDeclarationService getImportDeclarationService() {
+    return importDeclarationService;
+  }
+
+  public PackageDeclarationService getPackageDeclarationService() {
+    return packageDeclarationService;
+  }
+
+  public ClassDeclarationService getClassDeclarationService() {
+    return classDeclarationService;
   }
 }
+
