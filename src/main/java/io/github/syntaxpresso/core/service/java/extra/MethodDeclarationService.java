@@ -52,4 +52,26 @@ public class MethodDeclarationService {
   public void renameLocalVariables(TSFile file, String currentName, String newName) {
     this.localVariableDeclarationService.renameLocalVariablesInFile(file, currentName, newName);
   }
+
+  /**
+   * Checks if a method declaration is a main method.
+   *
+   * @param file The TSFile containing the source code.
+   * @param methodNode The method declaration node to check.
+   * @return True if the method is a main method, false otherwise.
+   */
+  public boolean isMainMethod(TSFile file, TSNode methodNode) {
+    if (file == null || methodNode == null || !"method_declaration".equals(methodNode.getType())) {
+      return false;
+    }
+    // Get the full method text and check if it matches main method patterns
+    String methodText = file.getTextFromNode(methodNode);
+    
+    // Check if it's a main method by looking for the common patterns:
+    // 1. public static void main(String[] args)
+    // 2. public static void main(String... args)  
+    // Allow for different parameter names and spacing
+    return methodText.matches("(?s).*public\\s+static\\s+void\\s+main\\s*\\(\\s*String\\s*\\[\\s*\\]\\s+\\w+\\s*\\).*") ||
+           methodText.matches("(?s).*public\\s+static\\s+void\\s+main\\s*\\(\\s*String\\s*\\.\\s*\\.\\s*\\.\\s+\\w+\\s*\\).*");
+  }
 }

@@ -190,4 +190,30 @@ public class FieldDeclarationService {
     // Rename field usages
     renameClassField(file, currentName, newName);
   }
+
+  /**
+   * Filters a list of field declaration nodes by type name.
+   *
+   * @param file The TSFile containing the source code.
+   * @param fieldNodes The list of field declaration nodes to filter.
+   * @param typeName The type name to filter by.
+   * @return A list of field declaration nodes that have the specified type.
+   */
+  public List<TSNode> filterFieldsByType(TSFile file, List<TSNode> fieldNodes, String typeName) {
+    if (file == null || fieldNodes == null || typeName == null) {
+      return Collections.emptyList();
+    }
+    List<TSNode> filteredFields = new ArrayList<>();
+    for (TSNode field : fieldNodes) {
+      List<TSNode> typeNodes = file.query(field, "(type_identifier) @type");
+      for (TSNode typeNode : typeNodes) {
+        String typeNodeName = file.getTextFromNode(typeNode);
+        if (typeName.equals(typeNodeName)) {
+          filteredFields.add(field);
+          break; // Found a match for this field, no need to check other type nodes
+        }
+      }
+    }
+    return filteredFields;
+  }
 }
