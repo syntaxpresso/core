@@ -35,7 +35,10 @@ public class GetMainClassCommand implements Callable<DataTransferObject<GetMainC
       boolean isMainClass = this.javaService.isMainClass(file);
       if (isMainClass) {
         Optional<String> packageName =
-            this.javaService.getPackageDeclarationService().getPackageName(file);
+            this.javaService
+                .getProgramService()
+                .getPackageDeclarationService()
+                .getPackageName(file);
         if (packageName.isEmpty()) {
           return DataTransferObject.error(
               "Main class found, but package name couldn't be determined.");

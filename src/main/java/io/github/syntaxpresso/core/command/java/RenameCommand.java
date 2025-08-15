@@ -62,7 +62,10 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     List<TSFile> allJavaFiles = this.javaService.getAllJavaFilesFromCwd(cwd);
     for (TSFile foundFile : allJavaFiles) {
       Optional<String> foundFilePackageName =
-          this.javaService.getPackageDeclarationService().getPackageName(foundFile);
+          this.javaService
+              .getProgramService()
+              .getPackageDeclarationService()
+              .getPackageName(foundFile);
       if (foundFilePackageName.isEmpty()) {
         continue;
       }
@@ -72,22 +75,30 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
       }
       Optional<TSNode> importNode =
           this.javaService
+              .getProgramService()
               .getImportDeclarationService()
               .getImportDeclarationNode(foundFile, currentName, packageName);
       if (importNode.isEmpty() && !foundFilePackageName.get().equals(packageName)) {
         continue;
       }
       this.javaService
+          .getProgramService()
+          .getClassDeclarationService()
           .getMethodDeclarationService()
           .renameLocalVariables(foundFile, currentName, newName);
       this.javaService
+          .getProgramService()
+          .getClassDeclarationService()
           .getMethodDeclarationService()
           .renameFormalParameters(foundFile, currentName, newName);
       this.javaService
+          .getProgramService()
+          .getClassDeclarationService()
           .getFieldDeclarationService()
           .renameClassFields(foundFile, currentName, newName);
       if (!foundFilePackageName.get().equals(packageName)) {
         this.javaService
+            .getProgramService()
             .getImportDeclarationService()
             .updateImport(foundFile, packageName + "." + currentName, packageName + "." + newName);
       }
@@ -107,7 +118,7 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
       return null;
     }
     Optional<String> packageName =
-        this.javaService.getPackageDeclarationService().getPackageName(file);
+        this.javaService.getProgramService().getPackageDeclarationService().getPackageName(file);
     if (packageName.isEmpty()) {
       return null;
     }
