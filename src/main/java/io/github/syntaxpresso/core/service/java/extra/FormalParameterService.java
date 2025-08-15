@@ -12,10 +12,8 @@ import org.treesitter.TSNode;
 
 @RequiredArgsConstructor
 public class FormalParameterService {
-
   private final LocalVariableDeclarationService localVariableDeclarationService;
   private final VariableNamingService variableNamingService;
-
   private static final String FORMAL_PARAMETER_QUERY = "(formal_parameter) @param";
 
   private record ParameterInfo(

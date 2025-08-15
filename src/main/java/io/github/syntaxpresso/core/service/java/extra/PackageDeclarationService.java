@@ -5,7 +5,6 @@ import java.util.Optional;
 import org.treesitter.TSNode;
 
 public class PackageDeclarationService {
-
   /**
    * Gets the package declaration node from a Java file.
    *

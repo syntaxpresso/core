@@ -9,9 +9,7 @@ import org.treesitter.TSNode;
 
 @RequiredArgsConstructor
 public class LocalVariableDeclarationService {
-
   private final VariableNamingService variableNamingService;
-
   private static final String LOCAL_VARIABLE_DECLARATION_QUERY =
       "(local_variable_declaration) @local_variable";
 

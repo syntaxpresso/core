@@ -3,7 +3,6 @@ package io.github.syntaxpresso.core.service.java.extra;
 import io.github.syntaxpresso.core.util.StringHelper;
 
 public class VariableNamingService {
-
   /**
    * Checks if a type represents a collection (List, Set, ArrayList, etc.).
    *
@@ -46,9 +45,11 @@ public class VariableNamingService {
    * @param isCollection Whether the type is a collection type.
    * @return true if the variable should be renamed, false otherwise.
    */
-  public boolean shouldRenameVariable(String currentVariableName, String typeName, boolean isCollection) {
+  public boolean shouldRenameVariable(
+      String currentVariableName, String typeName, boolean isCollection) {
     if (isCollection) {
-      String expectedPluralName = StringHelper.pascalToCamel(StringHelper.pluralizeCamelCase(typeName));
+      String expectedPluralName =
+          StringHelper.pascalToCamel(StringHelper.pluralizeCamelCase(typeName));
       return currentVariableName.equals(expectedPluralName);
     }
     return currentVariableName.equals(StringHelper.pascalToCamel(typeName));
@@ -63,10 +64,15 @@ public class VariableNamingService {
    * @param isCollection Whether the type is a collection type.
    * @return The new variable name, or the current name if no rename is needed.
    */
-  public String generateNewVariableName(String currentVariableName, String currentTypeName, String newTypeName, boolean isCollection) {
+  public String generateNewVariableName(
+      String currentVariableName,
+      String currentTypeName,
+      String newTypeName,
+      boolean isCollection) {
     if (shouldRenameVariable(currentVariableName, currentTypeName, isCollection)) {
       return generateVariableName(newTypeName, isCollection);
     }
     return currentVariableName;
   }
 }
+

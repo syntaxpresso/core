@@ -15,7 +15,6 @@ import org.treesitter.TSParser;
  * per-language, per-thread basis.
  */
 public final class ParserFactory {
-
   // A ThreadLocal holding a Map where each thread can store its own set of parsers.
   // The key is the TSLanguage, and the value is the configured TSParser.
   private static final ThreadLocal<Map<TSLanguage, TSParser>> PARSERS =
@@ -39,7 +38,6 @@ public final class ParserFactory {
   public static TSParser get(SupportedLanguage supportedLanguage) {
     // Get the map for the current thread.
     Map<TSLanguage, TSParser> parserMap = PARSERS.get();
-
     // Use computeIfAbsent to get the existing parser or create a new one.
     // This is an atomic and clean way to handle the "get or create" logic.
     return parserMap.computeIfAbsent(

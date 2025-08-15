@@ -62,7 +62,6 @@ public class CreateNewFileCommand
     if (isFileNameValid) {
       throw new IllegalArgumentException("File name invalid.");
     }
-
     String className = this.fileName.trim();
     className = Files.getNameWithoutExtension(className);
     String template = this.fileType.getSourceContent(this.packageName, className);

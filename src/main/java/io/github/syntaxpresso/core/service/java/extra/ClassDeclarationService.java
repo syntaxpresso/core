@@ -13,7 +13,6 @@ import org.treesitter.TSNode;
 @Getter
 public class ClassDeclarationService {
   private static final String CLASS_DECLARATION_QUERY = "(class_declaration) @class";
-  
   private final FieldDeclarationService fieldDeclarationService;
   private final MethodDeclarationService methodDeclarationService;
 
@@ -176,3 +175,4 @@ public class ClassDeclarationService {
     return false;
   }
 }
+

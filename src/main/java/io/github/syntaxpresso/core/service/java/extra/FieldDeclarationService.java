@@ -9,7 +9,6 @@ import java.util.Optional;
 import org.treesitter.TSNode;
 
 public class FieldDeclarationService {
-
   private static final String FIELD_DECLARATION_QUERY = "(field_declaration) @field";
 
   /**

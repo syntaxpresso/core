@@ -62,7 +62,6 @@ public class MethodDeclarationService {
     }
     // Get the full method text and check if it matches main method patterns
     String methodText = file.getTextFromNode(methodNode);
-
     // Check if it's a main method by looking for the common patterns:
     // 1. public static void main(String[] args)
     // 2. public static void main(String... args)

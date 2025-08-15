@@ -6,7 +6,6 @@ public enum JavaFileTemplate {
   ENUM("package %s;%n%npublic enum %s {\n\n}"),
   RECORD("package %s;%n%npublic record %s(\n\n) {\n\n}"),
   ANNOTATION("package %s;%n%npublic @interface %s {\n\n}");
-
   private final String template;
 
   JavaFileTemplate(String template) {
