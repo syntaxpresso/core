@@ -1,11 +1,23 @@
 package io.github.syntaxpresso.core.service.java;
 
+import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
+import io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse;
+import io.github.syntaxpresso.core.command.java.dto.RenameResponse;
+import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.extra.ScopeType;
+import io.github.syntaxpresso.core.service.java.extra.ClassDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.FieldDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.FormalParameterService;
+import io.github.syntaxpresso.core.service.java.extra.LocalVariableDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.MethodDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.ProgramService;
+import io.github.syntaxpresso.core.service.java.extra.VariableNamingService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.treesitter.TSNode;
 import org.treesitter.TSQuery;
 import org.treesitter.TSQueryCapture;
@@ -22,9 +35,20 @@ import org.treesitter.TSQueryCursor;
 import org.treesitter.TSQueryMatch;
 
 @Getter
+@NoArgsConstructor
 public class JavaService {
   private final PathHelper pathHelper = new PathHelper();
   private final ProgramService programService = new ProgramService();
+  private final VariableNamingService variableNamingService = new VariableNamingService();
+  private final LocalVariableDeclarationService localVariableDeclarationService =
+      new LocalVariableDeclarationService(variableNamingService);
+  private final FormalParameterService formalParameterService =
+      new FormalParameterService(localVariableDeclarationService, variableNamingService);
+  private final MethodDeclarationService methodDeclarationService =
+      new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
+  private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+  private final ClassDeclarationService classDeclarationService =
+      new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
 
   /**
    * Checks if a directory is a Java project.
@@ -63,26 +87,22 @@ public class JavaService {
     }
     final String srcDirName =
         (sourceDirectoryType == SourceDirectoryType.MAIN) ? "src/main/java" : "src/test/java";
-    Optional<Path> sourceDirOptional;
     try {
-      sourceDirOptional = this.pathHelper.findDirectoryRecursively(rootDir, srcDirName);
-    } catch (IOException e) {
-      e.printStackTrace();
-      return Optional.empty();
-    }
-    Path sourceDir;
-    if (sourceDirOptional.isPresent()) {
-      sourceDir = sourceDirOptional.get();
-    } else {
-      sourceDir = rootDir.resolve(srcDirName);
-    }
-    Path packageAsPath = Path.of(packageName.replace('.', '/'));
-    Path fullPackageDir = sourceDir.resolve(packageAsPath);
-    try {
+      Optional<Path> sourceDirOptional =
+          this.pathHelper.findDirectoryRecursively(rootDir, srcDirName);
+      Path sourceDir;
+      if (sourceDirOptional.isPresent()) {
+        sourceDir = sourceDirOptional.get();
+      } else {
+        sourceDir = rootDir.resolve(srcDirName);
+      }
+      Path packageAsPath = Path.of(packageName.replace('.', '/'));
+      Path fullPackageDir = sourceDir.resolve(packageAsPath);
       Files.createDirectories(fullPackageDir);
       return Optional.of(fullPackageDir);
     } catch (IOException e) {
-      e.printStackTrace();
+      // Log the error but don't print stack trace
+      System.err.println("Failed to create directory structure: " + e.getMessage());
       return Optional.empty();
     }
   }
@@ -316,5 +336,184 @@ public class JavaService {
    */
   public List<TSNode> getMethodsFromClass(TSFile file, TSNode classNode) {
     return this.getProgramService().getClassDeclarationService().getClassMethods(file, classNode);
+  }
+
+  /**
+   * Creates a new Java file.
+   *
+   * @param cwd The current working directory to search in.
+   * @param packageName The package name for the new file.
+   * @param fileName The name for the new file.
+   * @param fileType The type for the new file (CLASS | INTERFACE | ENUM | RECORD | ANNOTATION).
+   * @param sourceDirectoryType Whether if the file should be created in the main or test module
+   *     (MAIN | TEST).
+   * @return A DataTransferObject containing the new file information or error.
+   */
+  public DataTransferObject<CreateNewJavaFileResponse> createNewFile(
+      Path cwd,
+      String packageName,
+      String fileName,
+      JavaFileTemplate fileType,
+      SourceDirectoryType sourceDirectoryType) {
+    // Validate current working directory
+    if (cwd == null || !Files.exists(cwd)) {
+      return DataTransferObject.error("Current working directory does not exist.");
+    }
+    // Validate package name
+    if (Strings.isNullOrEmpty(packageName)) {
+      return DataTransferObject.error("Package name invalid.");
+    }
+    // Validate file name
+    if (Strings.isNullOrEmpty(fileName)) {
+      return DataTransferObject.error("File name invalid.");
+    }
+    // Validate file type
+    if (fileType == null) {
+      return DataTransferObject.error("File type is required.");
+    }
+    // Validate source directory type
+    if (sourceDirectoryType == null) {
+      return DataTransferObject.error("Source directory type is required.");
+    }
+    final String srcDirName =
+        (sourceDirectoryType == SourceDirectoryType.MAIN) ? "src/main/java" : "src/test/java";
+    try {
+      Optional<Path> sourceDirOptional = this.pathHelper.findDirectoryRecursively(cwd, srcDirName);
+      if (sourceDirOptional.isEmpty()) {
+        if (!Files.exists(cwd.resolve(srcDirName))) {
+          return DataTransferObject.error("Cannot find source directory.");
+        }
+      }
+    } catch (IOException e) {
+      return DataTransferObject.error("Failed to search for source directory: " + e.getMessage());
+    }
+    try {
+      String className = fileName.trim();
+      className = com.google.common.io.Files.getNameWithoutExtension(className);
+      String template = fileType.getSourceContent(packageName, className);
+      TSFile file = new TSFile(SupportedLanguage.JAVA, template);
+      Optional<Path> filePath = this.findFilePath(cwd, packageName, sourceDirectoryType);
+      if (filePath.isEmpty()) {
+        return DataTransferObject.error("Package name couldn't be determined.");
+      }
+      Path targetPath =
+          filePath.get().resolve(className.concat(SupportedLanguage.JAVA.getFileExtension()));
+      // Check if file already exists
+      if (Files.exists(targetPath)) {
+        return DataTransferObject.error("File already exists: " + targetPath.toString());
+      }
+      // Attempt to save the file
+      file.saveAs(targetPath);
+      CreateNewJavaFileResponse response =
+          CreateNewJavaFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
+      return DataTransferObject.success(response);
+    } catch (IOException e) {
+      return DataTransferObject.error("Failed to create file: " + e.getMessage());
+    } catch (Exception e) {
+      return DataTransferObject.error("Unexpected error occurred: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Finds the main class in the current working directory.
+   *
+   * @param cwd The current working directory to search in.
+   * @return A DataTransferObject containing the main class information or error.
+   */
+  public DataTransferObject<GetMainClassResponse> getMainClass(Path cwd) {
+    // Validate current working directory
+    if (cwd == null || !Files.exists(cwd)) {
+      return DataTransferObject.error("Current working directory does not exist.");
+    }
+    try {
+      List<TSFile> allFiles = this.getAllJavaFilesFromCwd(cwd);
+      for (TSFile file : allFiles) {
+        boolean isMainClass = this.isMainClass(file);
+        if (isMainClass) {
+          Optional<String> packageName =
+              this.programService.getPackageDeclarationService().getPackageName(file);
+          if (packageName.isEmpty()) {
+            return DataTransferObject.error(
+                "Main class found, but package name couldn't be determined.");
+          }
+          GetMainClassResponse response =
+              GetMainClassResponse.builder()
+                  .filePath(file.getFile().getAbsolutePath())
+                  .packageName(packageName.get())
+                  .build();
+          return DataTransferObject.success(response);
+        }
+      }
+      return DataTransferObject.error(
+          "Main class couldn't be found in the current working directory.");
+    } catch (Exception e) {
+      return DataTransferObject.error("Unexpected error occurred: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Renames a Java class/interface/enum and its file.
+   *
+   * @param filePath The absolute path to the .java file.
+   * @param newName The new name for the class/interface/enum.
+   * @return A DataTransferObject containing the new file path or an error.
+   */
+  public DataTransferObject<RenameResponse> rename(final Path filePath, final String newName) {
+    if (!Files.exists(filePath)) {
+      return DataTransferObject.error("File does not exist: " + filePath);
+    }
+    if (!filePath.toString().endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + filePath);
+    }
+    try {
+      Path newFilePath = this.renameFileAndContent(filePath, newName);
+      return DataTransferObject.success(
+          RenameResponse.builder().filePath(newFilePath.toString()).build());
+    } catch (IOException e) {
+      return DataTransferObject.error("Failed to rename file: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Renames the main class within a .java file and renames the file itself.
+   *
+   * <p>This method performs the following steps:
+   *
+   * <ol>
+   *   <li>Parses the Java file to find the main class declaration.
+   *   <li>If no main class is found, it attempts to find the first class declaration.
+   *   <li>Updates the source code in memory to rename the class.
+   *   <li>Writes the updated content to a new file with the new class name.
+   *   <li>Deletes the original file.
+   * </ol>
+   *
+   * @param filePath The absolute path to the .java file to be renamed.
+   * @param newName The new name for the class and the file (without the .java extension).
+   * @return The path to the newly created and renamed file.
+   * @throws IOException if an I/O error occurs during file reading, writing, or deletion, or if no
+   *     class declaration is found in the file.
+   */
+  private Path renameFileAndContent(final Path filePath, final String newName) throws IOException {
+    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
+    Optional<TSNode> mainClassNode = this.classDeclarationService.getMainClass(tsFile);
+    if (mainClassNode.isPresent()) {
+      this.classDeclarationService.renameClass(tsFile, mainClassNode.get(), newName);
+      String updatedContent = tsFile.getSourceCode();
+      Path newPath = filePath.resolveSibling(newName + ".java");
+      Files.writeString(newPath, updatedContent);
+      Files.delete(filePath);
+      return newPath;
+    } else {
+      List<TSNode> classes = this.classDeclarationService.findAllClassDeclarations(tsFile);
+      if (!classes.isEmpty()) {
+        this.classDeclarationService.renameClass(tsFile, classes.get(0), newName);
+        String updatedContent = tsFile.getSourceCode();
+        Path newPath = filePath.resolveSibling(newName + ".java");
+        Files.writeString(newPath, updatedContent);
+        Files.delete(filePath);
+        return newPath;
+      }
+    }
+    throw new IOException("No class found in file " + filePath);
   }
 }

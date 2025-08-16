@@ -20,6 +20,7 @@ dependencies {
 
     testImplementation(libs.junit.jupiter)
     testImplementation("org.slf4j:slf4j-simple:2.0.17")
+    testImplementation("org.assertj:assertj-core:3.26.3")
 
     annotationProcessor("org.projectlombok:lombok:1.18.38")
     annotationProcessor("info.picocli:picocli-codegen:4.7.7")

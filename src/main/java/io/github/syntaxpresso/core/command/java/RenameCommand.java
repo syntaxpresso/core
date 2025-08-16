@@ -1,171 +1,42 @@
 package io.github.syntaxpresso.core.command.java;
 
-import com.google.common.base.Strings;
-import com.google.common.io.Files;
+import io.github.syntaxpresso.core.command.java.dto.RenameResponse;
+import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
-import io.github.syntaxpresso.core.common.TSFile;
-import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.java.JavaService;
-import io.github.syntaxpresso.core.service.java.extra.ImportDeclarationService;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.io.File;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
-import org.treesitter.TSNode;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
+import picocli.CommandLine;
 
+@CommandLine.Command(
+    name = "rename",
+    description = "Rename a Java class/interface/enum and its file.",
+    mixinStandardHelpOptions = true)
 @RequiredArgsConstructor
-@Command(name = "rename", description = "Rename a symbol and all its usages.")
-public class RenameCommand implements Callable<DataTransferObject<Void>> {
+public class RenameCommand implements Callable<DataTransferObject<RenameResponse>> {
   private final JavaService javaService;
 
-  @Option(names = "--cwd", description = "Current Working Directory", required = true)
-  private Path cwd;
+  @CommandLine.Option(
+      names = {"-f", "--file-path"},
+      description = "The absolute path to the .java file.",
+      required = true)
+  private File filePath;
 
-  @Option(names = "--file-path", description = "The path to the file", required = true)
-  private Path filePath;
-
-  @Option(names = "--line", description = "The line number of the symbol", required = true)
-  private int line;
-
-  @Option(names = "--column", description = "The column number of the symbol", required = true)
-  private int column;
-
-  @Option(names = "--new-name", description = "The new name for the symbol", required = true)
+  @CommandLine.Option(
+      names = {"-n", "--new-name"},
+      description = "The new name for the class/interface/enum.",
+      required = true)
   private String newName;
 
-  private boolean shouldRenameFileName(TSFile file, String currentName) {
-    // Only appliable to classes.
-    String fileName = Files.getNameWithoutExtension(file.getFile().getAbsolutePath());
-    if (fileName.equals(currentName)) {
-      return true;
-    }
-    return false;
-  }
-
-  private List<TSFile> processClassRename(
-      Path cwd, TSFile file, TSNode node, String packageName, String currentName, String newName) {
-    List<TSFile> modifiedFiles = new ArrayList<>();
-    // Update class name and file name, if necessary.
-    file.updateSourceCode(node, newName);
-    if (this.shouldRenameFileName(file, currentName)) {
-      file.rename(newName);
-    }
-    if (file.isModified()) {
-      modifiedFiles.add(file);
-    }
-    // Parse all java files, but skip the current one, as it can't instantiate itself.
-    List<TSFile> allJavaFiles = this.javaService.getAllJavaFilesFromCwd(cwd);
-    for (TSFile foundFile : allJavaFiles) {
-      Optional<String> foundFilePackageName =
-          this.javaService
-              .getProgramService()
-              .getPackageDeclarationService()
-              .getPackageName(foundFile);
-      if (foundFilePackageName.isEmpty()) {
-        continue;
-      }
-      // Skip original file.
-      if (foundFile.getFile().getAbsolutePath().equals(file.getFile().getAbsolutePath())) {
-        continue;
-      }
-      ImportDeclarationService importService =
-          this.javaService.getProgramService().getImportDeclarationService();
-      if (importService == null) {
-        continue;
-      }
-      Optional<TSNode> importNode =
-          importService.getImportDeclarationNode(foundFile, currentName, packageName);
-      if (importNode.isEmpty() && !foundFilePackageName.get().equals(packageName)) {
-        continue;
-      }
-      this.javaService
-          .getProgramService()
-          .getClassDeclarationService()
-          .getMethodDeclarationService()
-          .renameLocalVariables(foundFile, currentName, newName);
-      this.javaService
-          .getProgramService()
-          .getClassDeclarationService()
-          .getMethodDeclarationService()
-          .renameFormalParameters(foundFile, currentName, newName);
-      this.javaService
-          .getProgramService()
-          .getClassDeclarationService()
-          .getFieldDeclarationService()
-          .renameClassFields(foundFile, currentName, newName);
-      if (!foundFilePackageName.get().equals(packageName)) {
-        this.javaService
-            .getProgramService()
-            .getImportDeclarationService()
-            .updateImport(foundFile, packageName + "." + currentName, packageName + "." + newName);
-      }
-      if (foundFile.isModified()) {
-        modifiedFiles.add(foundFile);
-      }
-    }
-    return modifiedFiles;
-  }
-
-  private List<TSFile> processMethodRename(
-      TSFile file, TSNode methodDeclarationNode, String currentName, String newName) {
-    return this.javaService
-        .getProgramService()
-        .getClassDeclarationService()
-        .getMethodDeclarationService()
-        .renameMethodAndUsages(
-            file,
-            methodDeclarationNode,
-            currentName,
-            newName,
-            this.cwd,
-            this.javaService.getProgramService().getTypeResolutionService(),
-            this.javaService.getProgramService().getClassDeclarationService(),
-            this.javaService);
-  }
+  @CommandLine.Option(
+      names = {"-s", "--source-directory"},
+      description = "The source directory type (e.g., MAIN, TEST).",
+      defaultValue = "MAIN")
+  private SourceDirectoryType sourceDirectoryType;
 
   @Override
-  public DataTransferObject<Void> call() throws IOException {
-    TSFile file = new TSFile(SupportedLanguage.JAVA, this.filePath);
-    TSNode node = file.getNodeFromPosition(this.line, this.column);
-    if (node == null) {
-      return null;
-    }
-    String currentName = file.getTextFromRange(node.getStartByte(), node.getEndByte());
-    if (Strings.isNullOrEmpty(currentName)) {
-      return null;
-    }
-    Optional<String> packageName =
-        this.javaService.getProgramService().getPackageDeclarationService().getPackageName(file);
-    if (packageName.isEmpty()) {
-      return null;
-    }
-    List<TSFile> modifiedFiles = new ArrayList<>();
-    JavaIdentifierType identifierType = this.javaService.getIdentifierType(node);
-    if (identifierType == null) {
-      return null;
-    }
-    if (identifierType.equals(JavaIdentifierType.CLASS_NAME)) {
-      modifiedFiles.addAll(
-          this.processClassRename(
-              this.cwd, file, node, packageName.get(), currentName, this.newName));
-    }
-    if (identifierType.equals(JavaIdentifierType.METHOD_NAME)) {
-      // Find the parent method declaration node
-      TSNode methodDeclarationNode = node.getParent();
-      if (methodDeclarationNode != null) {
-        modifiedFiles.addAll(
-            this.processMethodRename(file, methodDeclarationNode, currentName, this.newName));
-      }
-    }
-    for (TSFile modifiedFile : modifiedFiles) {
-      modifiedFile.save();
-    }
-    return DataTransferObject.success(null);
+  public DataTransferObject<RenameResponse> call() {
+    return this.javaService.rename(this.filePath.toPath(), this.newName);
   }
 }

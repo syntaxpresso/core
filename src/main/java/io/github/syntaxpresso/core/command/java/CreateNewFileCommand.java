@@ -1,17 +1,11 @@
 package io.github.syntaxpresso.core.command.java;
 
-import com.google.common.base.Strings;
-import com.google.common.io.Files;
 import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
 import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
-import io.github.syntaxpresso.core.common.TSFile;
-import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
-import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
 import picocli.CommandLine.Command;
@@ -49,32 +43,8 @@ public class CreateNewFileCommand
   private SourceDirectoryType sourceDirectoryType = SourceDirectoryType.MAIN;
 
   @Override
-  public DataTransferObject<CreateNewJavaFileResponse> call() throws IOException {
-    boolean cwdExists = java.nio.file.Files.exists(this.cwd);
-    if (!cwdExists) {
-      throw new IllegalArgumentException("Current working directory does not exist.");
-    }
-    boolean isPackageNameValid = Strings.isNullOrEmpty(this.packageName);
-    if (isPackageNameValid) {
-      throw new IllegalArgumentException("Package name invalid.");
-    }
-    boolean isFileNameValid = Strings.isNullOrEmpty(this.fileName);
-    if (isFileNameValid) {
-      throw new IllegalArgumentException("File name invalid.");
-    }
-    String className = this.fileName.trim();
-    className = Files.getNameWithoutExtension(className);
-    String template = this.fileType.getSourceContent(this.packageName, className);
-    TSFile file = new TSFile(SupportedLanguage.JAVA, template);
-    Optional<Path> filePath =
-        this.javaService.findFilePath(this.cwd, this.packageName, this.sourceDirectoryType);
-    if (filePath.isEmpty()) {
-      return DataTransferObject.error("Package name couldn't be determined.");
-    }
-    file.saveAs(
-        filePath.get().resolve(className.concat(SupportedLanguage.JAVA.getFileExtension())));
-    CreateNewJavaFileResponse response =
-        CreateNewJavaFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
-    return DataTransferObject.success(response);
+  public DataTransferObject<CreateNewJavaFileResponse> call() {
+    return this.javaService.createNewFile(
+        this.cwd, this.packageName, this.fileName, this.fileType, this.sourceDirectoryType);
   }
 }
