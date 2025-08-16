@@ -1,6 +1,5 @@
 package io.github.syntaxpresso.core.service.java.extra;
 
-import com.google.common.io.Files;
 import io.github.syntaxpresso.core.common.TSFile;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -193,11 +192,14 @@ public class ClassDeclarationService {
     } catch (IllegalStateException e) {
       return Optional.empty();
     }
-    String fileName = Files.getNameWithoutExtension(file.getFile().getName());
+    Optional<String> fileName = file.getFileNameWithoutExtension();
+    if (fileName.isEmpty()) {
+      return Optional.empty();
+    }
     List<TSNode> classNodes = findAllClassDeclarations(file);
     for (TSNode classNode : classNodes) {
       Optional<String> className = getClassName(file, classNode);
-      if (className.isPresent() && fileName.equals(className.get())) {
+      if (className.isPresent() && fileName.get().equals(className.get())) {
         return Optional.of(classNode);
       }
     }
