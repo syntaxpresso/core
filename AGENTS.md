@@ -21,6 +21,7 @@
 - **Testing**: JUnit 5 with `@DisplayName`, `@Nested` classes, Mockito for mocking
 - **CLI**: Uses Picocli framework with `@CommandLine.Command` annotations
 - **Formatting**: Prevent empty lines inside methods and functions; when invoking class fields, use "this"
+- **Comments**: Only use comments when strictly necessary to understand complex code
 
 ## Key Dependencies
 

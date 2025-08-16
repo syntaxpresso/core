@@ -15,27 +15,22 @@ import org.treesitter.TSNode;
 
 @DisplayName("ProgramService Tests")
 class ProgramServiceTest {
-
   private ProgramService programService;
   private TSFile testFile;
 
   @BeforeEach
   void setUp() {
     programService = new ProgramService();
-
     String javaCode =
         """
         package io.github.syntaxpresso.core;
-
         import java.util.List;
         import java.nio.file.Path;
-
         @Data
         @Getter
         public class Test {
           private String value;
           private File file;
-
           @Override
           public void run(File name, List<File> files, int id) {
             File x = new File();
@@ -46,7 +41,6 @@ class ProgramServiceTest {
           }
         }
         """;
-
     testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
   }
 
@@ -99,4 +93,3 @@ class ProgramServiceTest {
     assertEquals(1, methods.size());
   }
 }
-
