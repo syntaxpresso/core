@@ -306,6 +306,19 @@ public class TSFile {
   }
 
   /**
+   * Returns the file name without it's extension.
+   *
+   * @return The optional of the file name without extension as String;
+   */
+  public Optional<String> getFileNameWithoutExtension() {
+    String fileName = com.google.common.io.Files.getNameWithoutExtension(this.file.getName());
+    if (fileName == null) {
+      return Optional.empty();
+    }
+    return Optional.of(fileName);
+  }
+
+  /**
    * Finds the first parent node of a given node that has a specific type.
    *
    * @param startNode The node from which to start searching upwards.
