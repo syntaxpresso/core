@@ -121,6 +121,50 @@ public class TSFile {
   }
 
   /**
+   * Insert text at a specific byte position.
+   *
+   * @param position The byte position.
+   * @param textToInsert The text to be inserted.
+   */
+  private void insertText(int position, String textToInsert) {
+    if (this.sourceCode == null) {
+      throw new IllegalStateException("Source code has not been initialized.");
+    }
+    if (position < 0 && position > this.sourceCode.length()) {
+      throw new IndexOutOfBoundsException("Position is out of bounds for source length");
+    }
+    String newContent =
+        new StringBuilder(this.sourceCode).insert(position, textToInsert).toString();
+    this.updateSourceCode(newContent);
+  }
+
+  /**
+   * Insert text before node position.
+   *
+   * @param node The node to consider.
+   * @param newText The text to be inserted.
+   */
+  public void insertTextBeforeNode(TSNode node, String newText) {
+    if (this.tree == null) {
+      throw new IllegalStateException("Tree is not set.");
+    }
+    this.insertText(node.getStartByte(), newText);
+  }
+
+  /**
+   * Insert text after node position.
+   *
+   * @param node The node to consider.
+   * @param newText The text to be inserted.
+   */
+  public void insertTextAfterNode(TSNode node, String newText) {
+    if (this.tree == null) {
+      throw new IllegalStateException("Tree is not set.");
+    }
+    this.insertText(node.getEndByte(), newText);
+  }
+
+  /**
    * Saves the current source code to the original file path.
    *
    * @throws IOException If the file cannot be written.
