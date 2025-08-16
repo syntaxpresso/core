@@ -317,7 +317,6 @@ class TSFileTest {
       TSFile validTsFile = new TSFile(language, "class A{}");
       TSNode node = validTsFile.getNodeFromPosition(1, 7); // Position of 'A'
       assertNotNull(node);
-      String originalCode = validTsFile.getSourceCode();
       validTsFile.insertTextBeforeNode(node, "My");
       assertEquals("class MyA{}", validTsFile.getSourceCode());
       assertTrue(validTsFile.isModified());
@@ -329,7 +328,6 @@ class TSFileTest {
       TSFile validTsFile = new TSFile(language, "class A{}");
       TSNode node = validTsFile.getNodeFromPosition(1, 7); // Position of 'A'
       assertNotNull(node);
-      String originalCode = validTsFile.getSourceCode();
       validTsFile.insertTextAfterNode(node, "Extended");
       assertEquals("class AExtended{}", validTsFile.getSourceCode());
       assertTrue(validTsFile.isModified());
@@ -341,7 +339,9 @@ class TSFileTest {
       TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
       String multilineText = "/* Multi\n   line\n   comment */\n";
       tsFile.insertTextBeforeNode(classIdentifier, multilineText);
-      assertEquals("public class /* Multi\n   line\n   comment */\nMyClass { void method() {} }", tsFile.getSourceCode());
+      assertEquals(
+          "public class /* Multi\n   line\n   comment */\nMyClass { void method() {} }",
+          tsFile.getSourceCode());
       assertTrue(tsFile.isModified());
     }
 
@@ -351,7 +351,9 @@ class TSFileTest {
       TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
       String multilineText = "\n/* Multi\n   line\n   comment */";
       tsFile.insertTextAfterNode(classIdentifier, multilineText);
-      assertEquals("public class MyClass\n/* Multi\n   line\n   comment */ { void method() {} }", tsFile.getSourceCode());
+      assertEquals(
+          "public class MyClass\n/* Multi\n   line\n   comment */ { void method() {} }",
+          tsFile.getSourceCode());
       assertTrue(tsFile.isModified());
     }
 
@@ -391,7 +393,8 @@ class TSFileTest {
       TSNode methodNode = tsFile.query("(method_declaration) @method").get(0);
       assertNotNull(methodNode);
       tsFile.insertTextAfterNode(methodNode, " /* method end */");
-      assertEquals("public class MyClass { void method() {} /* method end */ }", tsFile.getSourceCode());
+      assertEquals(
+          "public class MyClass { void method() {} /* method end */ }", tsFile.getSourceCode());
       assertTrue(tsFile.isModified());
     }
 
@@ -415,7 +418,8 @@ class TSFileTest {
       TSNode classBodyNode = tsFile.query("(class_body) @body").get(0);
       assertNotNull(classBodyNode);
       tsFile.insertTextAfterNode(classBodyNode, "\n// End of class");
-      assertEquals("public class MyClass { void method() {} }\n// End of class", tsFile.getSourceCode());
+      assertEquals(
+          "public class MyClass { void method() {} }\n// End of class", tsFile.getSourceCode());
       assertTrue(tsFile.isModified());
     }
 
@@ -424,9 +428,9 @@ class TSFileTest {
     void insertTextBeforeAndAfterNode_consecutiveInsertions_shouldSucceed() {
       TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
       tsFile.insertTextBeforeNode(classIdentifier, "Base");
-      
       // After the first insertion, need to get the node again since positions changed
-      TSNode updatedClassIdentifier = tsFile.getNodeFromPosition(1, 19); // Position shifted by "Base" (4 chars)
+      TSNode updatedClassIdentifier =
+          tsFile.getNodeFromPosition(1, 19); // Position shifted by "Base" (4 chars)
       assertNotNull(updatedClassIdentifier);
       tsFile.insertTextAfterNode(updatedClassIdentifier, "Extended");
       assertEquals("public class BaseMyClassExtended { void method() {} }", tsFile.getSourceCode());
@@ -438,7 +442,8 @@ class TSFileTest {
     void insertTextBeforeNode_atStartOfFile_shouldSucceed() {
       TSNode programNode = tsFile.getTree().getRootNode();
       tsFile.insertTextBeforeNode(programNode, "// Header comment\n");
-      assertEquals("// Header comment\npublic class MyClass { void method() {} }", tsFile.getSourceCode());
+      assertEquals(
+          "// Header comment\npublic class MyClass { void method() {} }", tsFile.getSourceCode());
       assertTrue(tsFile.isModified());
     }
 
@@ -447,7 +452,8 @@ class TSFileTest {
     void insertTextAfterNode_atEndOfFile_shouldSucceed() {
       TSNode programNode = tsFile.getTree().getRootNode();
       tsFile.insertTextAfterNode(programNode, "\n// Footer comment");
-      assertEquals("public class MyClass { void method() {} }\n// Footer comment", tsFile.getSourceCode());
+      assertEquals(
+          "public class MyClass { void method() {} }\n// Footer comment", tsFile.getSourceCode());
       assertTrue(tsFile.isModified());
     }
   }
