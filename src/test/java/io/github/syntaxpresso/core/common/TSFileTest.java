@@ -260,6 +260,199 @@ class TSFileTest {
   }
 
   @Nested
+  @DisplayName("Insert Text Tests")
+  class InsertTextTests {
+    private TSFile tsFile;
+
+    @BeforeEach
+    void setup() {
+      tsFile = new TSFile(language, "public class MyClass { void method() {} }");
+    }
+
+    @Test
+    @DisplayName("should insert text before a node")
+    void insertTextBeforeNode_shouldSucceed() {
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      assertNotNull(classIdentifier);
+      assertEquals("identifier", classIdentifier.getType());
+      tsFile.insertTextBeforeNode(classIdentifier, "Final");
+      assertEquals("public class FinalMyClass { void method() {} }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should insert text after a node")
+    void insertTextAfterNode_shouldSucceed() {
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      assertNotNull(classIdentifier);
+      assertEquals("identifier", classIdentifier.getType());
+      tsFile.insertTextAfterNode(classIdentifier, "Extended");
+      assertEquals("public class MyClassExtended { void method() {} }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should insert empty string before node without changing content")
+    void insertTextBeforeNode_emptyString_shouldNotChangeContent() {
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      String originalCode = tsFile.getSourceCode();
+      tsFile.insertTextBeforeNode(classIdentifier, "");
+      assertEquals(originalCode, tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should insert empty string after node without changing content")
+    void insertTextAfterNode_emptyString_shouldNotChangeContent() {
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      String originalCode = tsFile.getSourceCode();
+      tsFile.insertTextAfterNode(classIdentifier, "");
+      assertEquals(originalCode, tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should handle insertTextBeforeNode with valid tree")
+    void insertTextBeforeNode_validTree_shouldSucceed() {
+      TSFile validTsFile = new TSFile(language, "class A{}");
+      TSNode node = validTsFile.getNodeFromPosition(1, 7); // Position of 'A'
+      assertNotNull(node);
+      String originalCode = validTsFile.getSourceCode();
+      validTsFile.insertTextBeforeNode(node, "My");
+      assertEquals("class MyA{}", validTsFile.getSourceCode());
+      assertTrue(validTsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should handle insertTextAfterNode with valid tree")
+    void insertTextAfterNode_validTree_shouldSucceed() {
+      TSFile validTsFile = new TSFile(language, "class A{}");
+      TSNode node = validTsFile.getNodeFromPosition(1, 7); // Position of 'A'
+      assertNotNull(node);
+      String originalCode = validTsFile.getSourceCode();
+      validTsFile.insertTextAfterNode(node, "Extended");
+      assertEquals("class AExtended{}", validTsFile.getSourceCode());
+      assertTrue(validTsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should insert multiline text before node correctly")
+    void insertTextBeforeNode_multilineText_shouldSucceed() {
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      String multilineText = "/* Multi\n   line\n   comment */\n";
+      tsFile.insertTextBeforeNode(classIdentifier, multilineText);
+      assertEquals("public class /* Multi\n   line\n   comment */\nMyClass { void method() {} }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should insert multiline text after node correctly")
+    void insertTextAfterNode_multilineText_shouldSucceed() {
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      String multilineText = "\n/* Multi\n   line\n   comment */";
+      tsFile.insertTextAfterNode(classIdentifier, multilineText);
+      assertEquals("public class MyClass\n/* Multi\n   line\n   comment */ { void method() {} }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should handle inserting text with special characters before node")
+    void insertTextBeforeNode_specialCharacters_shouldSucceed() {
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      String specialText = "@$#%^&*()_";
+      tsFile.insertTextBeforeNode(classIdentifier, specialText);
+      assertEquals("public class @$#%^&*()_MyClass { void method() {} }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should handle inserting text with special characters after node")
+    void insertTextAfterNode_specialCharacters_shouldSucceed() {
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      String specialText = "_@$#%^&*()";
+      tsFile.insertTextAfterNode(classIdentifier, specialText);
+      assertEquals("public class MyClass_@$#%^&*() { void method() {} }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should insert text before method declaration node")
+    void insertTextBeforeNode_methodDeclaration_shouldSucceed() {
+      TSNode methodNode = tsFile.query("(method_declaration) @method").get(0);
+      assertNotNull(methodNode);
+      tsFile.insertTextBeforeNode(methodNode, "public ");
+      assertEquals("public class MyClass { public void method() {} }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should insert text after method declaration node")
+    void insertTextAfterNode_methodDeclaration_shouldSucceed() {
+      TSNode methodNode = tsFile.query("(method_declaration) @method").get(0);
+      assertNotNull(methodNode);
+      tsFile.insertTextAfterNode(methodNode, " /* method end */");
+      assertEquals("public class MyClass { void method() {} /* method end */ }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should insert text before class body opening brace")
+    void insertTextBeforeNode_classBody_shouldSucceed() {
+      TSNode classBodyNode = tsFile.query("(class_body) @body").get(0);
+      assertNotNull(classBodyNode);
+      String beforeInsertion = tsFile.getSourceCode();
+      tsFile.insertTextBeforeNode(classBodyNode, " implements Serializable");
+      String afterInsertion = tsFile.getSourceCode();
+      // Just verify the text was inserted and content is longer
+      assertTrue(afterInsertion.length() > beforeInsertion.length());
+      assertTrue(afterInsertion.contains("implements Serializable"));
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should insert text after class body closing brace")
+    void insertTextAfterNode_classBody_shouldSucceed() {
+      TSNode classBodyNode = tsFile.query("(class_body) @body").get(0);
+      assertNotNull(classBodyNode);
+      tsFile.insertTextAfterNode(classBodyNode, "\n// End of class");
+      assertEquals("public class MyClass { void method() {} }\n// End of class", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should handle consecutive insertions before and after nodes correctly")
+    void insertTextBeforeAndAfterNode_consecutiveInsertions_shouldSucceed() {
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      tsFile.insertTextBeforeNode(classIdentifier, "Base");
+      
+      // After the first insertion, need to get the node again since positions changed
+      TSNode updatedClassIdentifier = tsFile.getNodeFromPosition(1, 19); // Position shifted by "Base" (4 chars)
+      assertNotNull(updatedClassIdentifier);
+      tsFile.insertTextAfterNode(updatedClassIdentifier, "Extended");
+      assertEquals("public class BaseMyClassExtended { void method() {} }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should handle insertion at start position correctly")
+    void insertTextBeforeNode_atStartOfFile_shouldSucceed() {
+      TSNode programNode = tsFile.getTree().getRootNode();
+      tsFile.insertTextBeforeNode(programNode, "// Header comment\n");
+      assertEquals("// Header comment\npublic class MyClass { void method() {} }", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("should handle insertion at end position correctly")
+    void insertTextAfterNode_atEndOfFile_shouldSucceed() {
+      TSNode programNode = tsFile.getTree().getRootNode();
+      tsFile.insertTextAfterNode(programNode, "\n// Footer comment");
+      assertEquals("public class MyClass { void method() {} }\n// Footer comment", tsFile.getSourceCode());
+      assertTrue(tsFile.isModified());
+    }
+  }
+
+  @Nested
   @DisplayName("History Integration Tests")
   class HistoryIntegrationTests {
     private TSFile tsFile;
