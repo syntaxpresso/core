@@ -50,7 +50,10 @@ class CreateNewFileTest {
 
     @Test
     @DisplayName("should fail when --cwd does not exist")
-    void execute_withNonExistentCwd_shouldThrowException() {
+    void execute_withNonExistentCwd_shouldReturnError() {
+      when(javaService.createNewFile(any(), any(), any(), any(), any()))
+          .thenReturn(DataTransferObject.error("Current working directory does not exist."));
+      
       String[] args = {
         "--cwd",
         "/invalid/path",
@@ -61,13 +64,18 @@ class CreateNewFileTest {
         "--file-type",
         "CLASS"
       };
-      int exitCode = cmd.execute(args);
-      assertEquals(1, exitCode);
+      cmd.execute(args);
+      DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
+      assertFalse(result.getSucceed());
+      assertEquals("Current working directory does not exist.", result.getErrorReason());
     }
 
     @Test
     @DisplayName("should fail when --packageName is empty")
-    void execute_withEmptyPackageName_shouldThrowException() {
+    void execute_withEmptyPackageName_shouldReturnError() {
+      when(javaService.createNewFile(any(), any(), any(), any(), any()))
+          .thenReturn(DataTransferObject.error("Package name invalid."));
+      
       String[] args = {
         "--cwd",
         tempDir.toString(),
@@ -78,13 +86,18 @@ class CreateNewFileTest {
         "--file-type",
         "CLASS"
       };
-      int exitCode = cmd.execute(args);
-      assertEquals(1, exitCode);
+      cmd.execute(args);
+      DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
+      assertFalse(result.getSucceed());
+      assertEquals("Package name invalid.", result.getErrorReason());
     }
 
     @Test
     @DisplayName("should fail when --fileName is empty")
-    void execute_withEmptyFileName_shouldThrowException() {
+    void execute_withEmptyFileName_shouldReturnError() {
+      when(javaService.createNewFile(any(), any(), any(), any(), any()))
+          .thenReturn(DataTransferObject.error("File name invalid."));
+      
       String[] args = {
         "--cwd",
         tempDir.toString(),
@@ -95,8 +108,10 @@ class CreateNewFileTest {
         "--file-type",
         "CLASS"
       };
-      int exitCode = cmd.execute(args);
-      assertEquals(1, exitCode);
+      cmd.execute(args);
+      DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
+      assertFalse(result.getSucceed());
+      assertEquals("File name invalid.", result.getErrorReason());
     }
   }
 
@@ -108,8 +123,14 @@ class CreateNewFileTest {
     void call_shouldCreateJavaFileSuccessfully() throws Exception {
       Path targetPath = tempDir.resolve("src/main/java/io/github");
       Files.createDirectories(targetPath);
-      when(javaService.findFilePath(any(), eq("io.github"), eq(SourceDirectoryType.MAIN)))
-          .thenReturn(Optional.of(targetPath));
+      
+      CreateNewJavaFileResponse mockResponse = CreateNewJavaFileResponse.builder()
+          .filePath(targetPath.resolve("MyClass.java").toString())
+          .build();
+      
+      when(javaService.createNewFile(any(), any(), any(), any(), any()))
+          .thenReturn(DataTransferObject.success(mockResponse));
+      
       String[] args = {
         "--cwd",
         tempDir.toString(),
@@ -127,13 +148,14 @@ class CreateNewFileTest {
       assertTrue(result.getSucceed());
       assertNotNull(result.getData());
       assertTrue(result.getData().getFilePath().endsWith("MyClass.java"));
-      assertTrue(Files.exists(Path.of(result.getData().getFilePath())));
     }
 
     @Test
     @DisplayName("should return error if path not found by JavaService")
     void call_shouldReturnErrorIfFilePathNotFound() {
-      when(javaService.findFilePath(any(), any(), any())).thenReturn(Optional.empty());
+      when(javaService.createNewFile(any(), any(), any(), any(), any()))
+          .thenReturn(DataTransferObject.error("Package name couldn't be determined."));
+      
       String[] args = {
         "--cwd",
         tempDir.toString(),

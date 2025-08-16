@@ -1,6 +1,10 @@
 package io.github.syntaxpresso.core.service.java;
 
+import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
+import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
@@ -63,26 +67,22 @@ public class JavaService {
     }
     final String srcDirName =
         (sourceDirectoryType == SourceDirectoryType.MAIN) ? "src/main/java" : "src/test/java";
-    Optional<Path> sourceDirOptional;
     try {
-      sourceDirOptional = this.pathHelper.findDirectoryRecursively(rootDir, srcDirName);
-    } catch (IOException e) {
-      e.printStackTrace();
-      return Optional.empty();
-    }
-    Path sourceDir;
-    if (sourceDirOptional.isPresent()) {
-      sourceDir = sourceDirOptional.get();
-    } else {
-      sourceDir = rootDir.resolve(srcDirName);
-    }
-    Path packageAsPath = Path.of(packageName.replace('.', '/'));
-    Path fullPackageDir = sourceDir.resolve(packageAsPath);
-    try {
+      Optional<Path> sourceDirOptional =
+          this.pathHelper.findDirectoryRecursively(rootDir, srcDirName);
+      Path sourceDir;
+      if (sourceDirOptional.isPresent()) {
+        sourceDir = sourceDirOptional.get();
+      } else {
+        sourceDir = rootDir.resolve(srcDirName);
+      }
+      Path packageAsPath = Path.of(packageName.replace('.', '/'));
+      Path fullPackageDir = sourceDir.resolve(packageAsPath);
       Files.createDirectories(fullPackageDir);
       return Optional.of(fullPackageDir);
     } catch (IOException e) {
-      e.printStackTrace();
+      // Log the error but don't print stack trace
+      System.err.println("Failed to create directory structure: " + e.getMessage());
       return Optional.empty();
     }
   }
@@ -316,5 +316,58 @@ public class JavaService {
    */
   public List<TSNode> getMethodsFromClass(TSFile file, TSNode classNode) {
     return this.getProgramService().getClassDeclarationService().getClassMethods(file, classNode);
+  }
+
+  public DataTransferObject<CreateNewJavaFileResponse> createNewFile(
+      Path cwd,
+      String packageName,
+      String fileName,
+      JavaFileTemplate fileType,
+      SourceDirectoryType sourceDirectoryType) {
+    // Validate current working directory
+    if (cwd == null || !Files.exists(cwd)) {
+      return DataTransferObject.error("Current working directory does not exist.");
+    }
+    // Validate package name
+    if (Strings.isNullOrEmpty(packageName)) {
+      return DataTransferObject.error("Package name invalid.");
+    }
+    // Validate file name
+    if (Strings.isNullOrEmpty(fileName)) {
+      return DataTransferObject.error("File name invalid.");
+    }
+    // Validate file type
+    if (fileType == null) {
+      return DataTransferObject.error("File type is required.");
+    }
+    // Validate source directory type
+    if (sourceDirectoryType == null) {
+      return DataTransferObject.error("Source directory type is required.");
+    }
+    try {
+      String className = fileName.trim();
+      className = com.google.common.io.Files.getNameWithoutExtension(className);
+      String template = fileType.getSourceContent(packageName, className);
+      TSFile file = new TSFile(SupportedLanguage.JAVA, template);
+      Optional<Path> filePath = this.findFilePath(cwd, packageName, sourceDirectoryType);
+      if (filePath.isEmpty()) {
+        return DataTransferObject.error("Package name couldn't be determined.");
+      }
+      Path targetPath =
+          filePath.get().resolve(className.concat(SupportedLanguage.JAVA.getFileExtension()));
+      // Check if file already exists
+      if (Files.exists(targetPath)) {
+        return DataTransferObject.error("File already exists: " + targetPath.toString());
+      }
+      // Attempt to save the file
+      file.saveAs(targetPath);
+      CreateNewJavaFileResponse response =
+          CreateNewJavaFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
+      return DataTransferObject.success(response);
+    } catch (IOException e) {
+      return DataTransferObject.error("Failed to create file: " + e.getMessage());
+    } catch (Exception e) {
+      return DataTransferObject.error("Unexpected error occurred: " + e.getMessage());
+    }
   }
 }
