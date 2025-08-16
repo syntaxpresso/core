@@ -172,7 +172,12 @@ public class MethodDeclarationService {
       TypeResolutionService typeResolutionService,
       ClassDeclarationService classDeclarationService,
       Object javaService) {
-    originalFile.updateSourceCode(methodDeclarationNode, newName);
+    // First rename the method declaration
+    TSNode nameNode = methodDeclarationNode.getChildByFieldName("name");
+    if (nameNode != null) {
+      originalFile.updateSourceCode(nameNode, newName);
+    }
+    
     if (!originalFile.isModified()) {
       return null;
     }

@@ -7,6 +7,7 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.extra.ImportDeclarationService;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -73,11 +74,13 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
       if (foundFile.getFile().getAbsolutePath().equals(file.getFile().getAbsolutePath())) {
         continue;
       }
-      Optional<TSNode> importNode =
-          this.javaService
+      ImportDeclarationService importService = this.javaService
               .getProgramService()
-              .getImportDeclarationService()
-              .getImportDeclarationNode(foundFile, currentName, packageName);
+              .getImportDeclarationService();
+      if (importService == null) {
+        continue;
+      }
+      Optional<TSNode> importNode = importService.getImportDeclarationNode(foundFile, currentName, packageName);
       if (importNode.isEmpty() && !foundFilePackageName.get().equals(packageName)) {
         continue;
       }
@@ -130,6 +133,9 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
   public DataTransferObject<Void> call() throws IOException {
     TSFile file = new TSFile(SupportedLanguage.JAVA, this.filePath);
     TSNode node = file.getNodeFromPosition(this.line, this.column);
+    if (node == null) {
+      return null;
+    }
     String currentName = file.getTextFromRange(node.getStartByte(), node.getEndByte());
     if (Strings.isNullOrEmpty(currentName)) {
       return null;
@@ -141,17 +147,24 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     }
     List<TSFile> modifiedFiles = new ArrayList<>();
     JavaIdentifierType identifierType = this.javaService.getIdentifierType(node);
+    if (identifierType == null) {
+      return null;
+    }
     if (identifierType.equals(JavaIdentifierType.CLASS_NAME)) {
       modifiedFiles.addAll(
           this.processClassRename(
               this.cwd, file, node, packageName.get(), currentName, this.newName));
     }
     if (identifierType.equals(JavaIdentifierType.METHOD_NAME)) {
-      modifiedFiles.addAll(this.processMethodRename(file, node, currentName, this.newName));
+      // Find the parent method declaration node
+      TSNode methodDeclarationNode = node.getParent();
+      if (methodDeclarationNode != null) {
+        modifiedFiles.addAll(this.processMethodRename(file, methodDeclarationNode, currentName, this.newName));
+      }
     }
     for (TSFile modifiedFile : modifiedFiles) {
       modifiedFile.save();
     }
-    return null;
+    return DataTransferObject.success(null);
   }
 }

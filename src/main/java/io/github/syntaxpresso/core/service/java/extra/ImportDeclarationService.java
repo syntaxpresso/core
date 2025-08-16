@@ -114,19 +114,14 @@ public class ImportDeclarationService {
     List<TSNode> existingImports = findAllImportDeclarations(file);
     Optional<TSNode> packageNode = this.packageDeclarationService.getPackageDeclarationNode(file);
     if (existingImports.isEmpty() && packageNode.isPresent()) {
-      // Package exists but no imports - insert after package with proper spacing
+      // Package exists but no imports - insert after package declaration
       TSNode packageDeclaration = packageNode.get();
       int packageEnd = packageDeclaration.getEndByte();
-      String sourceCode = file.getSourceCode();
-      // Find position right after the first newline (start of blank line or content)
-      int firstNewline = sourceCode.indexOf('\n', packageEnd);
-      if (firstNewline == -1) firstNewline = sourceCode.length();
-      // Insert import preserving the blank line structure
-      String importStatement = "\nimport " + fullImport + ";\n";
-      file.updateSourceCode(firstNewline + 1, firstNewline + 1, importStatement);
+      String importStatement = "\nimport " + fullImport + ";";
+      file.updateSourceCode(packageEnd, packageEnd, importStatement);
     } else if (existingImports.isEmpty()) {
       // No package, no imports - insert at start
-      String importStatement = "import " + fullImport + ";\n\n";
+      String importStatement = "import " + fullImport + ";\n";
       file.updateSourceCode(0, 0, importStatement);
     } else {
       // After existing imports
@@ -167,19 +162,14 @@ public class ImportDeclarationService {
     List<TSNode> existingImports = findAllImportDeclarations(file);
     Optional<TSNode> packageNode = this.packageDeclarationService.getPackageDeclarationNode(file);
     if (existingImports.isEmpty() && packageNode.isPresent()) {
-      // Package exists but no imports - insert after package with proper spacing
+      // Package exists but no imports - insert after package declaration
       TSNode packageDeclaration = packageNode.get();
       int packageEnd = packageDeclaration.getEndByte();
-      String sourceCode = file.getSourceCode();
-      // Find position right after the first newline (start of blank line or content)
-      int firstNewline = sourceCode.indexOf('\n', packageEnd);
-      if (firstNewline == -1) firstNewline = sourceCode.length();
-      // Insert import preserving the blank line structure
-      String importStatement = "\nimport " + wildcardImport + ";\n";
-      file.updateSourceCode(firstNewline + 1, firstNewline + 1, importStatement);
+      String importStatement = "\nimport " + wildcardImport + ";";
+      file.updateSourceCode(packageEnd, packageEnd, importStatement);
     } else if (existingImports.isEmpty()) {
       // No package, no imports - insert at start
-      String importStatement = "import " + wildcardImport + ";\n\n";
+      String importStatement = "import " + wildcardImport + ";\n";
       file.updateSourceCode(0, 0, importStatement);
     } else {
       // After existing imports

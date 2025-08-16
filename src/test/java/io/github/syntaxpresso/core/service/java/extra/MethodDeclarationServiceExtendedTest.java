@@ -22,6 +22,13 @@ import org.treesitter.TSNode;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MethodDeclarationService Extended Tests")
 class MethodDeclarationServiceExtendedTest {
+  
+  // Mock JavaService class for testing
+  static class MockJavaServiceClass {
+    public List<TSFile> getAllJavaFilesFromCwd(Path cwd) {
+      return List.of();
+    }
+  }
   private MethodDeclarationService methodDeclarationService;
   private TSFile testFile;
   private TSFile targetFile;
@@ -100,15 +107,11 @@ class MethodDeclarationServiceExtendedTest {
       when(mockClassDeclarationService.getMainClass(testFile)).thenReturn(Optional.of(mockClassNode));
       when(mockClassDeclarationService.getClassName(testFile, mockClassNode)).thenReturn(Optional.of("Calculator"));
 
-      try {
-        when(mockJavaService.getClass().getMethod("getAllJavaFilesFromCwd", Path.class))
-            .thenReturn(Object.class.getMethod("toString")); // Mock method
-        when(mockJavaService.getClass().getMethod("getAllJavaFilesFromCwd", Path.class)
-            .invoke(mockJavaService, Paths.get("/test")))
-            .thenReturn(List.of(targetFile));
-      } catch (Exception e) {
-        fail("Failed to mock getAllJavaFilesFromCwd: " + e.getMessage());
-      }
+      // Create a proper mock with the required method
+      MockJavaServiceClass mockJavaServiceClass = mock(MockJavaServiceClass.class);
+      when(mockJavaServiceClass.getAllJavaFilesFromCwd(any(Path.class)))
+          .thenReturn(List.of(targetFile));
+      mockJavaService = mockJavaServiceClass;
 
       when(mockTypeResolutionService.resolveObjectType(any(), any(), any())).thenReturn("Calculator");
 
@@ -188,8 +191,8 @@ class MethodDeclarationServiceExtendedTest {
       when(mockClassDeclarationService.getMainClass(testFile)).thenReturn(Optional.of(mockClassNode));
       when(mockClassDeclarationService.getClassName(testFile, mockClassNode)).thenReturn(Optional.of("Calculator"));
 
-      // Mock a JavaService that will cause reflection to fail
-      Object mockBadJavaService = mock(String.class); // Wrong type, will cause method not found
+      // Create a mock that doesn't have the expected method to cause reflection to fail
+      Object mockBadJavaService = new Object(); // Plain Object, will cause method not found
 
       List<TSFile> result = methodDeclarationService.renameMethodAndUsages(
           testFile,
@@ -224,15 +227,11 @@ class MethodDeclarationServiceExtendedTest {
       when(mockClassDeclarationService.getMainClass(testFile)).thenReturn(Optional.of(mockClassNode));
       when(mockClassDeclarationService.getClassName(testFile, mockClassNode)).thenReturn(Optional.of("Calculator"));
 
-      try {
-        when(mockJavaService.getClass().getMethod("getAllJavaFilesFromCwd", Path.class))
-            .thenReturn(Object.class.getMethod("toString"));
-        when(mockJavaService.getClass().getMethod("getAllJavaFilesFromCwd", Path.class)
-            .invoke(mockJavaService, Paths.get("/test")))
-            .thenReturn(List.of(targetFile));
-      } catch (Exception e) {
-        fail("Failed to mock getAllJavaFilesFromCwd");
-      }
+      // Create a proper mock with the required method
+      MockJavaServiceClass mockJavaServiceClass = mock(MockJavaServiceClass.class);
+      when(mockJavaServiceClass.getAllJavaFilesFromCwd(any(Path.class)))
+          .thenReturn(List.of(targetFile));
+      mockJavaService = mockJavaServiceClass;
 
       // Mock type resolution to return different types
       when(mockTypeResolutionService.resolveObjectType(any(), any(), any()))

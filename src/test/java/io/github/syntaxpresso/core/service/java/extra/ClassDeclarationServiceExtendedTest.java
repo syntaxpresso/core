@@ -254,14 +254,19 @@ class ClassDeclarationServiceExtendedTest {
     @Test
     @DisplayName("Should handle field declaration without type")
     void shouldHandleFieldDeclarationWithoutType() {
-      // In normal Java, this shouldn't happen, but we should handle edge cases
-      String edgeCaseCode = "public class Test { /* field without type */ }";
+      // Test with a class that has no fields - should return empty when no field declarations exist
+      String edgeCaseCode = "public class Test { public void method() {} }";
       TSFile edgeCaseFile = new TSFile(SupportedLanguage.JAVA, edgeCaseCode);
       
+      // Look for field declarations (there should be none)
+      List<TSNode> fieldDeclarations = edgeCaseFile.query("(field_declaration) @field");
+      assertTrue(fieldDeclarations.isEmpty(), "Class should have no fields");
+      
+      // Test that method handles class declaration gracefully (wrong node type)
       List<TSNode> classDeclarations = edgeCaseFile.query("(class_declaration) @class");
       if (!classDeclarations.isEmpty()) {
         Optional<TSNode> result = classDeclarationService.getFieldTypeNode(edgeCaseFile, classDeclarations.get(0));
-        assertFalse(result.isPresent(), "Should handle missing field type gracefully");
+        assertFalse(result.isPresent(), "Should handle wrong node type gracefully");
       }
     }
   }

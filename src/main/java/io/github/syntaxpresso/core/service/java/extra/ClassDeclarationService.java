@@ -183,7 +183,14 @@ public class ClassDeclarationService {
    * @return An Optional containing the main class declaration node, or empty if not found.
    */
   public Optional<TSNode> getMainClass(TSFile file) {
-    if (file == null || file.getFile() == null) {
+    if (file == null) {
+      return Optional.empty();
+    }
+    try {
+      if (file.getFile() == null) {
+        return Optional.empty();
+      }
+    } catch (IllegalStateException e) {
       return Optional.empty();
     }
     String fileName = Files.getNameWithoutExtension(file.getFile().getName());
@@ -208,15 +215,22 @@ public class ClassDeclarationService {
     if (file == null || fieldDeclarationNode == null) {
       return Optional.empty();
     }
-    TSNode fieldDeclaratorNode = fieldDeclarationNode.getChildByFieldName("declarator");
-    if (fieldDeclaratorNode == null) {
+    if (!"field_declaration".equals(fieldDeclarationNode.getType())) {
       return Optional.empty();
     }
-    TSNode fieldNameNode = fieldDeclaratorNode.getChildByFieldName("name");
-    if (fieldNameNode == null) {
+    try {
+      TSNode fieldDeclaratorNode = fieldDeclarationNode.getChildByFieldName("declarator");
+      if (fieldDeclaratorNode == null) {
+        return Optional.empty();
+      }
+      TSNode fieldNameNode = fieldDeclaratorNode.getChildByFieldName("name");
+      if (fieldNameNode == null) {
+        return Optional.empty();
+      }
+      return Optional.of(fieldNameNode);
+    } catch (Exception e) {
       return Optional.empty();
     }
-    return Optional.of(fieldNameNode);
   }
 
   /**
@@ -228,6 +242,10 @@ public class ClassDeclarationService {
    */
   public Optional<TSNode> getFieldTypeNode(TSFile file, TSNode fieldDeclarationNode) {
     if (file == null || fieldDeclarationNode == null) {
+      return Optional.empty();
+    }
+    // Validate that this is actually a field declaration node
+    if (!"field_declaration".equals(fieldDeclarationNode.getType())) {
       return Optional.empty();
     }
     TSNode fieldTypeNode = fieldDeclarationNode.getChildByFieldName("type");
