@@ -1,4 +1,4 @@
-package io.github.syntaxpresso.core.command;
+package io.github.syntaxpresso.core.command.java;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,7 +10,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.github.syntaxpresso.core.command.java.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
