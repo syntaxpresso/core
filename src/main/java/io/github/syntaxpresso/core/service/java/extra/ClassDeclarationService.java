@@ -1,5 +1,6 @@
 package io.github.syntaxpresso.core.service.java.extra;
 
+import com.google.common.io.Files;
 import io.github.syntaxpresso.core.common.TSFile;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -174,5 +175,65 @@ public class ClassDeclarationService {
     }
     return false;
   }
-}
 
+  /**
+   * Gets the main class of a file, which is the public class that has the same name as the file.
+   *
+   * @param file The TSFile to analyze.
+   * @return An Optional containing the main class declaration node, or empty if not found.
+   */
+  public Optional<TSNode> getMainClass(TSFile file) {
+    if (file == null || file.getFile() == null) {
+      return Optional.empty();
+    }
+    String fileName = Files.getNameWithoutExtension(file.getFile().getName());
+    List<TSNode> classNodes = findAllClassDeclarations(file);
+    for (TSNode classNode : classNodes) {
+      Optional<String> className = getClassName(file, classNode);
+      if (className.isPresent() && fileName.equals(className.get())) {
+        return Optional.of(classNode);
+      }
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Get field declaration name.
+   *
+   * @param file The TSFile to analyze.
+   * @param fieldDeclarationNode THe field declaration node.
+   * @return An Optional containing the main field name node, or empty if not found.
+   */
+  public Optional<TSNode> getFieldNameNode(TSFile file, TSNode fieldDeclarationNode) {
+    if (file == null || fieldDeclarationNode == null) {
+      return Optional.empty();
+    }
+    TSNode fieldDeclaratorNode = fieldDeclarationNode.getChildByFieldName("declarator");
+    if (fieldDeclaratorNode == null) {
+      return Optional.empty();
+    }
+    TSNode fieldNameNode = fieldDeclaratorNode.getChildByFieldName("name");
+    if (fieldNameNode == null) {
+      return Optional.empty();
+    }
+    return Optional.of(fieldNameNode);
+  }
+
+  /**
+   * Get field declaration type.
+   *
+   * @param file The TSFile to analyze.
+   * @param fieldDeclarationNode THe field declaration node.
+   * @return An Optional containing the main field type node, or empty if not found.
+   */
+  public Optional<TSNode> getFieldTypeNode(TSFile file, TSNode fieldDeclarationNode) {
+    if (file == null || fieldDeclarationNode == null) {
+      return Optional.empty();
+    }
+    TSNode fieldTypeNode = fieldDeclarationNode.getChildByFieldName("type");
+    if (fieldTypeNode == null) {
+      return Optional.empty();
+    }
+    return Optional.of(fieldTypeNode);
+  }
+}

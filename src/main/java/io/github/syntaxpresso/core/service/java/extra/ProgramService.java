@@ -22,6 +22,12 @@ public class ProgramService {
           this.formalParameterService, this.localVariableDeclarationService);
   private final ClassDeclarationService classDeclarationService =
       new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+  private final TypeResolutionService typeResolutionService =
+      new TypeResolutionService(
+          this.formalParameterService,
+          this.localVariableDeclarationService,
+          this.fieldDeclarationService,
+          this.classDeclarationService);
 
   /**
    * Gets the package name from the program.
@@ -172,5 +178,9 @@ public class ProgramService {
 
   public ClassDeclarationService getClassDeclarationService() {
     return classDeclarationService;
+  }
+
+  public TypeResolutionService getTypeResolutionService() {
+    return typeResolutionService;
   }
 }
