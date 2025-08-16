@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.treesitter.TSNode;
 import org.treesitter.TSQuery;
 import org.treesitter.TSQueryCapture;
@@ -34,6 +35,7 @@ import org.treesitter.TSQueryCursor;
 import org.treesitter.TSQueryMatch;
 
 @Getter
+@NoArgsConstructor
 public class JavaService {
   private final PathHelper pathHelper = new PathHelper();
   private final ProgramService programService = new ProgramService();
@@ -373,7 +375,6 @@ public class JavaService {
     if (sourceDirectoryType == null) {
       return DataTransferObject.error("Source directory type is required.");
     }
-
     final String srcDirName =
         (sourceDirectoryType == SourceDirectoryType.MAIN) ? "src/main/java" : "src/test/java";
     try {
@@ -386,7 +387,6 @@ public class JavaService {
     } catch (IOException e) {
       return DataTransferObject.error("Failed to search for source directory: " + e.getMessage());
     }
-    
     try {
       String className = fileName.trim();
       className = com.google.common.io.Files.getNameWithoutExtension(className);
@@ -462,11 +462,9 @@ public class JavaService {
     if (!Files.exists(filePath)) {
       return DataTransferObject.error("File does not exist: " + filePath);
     }
-
     if (!filePath.toString().endsWith(".java")) {
       return DataTransferObject.error("File is not a .java file: " + filePath);
     }
-
     try {
       Path newFilePath = this.renameFileAndContent(filePath, newName);
       return DataTransferObject.success(
@@ -476,6 +474,25 @@ public class JavaService {
     }
   }
 
+  /**
+   * Renames the main class within a .java file and renames the file itself.
+   *
+   * <p>This method performs the following steps:
+   *
+   * <ol>
+   *   <li>Parses the Java file to find the main class declaration.
+   *   <li>If no main class is found, it attempts to find the first class declaration.
+   *   <li>Updates the source code in memory to rename the class.
+   *   <li>Writes the updated content to a new file with the new class name.
+   *   <li>Deletes the original file.
+   * </ol>
+   *
+   * @param filePath The absolute path to the .java file to be renamed.
+   * @param newName The new name for the class and the file (without the .java extension).
+   * @return The path to the newly created and renamed file.
+   * @throws IOException if an I/O error occurs during file reading, writing, or deletion, or if no
+   *     class declaration is found in the file.
+   */
   private Path renameFileAndContent(final Path filePath, final String newName) throws IOException {
     TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
     Optional<TSNode> mainClassNode = this.classDeclarationService.getMainClass(tsFile);
