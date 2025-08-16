@@ -109,6 +109,23 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     return modifiedFiles;
   }
 
+  private List<TSFile> processMethodRename(
+      TSFile file, TSNode methodDeclarationNode, String currentName, String newName) {
+    return this.javaService
+        .getProgramService()
+        .getClassDeclarationService()
+        .getMethodDeclarationService()
+        .renameMethodAndUsages(
+            file,
+            methodDeclarationNode,
+            currentName,
+            newName,
+            this.cwd,
+            this.javaService.getProgramService().getTypeResolutionService(),
+            this.javaService.getProgramService().getClassDeclarationService(),
+            this.javaService);
+  }
+
   @Override
   public DataTransferObject<Void> call() throws IOException {
     TSFile file = new TSFile(SupportedLanguage.JAVA, this.filePath);
@@ -122,14 +139,18 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
     if (packageName.isEmpty()) {
       return null;
     }
+    List<TSFile> modifiedFiles = new ArrayList<>();
     JavaIdentifierType identifierType = this.javaService.getIdentifierType(node);
     if (identifierType.equals(JavaIdentifierType.CLASS_NAME)) {
-      List<TSFile> modifiedFiles =
+      modifiedFiles.addAll(
           this.processClassRename(
-              this.cwd, file, node, packageName.get(), currentName, this.newName);
-      for (TSFile modifiedFile : modifiedFiles) {
-        modifiedFile.save();
-      }
+              this.cwd, file, node, packageName.get(), currentName, this.newName));
+    }
+    if (identifierType.equals(JavaIdentifierType.METHOD_NAME)) {
+      modifiedFiles.addAll(this.processMethodRename(file, node, currentName, this.newName));
+    }
+    for (TSFile modifiedFile : modifiedFiles) {
+      modifiedFile.save();
     }
     return null;
   }
