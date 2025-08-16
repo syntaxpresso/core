@@ -62,13 +62,15 @@ public class GetMainClassTest {
 
     @Test
     @DisplayName("should fail when --cwd does not exist")
-    void execute_withNonExistentCwd_shouldThrowException() {
+    void execute_withNonExistentCwd_shouldReturnError() {
+      when(javaService.getMainClass(any()))
+          .thenReturn(DataTransferObject.error("Current working directory does not exist."));
+      
       String nonExistentPath = "non/existent/path";
       cmd.parseArgs("--cwd", nonExistentPath);
-      assertThrows(
-          IllegalArgumentException.class,
-          () -> command.call(),
-          "Current working directory does not exist.");
+      DataTransferObject<GetMainClassResponse> result = command.call();
+      assertFalse(result.getSucceed());
+      assertEquals("Current working directory does not exist.", result.getErrorReason());
     }
   }
 
@@ -78,13 +80,15 @@ public class GetMainClassTest {
     @Test
     @DisplayName("should return success when a main class is found")
     void call_whenMainClassNotFound_shouldReturnSuccess(@TempDir Path tempDir) throws Exception {
-      TSFile mainClassFile = mock(TSFile.class);
       File file = tempDir.resolve("Main.java").toFile();
-      when(mainClassFile.getFile()).thenReturn(file);
-      when(pathHelper.findFilesByExtention(any(), any())).thenReturn(List.of(mainClassFile));
-      when(javaService.isMainClass(mainClassFile)).thenReturn(true);
-      when(packageDeclarationService.getPackageName(mainClassFile))
-          .thenReturn(Optional.of("com.example"));
+      GetMainClassResponse mockResponse = GetMainClassResponse.builder()
+          .filePath(file.getAbsolutePath())
+          .packageName("com.example")
+          .build();
+      
+      when(javaService.getMainClass(any()))
+          .thenReturn(DataTransferObject.success(mockResponse));
+      
       cmd.parseArgs("--cwd", tempDir.toString());
       DataTransferObject<GetMainClassResponse> result = command.call();
       assertTrue(result.getSucceed());
@@ -96,7 +100,9 @@ public class GetMainClassTest {
     @Test
     @DisplayName("should return error when no main class is found")
     void call_whenNoMainClassNotFound_shouldReturnError(@TempDir Path tempDir) throws Exception {
-      when(pathHelper.findFilesByExtention(any(), any())).thenReturn(Collections.emptyList());
+      when(javaService.getMainClass(any()))
+          .thenReturn(DataTransferObject.error("Main class couldn't be found in the current working directory."));
+      
       cmd.parseArgs("--cwd", tempDir.toString());
       DataTransferObject<GetMainClassResponse> result = command.call();
       assertFalse(result.getSucceed());
@@ -108,12 +114,9 @@ public class GetMainClassTest {
     @Test
     @DisplayName("should return error when main class has no package")
     void call_whenMainClassHasNoPackage_shouldReturnError(@TempDir Path tempDir) throws Exception {
-      // Arrange
-      TSFile mainClassFile = mock(TSFile.class);
-      when(mainClassFile.getFile()).thenReturn(tempDir.resolve("Main.java").toFile());
-      when(pathHelper.findFilesByExtention(any(), any())).thenReturn(List.of(mainClassFile));
-      when(javaService.isMainClass(mainClassFile)).thenReturn(true);
-      when(packageDeclarationService.getPackageName(mainClassFile)).thenReturn(Optional.empty());
+      when(javaService.getMainClass(any()))
+          .thenReturn(DataTransferObject.error("Main class found, but package name couldn't be determined."));
+      
       cmd.parseArgs("--cwd", tempDir.toString());
       DataTransferObject<GetMainClassResponse> result = command.call();
       assertFalse(result.getSucceed());

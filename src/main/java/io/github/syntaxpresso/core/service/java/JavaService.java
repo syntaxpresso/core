@@ -2,6 +2,7 @@ package io.github.syntaxpresso.core.service.java;
 
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
+import io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
@@ -366,6 +367,43 @@ public class JavaService {
       return DataTransferObject.success(response);
     } catch (IOException e) {
       return DataTransferObject.error("Failed to create file: " + e.getMessage());
+    } catch (Exception e) {
+      return DataTransferObject.error("Unexpected error occurred: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Finds the main class in the current working directory.
+   *
+   * @param cwd The current working directory to search in.
+   * @return A DataTransferObject containing the main class information or error.
+   */
+  public DataTransferObject<GetMainClassResponse> getMainClass(Path cwd) {
+    // Validate current working directory
+    if (cwd == null || !Files.exists(cwd)) {
+      return DataTransferObject.error("Current working directory does not exist.");
+    }
+    try {
+      List<TSFile> allFiles = this.getAllJavaFilesFromCwd(cwd);
+      for (TSFile file : allFiles) {
+        boolean isMainClass = this.isMainClass(file);
+        if (isMainClass) {
+          Optional<String> packageName =
+              this.programService.getPackageDeclarationService().getPackageName(file);
+          if (packageName.isEmpty()) {
+            return DataTransferObject.error(
+                "Main class found, but package name couldn't be determined.");
+          }
+          GetMainClassResponse response =
+              GetMainClassResponse.builder()
+                  .filePath(file.getFile().getAbsolutePath())
+                  .packageName(packageName.get())
+                  .build();
+          return DataTransferObject.success(response);
+        }
+      }
+      return DataTransferObject.error(
+          "Main class couldn't be found in the current working directory.");
     } catch (Exception e) {
       return DataTransferObject.error("Unexpected error occurred: " + e.getMessage());
     }
