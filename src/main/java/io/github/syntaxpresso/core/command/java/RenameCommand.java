@@ -15,7 +15,6 @@ import picocli.CommandLine;
     mixinStandardHelpOptions = true)
 @RequiredArgsConstructor
 public class RenameCommand implements Callable<DataTransferObject<RenameResponse>> {
-
   private final JavaService javaService;
 
   @CommandLine.Option(
