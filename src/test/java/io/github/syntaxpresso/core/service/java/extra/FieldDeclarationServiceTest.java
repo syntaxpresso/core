@@ -127,7 +127,7 @@ class FieldDeclarationServiceTest {
         TSNode field = fields.get(0);
         
         assertFalse(fieldDeclarationService.getFieldTypeNode(null, testFile, "String").isPresent());
-        assertThrows(NullPointerException.class, () -> fieldDeclarationService.getFieldTypeNode(field, null, "String"));
+        assertFalse(fieldDeclarationService.getFieldTypeNode(field, null, "String").isPresent());
         assertFalse(fieldDeclarationService.getFieldTypeNode(field, testFile, null).isPresent());
       }
     }

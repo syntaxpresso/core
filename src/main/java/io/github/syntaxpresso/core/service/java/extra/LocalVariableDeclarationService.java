@@ -23,6 +23,7 @@ public class LocalVariableDeclarationService {
    */
   public List<TSNode> findAllLocalVariableDeclarations(TSNode methodDeclarationNode, TSFile file) {
     if (methodDeclarationNode == null
+        || file == null
         || !"method_declaration".equals(methodDeclarationNode.getType())) {
       return Collections.emptyList();
     }
@@ -40,6 +41,8 @@ public class LocalVariableDeclarationService {
   public Optional<TSNode> getVariableTypeNode(
       TSNode localVariableDeclarationNode, TSFile file, String typeName) {
     if (localVariableDeclarationNode == null
+        || file == null
+        || typeName == null
         || !"local_variable_declaration".equals(localVariableDeclarationNode.getType())) {
       return Optional.empty();
     }
@@ -62,6 +65,7 @@ public class LocalVariableDeclarationService {
    */
   public Optional<TSNode> getVariableNameNode(TSNode localVariableDeclarationNode, TSFile file) {
     if (localVariableDeclarationNode == null
+        || file == null
         || !"local_variable_declaration".equals(localVariableDeclarationNode.getType())) {
       return Optional.empty();
     }
@@ -117,7 +121,9 @@ public class LocalVariableDeclarationService {
         TSNode declarator = parent.getChildByFieldName("declarator");
         if (declarator != null && !declarator.isNull()) {
           TSNode nameNode = declarator.getChildByFieldName("name");
-          if (nameNode != null && !nameNode.isNull() && nameNode.equals(identifierNode)) {
+          if (nameNode != null && !nameNode.isNull() && 
+              identifierNode.getStartByte() == nameNode.getStartByte() &&
+              identifierNode.getEndByte() == nameNode.getEndByte()) {
             return true;
           }
         }
@@ -141,7 +147,9 @@ public class LocalVariableDeclarationService {
     if (identifierNode == null
         || identifierNode.isNull()
         || methodDeclarationNode == null
-        || methodDeclarationNode.isNull()) {
+        || methodDeclarationNode.isNull()
+        || varName == null
+        || file == null) {
       return false;
     }
     List<TSNode> localVars = findAllLocalVariableDeclarations(methodDeclarationNode, file);

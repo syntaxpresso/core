@@ -22,7 +22,6 @@ class TypeResolutionServiceTest {
     // Set up service dependencies - use actual ProgramService for consistent setup
     ProgramService programService = new ProgramService();
     typeResolutionService = programService.getTypeResolutionService();
-
     // Simple test file
     String javaCode =
         """
@@ -30,11 +29,9 @@ class TypeResolutionServiceTest {
         public class Calculator {
           private String name;
           private Calculator helper;
-
           public void processInput(String input, Calculator calc) {
             String localVar = "test";
             Calculator localCalc = new Calculator();
-            
             // Test method calls
             this.doSomething();
             input.length();
@@ -43,7 +40,6 @@ class TypeResolutionServiceTest {
             localCalc.reset();
             helper.validate();
           }
-
           public void doSomething() {}
           public int calculate() { return 42; }
           public void reset() {}
@@ -51,7 +47,6 @@ class TypeResolutionServiceTest {
         }
         """;
     testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-
     // Complex test file with nested scopes
     String complexJavaCode =
         """
@@ -59,22 +54,18 @@ class TypeResolutionServiceTest {
         public class ComplexExample {
           private Calculator calculator;
           private String globalName;
-
           public ComplexExample(Calculator calc) {
             this.calculator = calc;
           }
-
           public void method1(String param1, Calculator paramCalc) {
             String localStr = "local";
             Calculator localCalc = new Calculator();
-            
             for (int i = 0; i < 10; i++) {
               String loopVar = "loop";
               paramCalc.process();
               localCalc.execute();
             }
           }
-
           public void method2() {
             Calculator methodCalc = new Calculator();
             methodCalc.validate();
@@ -88,7 +79,6 @@ class TypeResolutionServiceTest {
   @Nested
   @DisplayName("resolveObjectType() tests")
   class ResolveObjectTypeTests {
-
     @Test
     @DisplayName("Should resolve 'this' keyword to class name")
     void shouldResolveThisKeyword() {
@@ -102,11 +92,10 @@ class TypeResolutionServiceTest {
           break;
         }
       }
-
       assertNotNull(thisInvocation, "Should find 'this' method invocation");
       TSNode objectNode = thisInvocation.getChildByFieldName("object");
-      
-      String resolvedType = typeResolutionService.resolveObjectType(testFile, objectNode, thisInvocation);
+      String resolvedType =
+          typeResolutionService.resolveObjectType(testFile, objectNode, thisInvocation);
       assertEquals("Calculator", resolvedType);
     }
 
@@ -123,11 +112,10 @@ class TypeResolutionServiceTest {
           break;
         }
       }
-
       assertNotNull(calcInvocation, "Should find 'calc' method invocation");
       TSNode objectNode = calcInvocation.getChildByFieldName("object");
-      
-      String resolvedType = typeResolutionService.resolveObjectType(testFile, objectNode, calcInvocation);
+      String resolvedType =
+          typeResolutionService.resolveObjectType(testFile, objectNode, calcInvocation);
       assertEquals("Calculator", resolvedType);
     }
 
@@ -144,11 +132,10 @@ class TypeResolutionServiceTest {
           break;
         }
       }
-
       assertNotNull(localCalcInvocation, "Should find 'localCalc' method invocation");
       TSNode objectNode = localCalcInvocation.getChildByFieldName("object");
-      
-      String resolvedType = typeResolutionService.resolveObjectType(testFile, objectNode, localCalcInvocation);
+      String resolvedType =
+          typeResolutionService.resolveObjectType(testFile, objectNode, localCalcInvocation);
       assertEquals("Calculator", resolvedType);
     }
 
@@ -165,11 +152,10 @@ class TypeResolutionServiceTest {
           break;
         }
       }
-
       assertNotNull(helperInvocation, "Should find 'helper' method invocation");
       TSNode objectNode = helperInvocation.getChildByFieldName("object");
-      
-      String resolvedType = typeResolutionService.resolveObjectType(testFile, objectNode, helperInvocation);
+      String resolvedType =
+          typeResolutionService.resolveObjectType(testFile, objectNode, helperInvocation);
       assertEquals("Calculator", resolvedType);
     }
 
@@ -186,11 +172,10 @@ class TypeResolutionServiceTest {
           break;
         }
       }
-
       assertNotNull(inputInvocation, "Should find 'input' method invocation");
       TSNode objectNode = inputInvocation.getChildByFieldName("object");
-      
-      String resolvedType = typeResolutionService.resolveObjectType(testFile, objectNode, inputInvocation);
+      String resolvedType =
+          typeResolutionService.resolveObjectType(testFile, objectNode, inputInvocation);
       assertEquals("String", resolvedType);
     }
 
@@ -200,9 +185,9 @@ class TypeResolutionServiceTest {
       // Create a mock object node that doesn't exist in scope
       List<TSNode> identifiers = testFile.query("(identifier) @id");
       TSNode firstIdentifier = identifiers.get(0);
-      
       // Create a fake context - this should not resolve to anything
-      String resolvedType = typeResolutionService.resolveObjectType(testFile, firstIdentifier, firstIdentifier);
+      String resolvedType =
+          typeResolutionService.resolveObjectType(testFile, firstIdentifier, firstIdentifier);
       assertEquals("", resolvedType);
     }
   }
@@ -210,14 +195,12 @@ class TypeResolutionServiceTest {
   @Nested
   @DisplayName("Complex scope resolution tests")
   class ComplexScopeTests {
-
     @Test
     @DisplayName("Should resolve constructor parameter type")
     void shouldResolveConstructorParameterType() {
       // Find constructor and its parameter usage
       List<TSNode> constructors = complexTestFile.query("(constructor_declaration) @constructor");
       assertFalse(constructors.isEmpty(), "Should find constructor");
-      
       // Look for assignments within constructor
       List<TSNode> assignments = complexTestFile.query("(assignment_expression) @assignment");
       TSNode calcAssignment = null;
@@ -228,10 +211,10 @@ class TypeResolutionServiceTest {
           break;
         }
       }
-
       if (calcAssignment != null) {
         TSNode objectNode = calcAssignment.getChildByFieldName("right");
-        String resolvedType = typeResolutionService.resolveObjectType(complexTestFile, objectNode, calcAssignment);
+        String resolvedType =
+            typeResolutionService.resolveObjectType(complexTestFile, objectNode, calcAssignment);
         assertEquals("Calculator", resolvedType);
       }
     }
@@ -241,31 +224,29 @@ class TypeResolutionServiceTest {
     void shouldHandleNestedScopesCorrectly() {
       // Find method invocations within different scopes
       List<TSNode> methodInvocations = complexTestFile.query("(method_invocation) @invocation");
-      
       // Count different types of invocations
       int totalInvocations = 0;
       int resolvedInvocations = 0;
-      
       for (TSNode invocation : methodInvocations) {
         TSNode object = invocation.getChildByFieldName("object");
         if (object != null) {
           String objectName = complexTestFile.getTextFromNode(object);
           totalInvocations++;
-          
           // Test that the service can resolve types without throwing exceptions
-          assertDoesNotThrow(() -> {
-            String resolvedType = typeResolutionService.resolveObjectType(complexTestFile, object, invocation);
-            // We don't assert specific types since the test setup might vary
-            // Just verify the method completes successfully
-          }, "Type resolution should not throw exceptions for: " + objectName);
-          
-          String resolvedType = typeResolutionService.resolveObjectType(complexTestFile, object, invocation);
+          assertDoesNotThrow(
+              () -> {
+                typeResolutionService.resolveObjectType(complexTestFile, object, invocation);
+                // We don't assert specific types since the test setup might vary
+                // Just verify the method completes successfully
+              },
+              "Type resolution should not throw exceptions for: " + objectName);
+          String resolvedType =
+              typeResolutionService.resolveObjectType(complexTestFile, object, invocation);
           if (resolvedType != null && !resolvedType.isEmpty()) {
             resolvedInvocations++;
           }
         }
       }
-
       assertTrue(totalInvocations > 0, "Should find method invocations in complex file");
       // At least some invocations should be resolvable
       assertTrue(resolvedInvocations >= 0, "Should handle all invocations gracefully");
@@ -275,17 +256,18 @@ class TypeResolutionServiceTest {
   @Nested
   @DisplayName("Error handling tests")
   class ErrorHandlingTests {
-
     @Test
     @DisplayName("Should handle null file gracefully")
     void shouldHandleNullFileGracefully() {
       TSNode mockNode = testFile.query("(identifier) @id").get(0);
       // The service should handle null file gracefully without throwing NPE
-      assertDoesNotThrow(() -> {
-        String result = typeResolutionService.resolveObjectType(null, mockNode, mockNode);
-        // Result should be empty string for null file
-        assertTrue(result == null || result.isEmpty(), "Should return empty or null for null file");
-      });
+      assertDoesNotThrow(
+          () -> {
+            String result = typeResolutionService.resolveObjectType(null, mockNode, mockNode);
+            // Result should be empty string for null file
+            assertTrue(
+                result == null || result.isEmpty(), "Should return empty or null for null file");
+          });
     }
 
     @Test
@@ -293,11 +275,14 @@ class TypeResolutionServiceTest {
     void shouldHandleNullObjectNodeGracefully() {
       TSNode mockContext = testFile.query("(identifier) @id").get(0);
       // The service should handle null object node gracefully without throwing NPE
-      assertDoesNotThrow(() -> {
-        String result = typeResolutionService.resolveObjectType(testFile, null, mockContext);
-        // Result should be empty string for null object node
-        assertTrue(result == null || result.isEmpty(), "Should return empty or null for null object node");
-      });
+      assertDoesNotThrow(
+          () -> {
+            String result = typeResolutionService.resolveObjectType(testFile, null, mockContext);
+            // Result should be empty string for null object node
+            assertTrue(
+                result == null || result.isEmpty(),
+                "Should return empty or null for null object node");
+          });
     }
 
     @Test
@@ -309,3 +294,4 @@ class TypeResolutionServiceTest {
     }
   }
 }
+
