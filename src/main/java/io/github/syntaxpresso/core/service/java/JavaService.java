@@ -3,6 +3,7 @@ package io.github.syntaxpresso.core.service.java;
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
 import io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse;
+import io.github.syntaxpresso.core.command.java.dto.RenameResponse;
 import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
@@ -10,7 +11,13 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.extra.ScopeType;
+import io.github.syntaxpresso.core.service.java.extra.ClassDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.FieldDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.FormalParameterService;
+import io.github.syntaxpresso.core.service.java.extra.LocalVariableDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.MethodDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.ProgramService;
+import io.github.syntaxpresso.core.service.java.extra.VariableNamingService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +37,16 @@ import org.treesitter.TSQueryMatch;
 public class JavaService {
   private final PathHelper pathHelper = new PathHelper();
   private final ProgramService programService = new ProgramService();
+  private final VariableNamingService variableNamingService = new VariableNamingService();
+  private final LocalVariableDeclarationService localVariableDeclarationService =
+      new LocalVariableDeclarationService(variableNamingService);
+  private final FormalParameterService formalParameterService =
+      new FormalParameterService(localVariableDeclarationService, variableNamingService);
+  private final MethodDeclarationService methodDeclarationService =
+      new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
+  private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+  private final ClassDeclarationService classDeclarationService =
+      new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
 
   /**
    * Checks if a directory is a Java project.
@@ -356,6 +373,20 @@ public class JavaService {
     if (sourceDirectoryType == null) {
       return DataTransferObject.error("Source directory type is required.");
     }
+
+    final String srcDirName =
+        (sourceDirectoryType == SourceDirectoryType.MAIN) ? "src/main/java" : "src/test/java";
+    try {
+      Optional<Path> sourceDirOptional = this.pathHelper.findDirectoryRecursively(cwd, srcDirName);
+      if (sourceDirOptional.isEmpty()) {
+        if (!Files.exists(cwd.resolve(srcDirName))) {
+          return DataTransferObject.error("Cannot find source directory.");
+        }
+      }
+    } catch (IOException e) {
+      return DataTransferObject.error("Failed to search for source directory: " + e.getMessage());
+    }
+    
     try {
       String className = fileName.trim();
       className = com.google.common.io.Files.getNameWithoutExtension(className);
@@ -418,5 +449,54 @@ public class JavaService {
     } catch (Exception e) {
       return DataTransferObject.error("Unexpected error occurred: " + e.getMessage());
     }
+  }
+
+  /**
+   * Renames a Java class/interface/enum and its file.
+   *
+   * @param filePath The absolute path to the .java file.
+   * @param newName The new name for the class/interface/enum.
+   * @return A DataTransferObject containing the new file path or an error.
+   */
+  public DataTransferObject<RenameResponse> rename(final Path filePath, final String newName) {
+    if (!Files.exists(filePath)) {
+      return DataTransferObject.error("File does not exist: " + filePath);
+    }
+
+    if (!filePath.toString().endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + filePath);
+    }
+
+    try {
+      Path newFilePath = this.renameFileAndContent(filePath, newName);
+      return DataTransferObject.success(
+          RenameResponse.builder().filePath(newFilePath.toString()).build());
+    } catch (IOException e) {
+      return DataTransferObject.error("Failed to rename file: " + e.getMessage());
+    }
+  }
+
+  private Path renameFileAndContent(final Path filePath, final String newName) throws IOException {
+    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
+    Optional<TSNode> mainClassNode = this.classDeclarationService.getMainClass(tsFile);
+    if (mainClassNode.isPresent()) {
+      this.classDeclarationService.renameClass(tsFile, mainClassNode.get(), newName);
+      String updatedContent = tsFile.getSourceCode();
+      Path newPath = filePath.resolveSibling(newName + ".java");
+      Files.writeString(newPath, updatedContent);
+      Files.delete(filePath);
+      return newPath;
+    } else {
+      List<TSNode> classes = this.classDeclarationService.findAllClassDeclarations(tsFile);
+      if (!classes.isEmpty()) {
+        this.classDeclarationService.renameClass(tsFile, classes.get(0), newName);
+        String updatedContent = tsFile.getSourceCode();
+        Path newPath = filePath.resolveSibling(newName + ".java");
+        Files.writeString(newPath, updatedContent);
+        Files.delete(filePath);
+        return newPath;
+      }
+    }
+    throw new IOException("No class found in file " + filePath);
   }
 }

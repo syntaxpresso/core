@@ -3,69 +3,44 @@ package io.github.syntaxpresso.core.command.java;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
+import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import picocli.CommandLine;
 
 @DisplayName("CreateNewFileTest Tests")
 class CreateNewFileTest {
   private JavaService javaService;
-  private CommandLine cmd;
   @TempDir Path tempDir;
 
   @BeforeEach
   void setUp() {
-    javaService = mock(JavaService.class);
-    cmd = new CommandLine(new CreateNewFileCommand(javaService));
+    javaService = new JavaService();
   }
 
   @Nested
   @DisplayName("Argument Tests")
   class ArgumentTests {
     @Test
-    @DisplayName("should fail when --cwd is not provided")
-    void execute_withoutCwd_shouldThrowException() {
-      String[] args = {
-        "--package-name", "io.github", "--file-name", "MyClass.java", "--file-type", "CLASS"
-      };
-      assertThrows(CommandLine.MissingParameterException.class, () -> cmd.parseArgs(args));
-    }
-
-    @Test
     @DisplayName("should fail when --cwd does not exist")
     void execute_withNonExistentCwd_shouldReturnError() {
-      when(javaService.createNewFile(any(), any(), any(), any(), any()))
-          .thenReturn(DataTransferObject.error("Current working directory does not exist."));
-      
-      String[] args = {
-        "--cwd",
-        "/invalid/path",
-        "--package-name",
-        "io.github",
-        "--file-name",
-        "MyClass.java",
-        "--file-type",
-        "CLASS"
-      };
-      cmd.execute(args);
-      DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
+      DataTransferObject<CreateNewJavaFileResponse> result =
+          javaService.createNewFile(
+              Path.of("/invalid/path"),
+              "io.github",
+              "MyClass.java",
+              JavaFileTemplate.CLASS,
+              SourceDirectoryType.MAIN);
       assertFalse(result.getSucceed());
       assertEquals("Current working directory does not exist.", result.getErrorReason());
     }
@@ -73,21 +48,9 @@ class CreateNewFileTest {
     @Test
     @DisplayName("should fail when --packageName is empty")
     void execute_withEmptyPackageName_shouldReturnError() {
-      when(javaService.createNewFile(any(), any(), any(), any(), any()))
-          .thenReturn(DataTransferObject.error("Package name invalid."));
-      
-      String[] args = {
-        "--cwd",
-        tempDir.toString(),
-        "--package-name",
-        "",
-        "--file-name",
-        "MyClass.java",
-        "--file-type",
-        "CLASS"
-      };
-      cmd.execute(args);
-      DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
+      DataTransferObject<CreateNewJavaFileResponse> result =
+          javaService.createNewFile(
+              tempDir, "", "MyClass.java", JavaFileTemplate.CLASS, SourceDirectoryType.MAIN);
       assertFalse(result.getSucceed());
       assertEquals("Package name invalid.", result.getErrorReason());
     }
@@ -95,21 +58,9 @@ class CreateNewFileTest {
     @Test
     @DisplayName("should fail when --fileName is empty")
     void execute_withEmptyFileName_shouldReturnError() {
-      when(javaService.createNewFile(any(), any(), any(), any(), any()))
-          .thenReturn(DataTransferObject.error("File name invalid."));
-      
-      String[] args = {
-        "--cwd",
-        tempDir.toString(),
-        "--package-name",
-        "io.github",
-        "--file-name",
-        "",
-        "--file-type",
-        "CLASS"
-      };
-      cmd.execute(args);
-      DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
+      DataTransferObject<CreateNewJavaFileResponse> result =
+          javaService.createNewFile(
+              tempDir, "io.github", "", JavaFileTemplate.CLASS, SourceDirectoryType.MAIN);
       assertFalse(result.getSucceed());
       assertEquals("File name invalid.", result.getErrorReason());
     }
@@ -123,55 +74,31 @@ class CreateNewFileTest {
     void call_shouldCreateJavaFileSuccessfully() throws Exception {
       Path targetPath = tempDir.resolve("src/main/java/io/github");
       Files.createDirectories(targetPath);
-      
-      CreateNewJavaFileResponse mockResponse = CreateNewJavaFileResponse.builder()
-          .filePath(targetPath.resolve("MyClass.java").toString())
-          .build();
-      
-      when(javaService.createNewFile(any(), any(), any(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
-      
-      String[] args = {
-        "--cwd",
-        tempDir.toString(),
-        "--package-name",
-        "io.github",
-        "--file-name",
-        "MyClass.java",
-        "--file-type",
-        "CLASS",
-        "--source-directory-type",
-        "MAIN"
-      };
-      cmd.execute(args);
-      DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
+      DataTransferObject<CreateNewJavaFileResponse> result =
+          javaService.createNewFile(
+              tempDir,
+              "io.github",
+              "MyClass.java",
+              JavaFileTemplate.CLASS,
+              SourceDirectoryType.MAIN);
       assertTrue(result.getSucceed());
       assertNotNull(result.getData());
       assertTrue(result.getData().getFilePath().endsWith("MyClass.java"));
+      assertTrue(Files.exists(Path.of(result.getData().getFilePath())));
     }
 
     @Test
-    @DisplayName("should return error if path not found by JavaService")
-    void call_shouldReturnErrorIfFilePathNotFound() {
-      when(javaService.createNewFile(any(), any(), any(), any(), any()))
-          .thenReturn(DataTransferObject.error("Package name couldn't be determined."));
-      
-      String[] args = {
-        "--cwd",
-        tempDir.toString(),
-        "--package-name",
-        "io.github",
-        "--file-name",
-        "MyClass.java",
-        "--file-type",
-        "CLASS",
-        "--source-directory-type",
-        "MAIN"
-      };
-      cmd.execute(args);
-      DataTransferObject<CreateNewJavaFileResponse> result = cmd.getExecutionResult();
+    @DisplayName("should return error when source directory is missing")
+    void shouldReturnErrorWhenSourceDirectoryIsMissing() {
+      DataTransferObject<CreateNewJavaFileResponse> result =
+          javaService.createNewFile(
+              tempDir,
+              "io.github",
+              "MyClass.java",
+              JavaFileTemplate.CLASS,
+              SourceDirectoryType.MAIN);
       assertFalse(result.getSucceed());
-      assertEquals("Package name couldn't be determined.", result.getErrorReason());
+      assertEquals("Cannot find source directory.", result.getErrorReason());
     }
   }
 }
