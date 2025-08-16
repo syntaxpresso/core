@@ -1,3 +1,4 @@
+// TODO: validate command arguments with annotations.
 package io.github.syntaxpresso.core.service.java;
 
 import com.google.common.base.Strings;
@@ -339,6 +340,49 @@ public class JavaService {
   }
 
   /**
+   * Renames the main class within a .java file and renames the file itself.
+   *
+   * <p>This method performs the following steps:
+   *
+   * <ol>
+   *   <li>Parses the Java file to find the main class declaration.
+   *   <li>If no main class is found, it attempts to find the first class declaration.
+   *   <li>Updates the source code in memory to rename the class.
+   *   <li>Writes the updated content to a new file with the new class name.
+   *   <li>Deletes the original file.
+   * </ol>
+   *
+   * @param filePath The absolute path to the .java file to be renamed.
+   * @param newName The new name for the class and the file (without the .java extension).
+   * @return The path to the newly created and renamed file.
+   * @throws IOException if an I/O error occurs during file reading, writing, or deletion, or if no
+   *     class declaration is found in the file.
+   */
+  private Path renameFileAndContent(final Path filePath, final String newName) throws IOException {
+    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
+    Optional<TSNode> mainClassNode = this.classDeclarationService.getMainClass(tsFile);
+    if (mainClassNode.isPresent()) {
+      this.classDeclarationService.renameClass(tsFile, mainClassNode.get(), newName);
+      String updatedContent = tsFile.getSourceCode();
+      Path newPath = filePath.resolveSibling(newName + ".java");
+      Files.writeString(newPath, updatedContent);
+      Files.delete(filePath);
+      return newPath;
+    } else {
+      List<TSNode> classes = this.classDeclarationService.findAllClassDeclarations(tsFile);
+      if (!classes.isEmpty()) {
+        this.classDeclarationService.renameClass(tsFile, classes.get(0), newName);
+        String updatedContent = tsFile.getSourceCode();
+        Path newPath = filePath.resolveSibling(newName + ".java");
+        Files.writeString(newPath, updatedContent);
+        Files.delete(filePath);
+        return newPath;
+      }
+    }
+    throw new IOException("No class found in file " + filePath);
+  }
+
+  /**
    * Creates a new Java file.
    *
    * @param cwd The current working directory to search in.
@@ -474,46 +518,58 @@ public class JavaService {
     }
   }
 
-  /**
-   * Renames the main class within a .java file and renames the file itself.
-   *
-   * <p>This method performs the following steps:
-   *
-   * <ol>
-   *   <li>Parses the Java file to find the main class declaration.
-   *   <li>If no main class is found, it attempts to find the first class declaration.
-   *   <li>Updates the source code in memory to rename the class.
-   *   <li>Writes the updated content to a new file with the new class name.
-   *   <li>Deletes the original file.
-   * </ol>
-   *
-   * @param filePath The absolute path to the .java file to be renamed.
-   * @param newName The new name for the class and the file (without the .java extension).
-   * @return The path to the newly created and renamed file.
-   * @throws IOException if an I/O error occurs during file reading, writing, or deletion, or if no
-   *     class declaration is found in the file.
-   */
-  private Path renameFileAndContent(final Path filePath, final String newName) throws IOException {
-    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
-    Optional<TSNode> mainClassNode = this.classDeclarationService.getMainClass(tsFile);
-    if (mainClassNode.isPresent()) {
-      this.classDeclarationService.renameClass(tsFile, mainClassNode.get(), newName);
-      String updatedContent = tsFile.getSourceCode();
-      Path newPath = filePath.resolveSibling(newName + ".java");
-      Files.writeString(newPath, updatedContent);
-      Files.delete(filePath);
-      return newPath;
-    } else {
-      List<TSNode> classes = this.classDeclarationService.findAllClassDeclarations(tsFile);
-      if (!classes.isEmpty()) {
-        this.classDeclarationService.renameClass(tsFile, classes.get(0), newName);
-        String updatedContent = tsFile.getSourceCode();
-        Path newPath = filePath.resolveSibling(newName + ".java");
-        Files.writeString(newPath, updatedContent);
-        Files.delete(filePath);
-        return newPath;
+  public DataTransferObject<Void> createJPARepository(final Path cwd, final Path filePath) {
+    if (!Files.exists(filePath)) {
+      return DataTransferObject.error("File does not exist: " + filePath);
+    }
+    if (!filePath.toString().endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + filePath);
+    }
+    TSFile file = new TSFile(SupportedLanguage.JAVA, filePath);
+    Optional<String> className = file.getFileNameWithoutExtension();
+    if (className.isEmpty()) {
+      return DataTransferObject.error("Unable to get file name");
+    }
+    Optional<String> packageName = this.getProgramService().getPackageName(file);
+    if (className.isEmpty()) {
+      return DataTransferObject.error("Unable to get package name for this file");
+    }
+    Optional<TSNode> classDeclarationNode =
+        this.getClassDeclarationService().findClassByName(file, className.get());
+    if (classDeclarationNode.isEmpty()) {
+      return DataTransferObject.error("No class found on this file");
+    }
+    Optional<TSNode> classNameNode =
+        this.getClassDeclarationService().getClassNameNode(file, classDeclarationNode.get());
+    // DataTransferObject<CreateNewJavaFileResponse> response =
+    //     this.createNewFile(
+    //         cwd,
+    //         packageName.get(),
+    //         className.get() + "Repository",
+    //         JavaFileTemplate.INTERFACE,
+    //         SourceDirectoryType.MAIN);
+    // if (!response.getSucceed()) {
+    //   return DataTransferObject.error("Unable to create interface");
+    // }
+    // TSFile repositoryFile =
+    //     new TSFile(SupportedLanguage.JAVA, Paths.get(response.getData().getFilePath()));
+    // this.programService
+    //     .getImportDeclarationService()
+    //     .addImport(repositoryFile, "org.springframework.data.jpa.repository.JpaRepository");
+    // try {
+    //   repositoryFile.save();
+    // } catch (IOException e) {
+    //   return DataTransferObject.error("Failed to save file: " + e.getMessage());
+    // }
+    List<TSNode> allClassFields =
+        this.getClassDeclarationService().getClassFields(file, classDeclarationNode.get());
+    for (TSNode field : allClassFields) {
+      List<TSNode> allMarkerAnnotations =
+          file.query(field, "(marker_annotation name: (identifier) @annotation.name)");
+      for (TSNode markerAnnotation : allMarkerAnnotations) {
+        System.out.println(file.getTextFromNode(markerAnnotation));
       }
     }
-    throw new IOException("No class found in file " + filePath);
+    return null;
   }
 }

@@ -30,6 +30,24 @@ public class ClassDeclarationService {
   }
 
   /**
+   * Gets the class name node.
+   *
+   * @param file The TSFile containing the source code.
+   * @param classNode The class declaration node.
+   * @return The class name node, or empty if not found.
+   */
+  public Optional<TSNode> getClassNameNode(TSFile file, TSNode classNode) {
+    if (file == null || classNode == null || !"class_declaration".equals(classNode.getType())) {
+      return Optional.empty();
+    }
+    TSNode nameNode = classNode.getChildByFieldName("name");
+    if (nameNode != null) {
+      return Optional.of(nameNode);
+    }
+    return Optional.empty();
+  }
+
+  /**
    * Gets the class name from a class declaration node.
    *
    * @param file The TSFile containing the source code.
