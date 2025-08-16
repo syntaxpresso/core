@@ -177,7 +177,6 @@ public class MethodDeclarationService {
     if (nameNode != null) {
       originalFile.updateSourceCode(nameNode, newName);
     }
-    
     if (!originalFile.isModified()) {
       return null;
     }

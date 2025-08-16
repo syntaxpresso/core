@@ -46,7 +46,10 @@ public class FieldDeclarationService {
    * @return An Optional containing the found TSNode, or empty.
    */
   public Optional<TSNode> getFieldTypeNode(TSNode declarationNode, TSFile file, String typeName) {
-    if (declarationNode == null || file == null || typeName == null || !"field_declaration".equals(declarationNode.getType())) {
+    if (declarationNode == null
+        || file == null
+        || typeName == null
+        || !"field_declaration".equals(declarationNode.getType())) {
       return Optional.empty();
     }
     // Query for type identifiers within this field declaration

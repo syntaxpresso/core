@@ -65,7 +65,10 @@ public class FormalParameterService {
    * @return A list of all formal parameter nodes.
    */
   public List<TSNode> findAllFormalParameters(TSFile file, TSNode node, String typeName) {
-    if (file == null || node == null || typeName == null || !"method_declaration".equals(node.getType())) {
+    if (file == null
+        || node == null
+        || typeName == null
+        || !"method_declaration".equals(node.getType())) {
       return Collections.emptyList();
     }
     List<TSNode> foundParams = new ArrayList<>();
@@ -92,7 +95,10 @@ public class FormalParameterService {
    */
   public Optional<TSNode> getParameterTypeNode(
       TSNode formalParameterNode, TSFile file, String typeName) {
-    if (formalParameterNode == null || file == null || typeName == null || !"formal_parameter".equals(formalParameterNode.getType())) {
+    if (formalParameterNode == null
+        || file == null
+        || typeName == null
+        || !"formal_parameter".equals(formalParameterNode.getType())) {
       return Optional.empty();
     }
     List<TSNode> typeNodes = file.query(formalParameterNode, "(type_identifier) @type");
@@ -113,7 +119,9 @@ public class FormalParameterService {
    * @return An Optional containing the parameter name node, or empty if not found.
    */
   public Optional<TSNode> getParameterNameNode(TSNode formalParameterNode, TSFile file) {
-    if (formalParameterNode == null || file == null || !"formal_parameter".equals(formalParameterNode.getType())) {
+    if (formalParameterNode == null
+        || file == null
+        || !"formal_parameter".equals(formalParameterNode.getType())) {
       return Optional.empty();
     }
     return Optional.ofNullable(formalParameterNode.getChildByFieldName("name"));
@@ -193,7 +201,9 @@ public class FormalParameterService {
    */
   public List<TSNode> findAllFormalParameterUsages(
       TSFile file, TSNode methodDeclarationNode, String currentName) {
-    if (file == null || methodDeclarationNode == null || currentName == null
+    if (file == null
+        || methodDeclarationNode == null
+        || currentName == null
         || !"method_declaration".equals(methodDeclarationNode.getType())) {
       return Collections.emptyList();
     }

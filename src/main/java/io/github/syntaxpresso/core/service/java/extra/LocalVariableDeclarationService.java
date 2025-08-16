@@ -121,9 +121,10 @@ public class LocalVariableDeclarationService {
         TSNode declarator = parent.getChildByFieldName("declarator");
         if (declarator != null && !declarator.isNull()) {
           TSNode nameNode = declarator.getChildByFieldName("name");
-          if (nameNode != null && !nameNode.isNull() && 
-              identifierNode.getStartByte() == nameNode.getStartByte() &&
-              identifierNode.getEndByte() == nameNode.getEndByte()) {
+          if (nameNode != null
+              && !nameNode.isNull()
+              && identifierNode.getStartByte() == nameNode.getStartByte()
+              && identifierNode.getEndByte() == nameNode.getEndByte()) {
             return true;
           }
         }

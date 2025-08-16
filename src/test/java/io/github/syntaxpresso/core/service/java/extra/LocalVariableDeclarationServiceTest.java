@@ -21,26 +21,26 @@ class LocalVariableDeclarationServiceTest {
   void setUp() {
     // Use ProgramService for consistent service setup
     ProgramService programService = new ProgramService();
-    localVariableDeclarationService = programService.getClassDeclarationService().getMethodDeclarationService().getLocalVariableDeclarationService();
-    
-    String javaCode = """
+    localVariableDeclarationService =
+        programService
+            .getClassDeclarationService()
+            .getMethodDeclarationService()
+            .getLocalVariableDeclarationService();
+    String javaCode =
+        """
         package io.github.test;
-        
         public class TestClass {
           private Calculator calculator;
-          
           public void processData(Calculator param) {
             Calculator localCalc = new Calculator();
             String message = "test";
             int count = 5;
             Calculator backup = param;
-            
             localCalc.process();
             message.length();
             count++;
             backup.validate();
           }
-          
           public String anotherMethod() {
             Calculator helper = new Calculator();
             List<Calculator> calculators = new ArrayList<>();
@@ -48,7 +48,6 @@ class LocalVariableDeclarationServiceTest {
             calculators.add(helper);
             return result;
           }
-          
           public void noLocalVars() {
             this.calculator.run();
           }
@@ -60,15 +59,16 @@ class LocalVariableDeclarationServiceTest {
   @Nested
   @DisplayName("findAllLocalVariableDeclarations() tests")
   class FindAllLocalVariableDeclarationsTests {
-
     @Test
     @DisplayName("Should find all local variable declarations in method")
     void shouldFindAllLocalVariableDeclarationsInMethod() {
       TSNode processDataMethod = findMethodByName("processData");
       assertNotNull(processDataMethod, "Should find processData method");
-      
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
-      assertEquals(4, localVars.size(), "Should find 4 local variable declarations in processData method");
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
+      assertEquals(
+          4, localVars.size(), "Should find 4 local variable declarations in processData method");
     }
 
     @Test
@@ -76,9 +76,10 @@ class LocalVariableDeclarationServiceTest {
     void shouldFindLocalVariablesInDifferentMethod() {
       TSNode anotherMethod = findMethodByName("anotherMethod");
       assertNotNull(anotherMethod, "Should find anotherMethod");
-      
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(anotherMethod, testFile);
-      assertEquals(3, localVars.size(), "Should find 3 local variable declarations in anotherMethod");
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(anotherMethod, testFile);
+      assertEquals(
+          3, localVars.size(), "Should find 3 local variable declarations in anotherMethod");
     }
 
     @Test
@@ -86,16 +87,20 @@ class LocalVariableDeclarationServiceTest {
     void shouldReturnEmptyListForMethodWithoutLocalVariables() {
       TSNode noLocalVarsMethod = findMethodByName("noLocalVars");
       assertNotNull(noLocalVarsMethod, "Should find noLocalVars method");
-      
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(noLocalVarsMethod, testFile);
-      assertTrue(localVars.isEmpty(), "Should return empty list for method without local variables");
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              noLocalVarsMethod, testFile);
+      assertTrue(
+          localVars.isEmpty(), "Should return empty list for method without local variables");
     }
 
     @Test
     @DisplayName("Should handle invalid method node")
     void shouldHandleInvalidMethodNode() {
       List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(classNodes.get(0), testFile);
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              classNodes.get(0), testFile);
       assertTrue(localVars.isEmpty(), "Should return empty list for non-method node");
     }
 
@@ -103,11 +108,11 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should handle null parameters")
     void shouldHandleNullParameters() {
       TSNode method = findMethodByName("processData");
-      
-      List<TSNode> nullMethodResult = localVariableDeclarationService.findAllLocalVariableDeclarations(null, testFile);
+      List<TSNode> nullMethodResult =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(null, testFile);
       assertTrue(nullMethodResult.isEmpty(), "Should handle null method node");
-      
-      List<TSNode> nullFileResult = localVariableDeclarationService.findAllLocalVariableDeclarations(method, null);
+      List<TSNode> nullFileResult =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(method, null);
       assertTrue(nullFileResult.isEmpty(), "Should handle null file gracefully");
     }
 
@@ -126,13 +131,13 @@ class LocalVariableDeclarationServiceTest {
   @Nested
   @DisplayName("getVariableTypeNode() tests")
   class GetVariableTypeNodeTests {
-
     @Test
     @DisplayName("Should find type node in local variable declaration")
     void shouldFindTypeNodeInLocalVariableDeclaration() {
       TSNode processDataMethod = findMethodByName("processData");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
-      
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       // Find Calculator local variable
       TSNode calculatorVar = null;
       for (TSNode localVar : localVars) {
@@ -142,10 +147,10 @@ class LocalVariableDeclarationServiceTest {
           break;
         }
       }
-      
       assertNotNull(calculatorVar, "Should find Calculator local variable");
-      
-      Optional<TSNode> typeNode = localVariableDeclarationService.getVariableTypeNode(calculatorVar, testFile, "Calculator");
+      Optional<TSNode> typeNode =
+          localVariableDeclarationService.getVariableTypeNode(
+              calculatorVar, testFile, "Calculator");
       assertTrue(typeNode.isPresent(), "Should find Calculator type node");
       assertEquals("Calculator", testFile.getTextFromNode(typeNode.get()));
     }
@@ -154,8 +159,9 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should return empty for non-matching type")
     void shouldReturnEmptyForNonMatchingType() {
       TSNode processDataMethod = findMethodByName("processData");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
-      
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       // Find String local variable
       TSNode stringVar = null;
       for (TSNode localVar : localVars) {
@@ -165,10 +171,9 @@ class LocalVariableDeclarationServiceTest {
           break;
         }
       }
-      
       assertNotNull(stringVar, "Should find String local variable");
-      
-      Optional<TSNode> typeNode = localVariableDeclarationService.getVariableTypeNode(stringVar, testFile, "Calculator");
+      Optional<TSNode> typeNode =
+          localVariableDeclarationService.getVariableTypeNode(stringVar, testFile, "Calculator");
       assertFalse(typeNode.isPresent(), "Should not find Calculator type in String variable");
     }
 
@@ -176,7 +181,9 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should handle invalid local variable node")
     void shouldHandleInvalidLocalVariableNode() {
       List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      Optional<TSNode> typeNode = localVariableDeclarationService.getVariableTypeNode(classNodes.get(0), testFile, "Calculator");
+      Optional<TSNode> typeNode =
+          localVariableDeclarationService.getVariableTypeNode(
+              classNodes.get(0), testFile, "Calculator");
       assertFalse(typeNode.isPresent(), "Should return empty for non-local-variable node");
     }
 
@@ -184,12 +191,22 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should handle null parameters")
     void shouldHandleNullParameters() {
       TSNode processDataMethod = findMethodByName("processData");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       TSNode localVar = localVars.get(0);
-      
-      assertFalse(localVariableDeclarationService.getVariableTypeNode(null, testFile, "Calculator").isPresent());
-      assertFalse(localVariableDeclarationService.getVariableTypeNode(localVar, null, "Calculator").isPresent());
-      assertFalse(localVariableDeclarationService.getVariableTypeNode(localVar, testFile, null).isPresent());
+      assertFalse(
+          localVariableDeclarationService
+              .getVariableTypeNode(null, testFile, "Calculator")
+              .isPresent());
+      assertFalse(
+          localVariableDeclarationService
+              .getVariableTypeNode(localVar, null, "Calculator")
+              .isPresent());
+      assertFalse(
+          localVariableDeclarationService
+              .getVariableTypeNode(localVar, testFile, null)
+              .isPresent());
     }
 
     private TSNode findMethodByName(String methodName) {
@@ -207,13 +224,13 @@ class LocalVariableDeclarationServiceTest {
   @Nested
   @DisplayName("getVariableNameNode() tests")
   class GetVariableNameNodeTests {
-
     @Test
     @DisplayName("Should extract variable name from local declaration")
     void shouldExtractVariableNameFromLocalDeclaration() {
       TSNode processDataMethod = findMethodByName("processData");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
-      
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       // Find Calculator local variable
       TSNode calculatorVar = null;
       for (TSNode localVar : localVars) {
@@ -223,10 +240,9 @@ class LocalVariableDeclarationServiceTest {
           break;
         }
       }
-      
       assertNotNull(calculatorVar, "Should find Calculator local variable");
-      
-      Optional<TSNode> nameNode = localVariableDeclarationService.getVariableNameNode(calculatorVar, testFile);
+      Optional<TSNode> nameNode =
+          localVariableDeclarationService.getVariableNameNode(calculatorVar, testFile);
       assertTrue(nameNode.isPresent(), "Should find variable name node");
       assertEquals("localCalc", testFile.getTextFromNode(nameNode.get()));
     }
@@ -235,14 +251,15 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should handle different variable types")
     void shouldHandleDifferentVariableTypes() {
       TSNode processDataMethod = findMethodByName("processData");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
-      
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       // Check each local variable
       boolean foundString = false;
       boolean foundInt = false;
-      
       for (TSNode localVar : localVars) {
-        Optional<TSNode> nameNode = localVariableDeclarationService.getVariableNameNode(localVar, testFile);
+        Optional<TSNode> nameNode =
+            localVariableDeclarationService.getVariableNameNode(localVar, testFile);
         if (nameNode.isPresent()) {
           String varName = testFile.getTextFromNode(nameNode.get());
           if ("message".equals(varName)) {
@@ -252,7 +269,6 @@ class LocalVariableDeclarationServiceTest {
           }
         }
       }
-      
       assertTrue(foundString, "Should find 'message' variable name");
       assertTrue(foundInt, "Should find 'count' variable name");
     }
@@ -261,7 +277,8 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should handle invalid declaration node")
     void shouldHandleInvalidDeclarationNode() {
       List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      Optional<TSNode> nameNode = localVariableDeclarationService.getVariableNameNode(classNodes.get(0), testFile);
+      Optional<TSNode> nameNode =
+          localVariableDeclarationService.getVariableNameNode(classNodes.get(0), testFile);
       assertFalse(nameNode.isPresent(), "Should return empty for non-local-variable node");
     }
 
@@ -269,9 +286,10 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should handle null parameters")
     void shouldHandleNullParameters() {
       TSNode processDataMethod = findMethodByName("processData");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       TSNode localVar = localVars.get(0);
-      
       assertFalse(localVariableDeclarationService.getVariableNameNode(null, testFile).isPresent());
       assertFalse(localVariableDeclarationService.getVariableNameNode(localVar, null).isPresent());
     }
@@ -291,13 +309,13 @@ class LocalVariableDeclarationServiceTest {
   @Nested
   @DisplayName("getVariableInstanceNode() tests")
   class GetVariableInstanceNodeTests {
-
     @Test
     @DisplayName("Should find instance node in variable with object creation")
     void shouldFindInstanceNodeInVariableWithObjectCreation() {
       TSNode processDataMethod = findMethodByName("processData");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
-      
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       // Find variable with object creation (Calculator localCalc = new Calculator())
       TSNode varWithInstance = null;
       for (TSNode localVar : localVars) {
@@ -307,10 +325,10 @@ class LocalVariableDeclarationServiceTest {
           break;
         }
       }
-      
       assertNotNull(varWithInstance, "Should find local variable with object creation");
-      
-      Optional<TSNode> instanceNode = localVariableDeclarationService.getVariableInstanceNode(varWithInstance, testFile, "Calculator");
+      Optional<TSNode> instanceNode =
+          localVariableDeclarationService.getVariableInstanceNode(
+              varWithInstance, testFile, "Calculator");
       assertTrue(instanceNode.isPresent(), "Should find Calculator instance node");
       assertEquals("Calculator", testFile.getTextFromNode(instanceNode.get()));
     }
@@ -319,8 +337,9 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should return empty for variable without object creation")
     void shouldReturnEmptyForVariableWithoutObjectCreation() {
       TSNode processDataMethod = findMethodByName("processData");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
-      
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       // Find String variable (no object creation)
       TSNode stringVar = null;
       for (TSNode localVar : localVars) {
@@ -330,18 +349,21 @@ class LocalVariableDeclarationServiceTest {
           break;
         }
       }
-      
       assertNotNull(stringVar, "Should find String local variable");
-      
-      Optional<TSNode> instanceNode = localVariableDeclarationService.getVariableInstanceNode(stringVar, testFile, "String");
-      assertFalse(instanceNode.isPresent(), "Should not find instance node in variable without object creation");
+      Optional<TSNode> instanceNode =
+          localVariableDeclarationService.getVariableInstanceNode(stringVar, testFile, "String");
+      assertFalse(
+          instanceNode.isPresent(),
+          "Should not find instance node in variable without object creation");
     }
 
     @Test
     @DisplayName("Should handle invalid declaration node")
     void shouldHandleInvalidDeclarationNode() {
       List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      Optional<TSNode> instanceNode = localVariableDeclarationService.getVariableInstanceNode(classNodes.get(0), testFile, "Calculator");
+      Optional<TSNode> instanceNode =
+          localVariableDeclarationService.getVariableInstanceNode(
+              classNodes.get(0), testFile, "Calculator");
       assertFalse(instanceNode.isPresent(), "Should return empty for non-local-variable node");
     }
 
@@ -360,18 +382,19 @@ class LocalVariableDeclarationServiceTest {
   @Nested
   @DisplayName("isLocalVariableDeclaration() tests")
   class IsLocalVariableDeclarationTests {
-
     @Test
     @DisplayName("Should identify local variable declarations")
     void shouldIdentifyLocalVariableDeclarations() {
       TSNode processDataMethod = findMethodByName("processData");
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
-      
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       TSNode calculatorVar = localVars.get(0);
-      Optional<TSNode> nameNode = localVariableDeclarationService.getVariableNameNode(calculatorVar, testFile);
+      Optional<TSNode> nameNode =
+          localVariableDeclarationService.getVariableNameNode(calculatorVar, testFile);
       assertTrue(nameNode.isPresent(), "Should have name node to test");
-      
-      boolean isDeclaration = localVariableDeclarationService.isLocalVariableDeclaration(nameNode.get());
+      boolean isDeclaration =
+          localVariableDeclarationService.isLocalVariableDeclaration(nameNode.get());
       assertTrue(isDeclaration, "Should identify local variable declaration");
     }
 
@@ -381,20 +404,23 @@ class LocalVariableDeclarationServiceTest {
       // Find method invocation identifiers
       List<TSNode> identifiers = testFile.query("(method_invocation name: (identifier) @id)");
       assertFalse(identifiers.isEmpty(), "Should have method invocation identifiers to test");
-      
       TSNode invocationId = identifiers.get(0);
-      boolean isDeclaration = localVariableDeclarationService.isLocalVariableDeclaration(invocationId);
+      boolean isDeclaration =
+          localVariableDeclarationService.isLocalVariableDeclaration(invocationId);
       assertFalse(isDeclaration, "Should not identify method invocation as variable declaration");
     }
 
     @Test
     @DisplayName("Should handle null and invalid nodes")
     void shouldHandleNullAndInvalidNodes() {
-      assertFalse(localVariableDeclarationService.isLocalVariableDeclaration(null), "Should handle null node");
-      
+      assertFalse(
+          localVariableDeclarationService.isLocalVariableDeclaration(null),
+          "Should handle null node");
       List<TSNode> classNodes = testFile.query("(class_declaration) @class");
       TSNode classNode = classNodes.get(0);
-      assertFalse(localVariableDeclarationService.isLocalVariableDeclaration(classNode), "Should handle non-identifier node");
+      assertFalse(
+          localVariableDeclarationService.isLocalVariableDeclaration(classNode),
+          "Should handle non-identifier node");
     }
 
     private TSNode findMethodByName(String methodName) {
@@ -412,15 +438,12 @@ class LocalVariableDeclarationServiceTest {
   @Nested
   @DisplayName("isLocalVariableUsage() tests")
   class IsLocalVariableUsageTests {
-
     @Test
     @DisplayName("Should identify local variable usage")
     void shouldIdentifyLocalVariableUsage() {
       TSNode processDataMethod = findMethodByName("processData");
-      
       // Find usage of localCalc in method invocation
       List<TSNode> identifiers = testFile.query(processDataMethod, "(identifier) @id");
-      
       TSNode localCalcUsage = null;
       for (TSNode identifier : identifiers) {
         String idText = testFile.getTextFromNode(identifier);
@@ -433,9 +456,10 @@ class LocalVariableDeclarationServiceTest {
           }
         }
       }
-      
       if (localCalcUsage != null) {
-        boolean isUsage = localVariableDeclarationService.isLocalVariableUsage(localCalcUsage, processDataMethod, "localCalc", testFile);
+        boolean isUsage =
+            localVariableDeclarationService.isLocalVariableUsage(
+                localCalcUsage, processDataMethod, "localCalc", testFile);
         assertTrue(isUsage, "Should identify local variable usage");
       }
     }
@@ -444,10 +468,8 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should not identify parameter as local variable usage")
     void shouldNotIdentifyParameterAsLocalVariableUsage() {
       TSNode processDataMethod = findMethodByName("processData");
-      
       // Find usage of param in method
       List<TSNode> identifiers = testFile.query(processDataMethod, "(identifier) @id");
-      
       TSNode paramUsage = null;
       for (TSNode identifier : identifiers) {
         String idText = testFile.getTextFromNode(identifier);
@@ -456,9 +478,10 @@ class LocalVariableDeclarationServiceTest {
           break;
         }
       }
-      
       if (paramUsage != null) {
-        boolean isUsage = localVariableDeclarationService.isLocalVariableUsage(paramUsage, processDataMethod, "param", testFile);
+        boolean isUsage =
+            localVariableDeclarationService.isLocalVariableUsage(
+                paramUsage, processDataMethod, "param", testFile);
         assertFalse(isUsage, "Should not identify parameter as local variable usage");
       }
     }
@@ -468,23 +491,23 @@ class LocalVariableDeclarationServiceTest {
     void shouldHandleIdentifierBeforeDeclaration() {
       // This test would require a scenario where an identifier appears before its declaration
       // In normal Java, this shouldn't happen, but we should handle it gracefully
-      String testCode = """
+      String testCode =
+          """
           public void testMethod() {
             // usage before declaration (invalid Java, but we should handle it)
             Calculator calc = new Calculator();
           }
           """;
       TSFile testMethodFile = new TSFile(SupportedLanguage.JAVA, testCode);
-      
       List<TSNode> methods = testMethodFile.query("(method_declaration) @method");
       if (!methods.isEmpty()) {
         TSNode method = methods.get(0);
         List<TSNode> identifiers = testMethodFile.query(method, "(identifier) @id");
-        
         for (TSNode identifier : identifiers) {
           String idText = testMethodFile.getTextFromNode(identifier);
           if ("calc".equals(idText)) {
-            boolean isUsage = localVariableDeclarationService.isLocalVariableUsage(identifier, method, "calc", testMethodFile);
+            localVariableDeclarationService.isLocalVariableUsage(
+                identifier, method, "calc", testMethodFile);
             // This depends on whether it's the declaration or usage
             break;
           }
@@ -496,11 +519,18 @@ class LocalVariableDeclarationServiceTest {
     @DisplayName("Should handle null parameters")
     void shouldHandleNullParameters() {
       TSNode method = findMethodByName("processData");
-      
-      assertFalse(localVariableDeclarationService.isLocalVariableUsage(null, method, "localCalc", testFile));
-      assertFalse(localVariableDeclarationService.isLocalVariableUsage(testFile.query("(identifier) @id").get(0), null, "localCalc", testFile));
-      assertFalse(localVariableDeclarationService.isLocalVariableUsage(testFile.query("(identifier) @id").get(0), method, null, testFile));
-      assertFalse(localVariableDeclarationService.isLocalVariableUsage(testFile.query("(identifier) @id").get(0), method, "localCalc", null));
+      assertFalse(
+          localVariableDeclarationService.isLocalVariableUsage(
+              null, method, "localCalc", testFile));
+      assertFalse(
+          localVariableDeclarationService.isLocalVariableUsage(
+              testFile.query("(identifier) @id").get(0), null, "localCalc", testFile));
+      assertFalse(
+          localVariableDeclarationService.isLocalVariableUsage(
+              testFile.query("(identifier) @id").get(0), method, null, testFile));
+      assertFalse(
+          localVariableDeclarationService.isLocalVariableUsage(
+              testFile.query("(identifier) @id").get(0), method, "localCalc", null));
     }
 
     private TSNode findMethodByName(String methodName) {
@@ -518,26 +548,25 @@ class LocalVariableDeclarationServiceTest {
   @Nested
   @DisplayName("Integration tests")
   class IntegrationTests {
-
     @Test
     @DisplayName("Should work together to analyze local variable information")
     void shouldWorkTogetherToAnalyzeLocalVariableInformation() {
       TSNode processDataMethod = findMethodByName("processData");
-      
       // Find all local variables
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(processDataMethod, testFile);
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              processDataMethod, testFile);
       assertEquals(4, localVars.size(), "Should find 4 local variables");
-      
       // Check each local variable
       for (TSNode localVar : localVars) {
-        Optional<TSNode> nameNode = localVariableDeclarationService.getVariableNameNode(localVar, testFile);
+        Optional<TSNode> nameNode =
+            localVariableDeclarationService.getVariableNameNode(localVar, testFile);
         assertTrue(nameNode.isPresent(), "Should find name node for each local variable");
-        
         String varName = testFile.getTextFromNode(nameNode.get());
         assertFalse(varName.isEmpty(), "Variable name should not be empty");
-        
         // Check if it's a declaration
-        boolean isDeclaration = localVariableDeclarationService.isLocalVariableDeclaration(nameNode.get());
+        boolean isDeclaration =
+            localVariableDeclarationService.isLocalVariableDeclaration(nameNode.get());
         assertTrue(isDeclaration, "Should identify as local variable declaration");
       }
     }
@@ -545,34 +574,32 @@ class LocalVariableDeclarationServiceTest {
     @Test
     @DisplayName("Should handle complex local variable scenarios")
     void shouldHandleComplexLocalVariableScenarios() {
-      String complexCode = """
+      String complexCode =
+          """
           public void complexMethod() {
             Calculator calc1 = new Calculator();
             Calculator calc2 = calc1;
             List<Calculator> calculators = new ArrayList<>();
             calculators.add(calc1);
             calculators.add(calc2);
-            
             for (Calculator c : calculators) {
               c.process();
             }
           }
           """;
       TSFile complexFile = new TSFile(SupportedLanguage.JAVA, complexCode);
-      
       List<TSNode> methods = complexFile.query("(method_declaration) @method");
       assertFalse(methods.isEmpty(), "Should have method to test");
-      
       TSNode complexMethod = methods.get(0);
-      List<TSNode> localVars = localVariableDeclarationService.findAllLocalVariableDeclarations(complexMethod, complexFile);
-      
+      List<TSNode> localVars =
+          localVariableDeclarationService.findAllLocalVariableDeclarations(
+              complexMethod, complexFile);
       assertFalse(localVars.isEmpty(), "Should find local variables");
-      
       // Test each local variable
       for (TSNode localVar : localVars) {
-        Optional<TSNode> nameNode = localVariableDeclarationService.getVariableNameNode(localVar, complexFile);
+        Optional<TSNode> nameNode =
+            localVariableDeclarationService.getVariableNameNode(localVar, complexFile);
         assertTrue(nameNode.isPresent(), "Should find variable name");
-        
         String varName = complexFile.getTextFromNode(nameNode.get());
         assertFalse(varName.isEmpty(), "Variable name should not be empty");
       }
@@ -590,3 +617,4 @@ class LocalVariableDeclarationServiceTest {
     }
   }
 }
+

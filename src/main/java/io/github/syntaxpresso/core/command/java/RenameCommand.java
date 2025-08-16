@@ -74,13 +74,13 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
       if (foundFile.getFile().getAbsolutePath().equals(file.getFile().getAbsolutePath())) {
         continue;
       }
-      ImportDeclarationService importService = this.javaService
-              .getProgramService()
-              .getImportDeclarationService();
+      ImportDeclarationService importService =
+          this.javaService.getProgramService().getImportDeclarationService();
       if (importService == null) {
         continue;
       }
-      Optional<TSNode> importNode = importService.getImportDeclarationNode(foundFile, currentName, packageName);
+      Optional<TSNode> importNode =
+          importService.getImportDeclarationNode(foundFile, currentName, packageName);
       if (importNode.isEmpty() && !foundFilePackageName.get().equals(packageName)) {
         continue;
       }
@@ -159,7 +159,8 @@ public class RenameCommand implements Callable<DataTransferObject<Void>> {
       // Find the parent method declaration node
       TSNode methodDeclarationNode = node.getParent();
       if (methodDeclarationNode != null) {
-        modifiedFiles.addAll(this.processMethodRename(file, methodDeclarationNode, currentName, this.newName));
+        modifiedFiles.addAll(
+            this.processMethodRename(file, methodDeclarationNode, currentName, this.newName));
       }
     }
     for (TSFile modifiedFile : modifiedFiles) {

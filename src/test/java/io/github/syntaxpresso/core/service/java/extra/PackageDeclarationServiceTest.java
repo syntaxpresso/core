@@ -14,7 +14,7 @@ import org.treesitter.TSNode;
 @DisplayName("PackageDeclarationService Tests")
 class PackageDeclarationServiceTest {
   private PackageDeclarationService packageDeclarationService;
-  
+
   @BeforeEach
   void setUp() {
     packageDeclarationService = new PackageDeclarationService();
@@ -23,13 +23,12 @@ class PackageDeclarationServiceTest {
   @Nested
   @DisplayName("getPackageDeclarationNode() tests")
   class GetPackageDeclarationNodeTests {
-
     @Test
     @DisplayName("Should find package declaration node")
     void shouldFindPackageDeclarationNode() {
-      String javaCode = """
+      String javaCode =
+          """
           package io.github.test;
-          
           public class TestClass {
             public void method() {
               System.out.println("Hello");
@@ -37,38 +36,39 @@ class PackageDeclarationServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
       assertTrue(packageNode.isPresent(), "Should find package declaration node");
-      
-      assertEquals("package_declaration", packageNode.get().getType(), "Node should be package_declaration type");
+      assertEquals(
+          "package_declaration",
+          packageNode.get().getType(),
+          "Node should be package_declaration type");
     }
 
     @Test
     @DisplayName("Should find package declaration with complex package name")
     void shouldFindPackageDeclarationWithComplexPackageName() {
-      String javaCode = """
+      String javaCode =
+          """
           package com.example.project.service.impl;
-          
           import java.util.List;
-          
           public class ComplexPackageClass {
             private String name;
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
       assertTrue(packageNode.isPresent(), "Should find package declaration node");
-      
       String packageText = file.getTextFromNode(packageNode.get());
-      assertTrue(packageText.contains("com.example.project.service.impl"), "Should contain full package name");
+      assertTrue(
+          packageText.contains("com.example.project.service.impl"),
+          "Should contain full package name");
     }
 
     @Test
     @DisplayName("Should return empty for file without package declaration")
     void shouldReturnEmptyForFileWithoutPackageDeclaration() {
-      String javaCode = """
+      String javaCode =
+          """
           public class NoPackageClass {
             public void method() {
               System.out.println("No package");
@@ -76,24 +76,23 @@ class PackageDeclarationServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      assertFalse(packageNode.isPresent(), "Should return empty for file without package declaration");
+      assertFalse(
+          packageNode.isPresent(), "Should return empty for file without package declaration");
     }
 
     @Test
     @DisplayName("Should handle file with only imports")
     void shouldHandleFileWithOnlyImports() {
-      String javaCode = """
+      String javaCode =
+          """
           import java.util.List;
           import java.util.Map;
-          
           public class ImportOnlyClass {
             private List<String> items;
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
       assertFalse(packageNode.isPresent(), "Should return empty for file with only imports");
     }
@@ -101,13 +100,12 @@ class PackageDeclarationServiceTest {
     @Test
     @DisplayName("Should find package declaration before imports")
     void shouldFindPackageDeclarationBeforeImports() {
-      String javaCode = """
+      String javaCode =
+          """
           package io.github.test.example;
-          
           import java.util.List;
           import java.util.Map;
           import java.util.Set;
-          
           public class PackageWithImportsClass {
             private List<String> items;
             private Map<String, String> properties;
@@ -115,19 +113,20 @@ class PackageDeclarationServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
       assertTrue(packageNode.isPresent(), "Should find package declaration node");
-      
       String packageText = file.getTextFromNode(packageNode.get());
-      assertTrue(packageText.contains("io.github.test.example"), "Should contain correct package name");
+      assertTrue(
+          packageText.contains("io.github.test.example"), "Should contain correct package name");
     }
 
     @Test
     @DisplayName("Should handle null file gracefully")
     void shouldHandleNullFileGracefully() {
-      assertThrows(NullPointerException.class, () -> packageDeclarationService.getPackageDeclarationNode(null),
-                  "Should throw exception for null file");
+      assertThrows(
+          NullPointerException.class,
+          () -> packageDeclarationService.getPackageDeclarationNode(null),
+          "Should throw exception for null file");
     }
 
     @Test
@@ -135,7 +134,6 @@ class PackageDeclarationServiceTest {
     void shouldHandleEmptyFile() {
       String javaCode = "";
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
       assertFalse(packageNode.isPresent(), "Should return empty for empty file");
     }
@@ -143,36 +141,35 @@ class PackageDeclarationServiceTest {
     @Test
     @DisplayName("Should handle malformed Java code")
     void shouldHandleMalformedJavaCode() {
-      String javaCode = """
-          package 
+      String javaCode =
+          """
+          package
           public class MalformedClass {
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
-      Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
+      packageDeclarationService.getPackageDeclarationNode(file);
       // The behavior here depends on how tree-sitter handles malformed code
       // It should either find no package declaration or handle it gracefully
-      assertDoesNotThrow(() -> packageDeclarationService.getPackageDeclarationNode(file),
-                        "Should handle malformed code without throwing exception");
+      assertDoesNotThrow(
+          () -> packageDeclarationService.getPackageDeclarationNode(file),
+          "Should handle malformed code without throwing exception");
     }
   }
 
   @Nested
   @DisplayName("getPackageName() tests")
   class GetPackageNameTests {
-
     @Test
     @DisplayName("Should extract simple package name")
     void shouldExtractSimplePackageName() {
-      String javaCode = """
+      String javaCode =
+          """
           package test;
-          
           public class SimplePackageClass {
             public void method() {}
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<String> packageName = packageDeclarationService.getPackageName(file);
       // Note: simple package names might not be handled the same way as complex ones
       if (packageName.isPresent()) {
@@ -186,43 +183,47 @@ class PackageDeclarationServiceTest {
     @Test
     @DisplayName("Should extract complex package name")
     void shouldExtractComplexPackageName() {
-      String javaCode = """
+      String javaCode =
+          """
           package io.github.syntaxpresso.core.service;
-          
           import java.util.List;
-          
           public class ComplexPackageClass {
             private List<String> items;
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<String> packageName = packageDeclarationService.getPackageName(file);
       assertTrue(packageName.isPresent(), "Should find package name");
-      assertEquals("io.github.syntaxpresso.core.service", packageName.get(), "Should extract correct complex package name");
+      assertEquals(
+          "io.github.syntaxpresso.core.service",
+          packageName.get(),
+          "Should extract correct complex package name");
     }
 
     @Test
     @DisplayName("Should extract package name with numbers and underscores")
     void shouldExtractPackageNameWithNumbersAndUnderscores() {
-      String javaCode = """
+      String javaCode =
+          """
           package com.example.project_v2.service1;
-          
           public class NumberUnderscorePackageClass {
             public void method() {}
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<String> packageName = packageDeclarationService.getPackageName(file);
       assertTrue(packageName.isPresent(), "Should find package name");
-      assertEquals("com.example.project_v2.service1", packageName.get(), "Should extract package name with numbers and underscores");
+      assertEquals(
+          "com.example.project_v2.service1",
+          packageName.get(),
+          "Should extract package name with numbers and underscores");
     }
 
     @Test
     @DisplayName("Should return empty for file without package declaration")
     void shouldReturnEmptyForFileWithoutPackageDeclaration() {
-      String javaCode = """
+      String javaCode =
+          """
           public class NoPackageClass {
             public void method() {
               System.out.println("No package");
@@ -230,34 +231,36 @@ class PackageDeclarationServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<String> packageName = packageDeclarationService.getPackageName(file);
-      assertFalse(packageName.isPresent(), "Should return empty for file without package declaration");
+      assertFalse(
+          packageName.isPresent(), "Should return empty for file without package declaration");
     }
 
     @Test
     @DisplayName("Should return empty for file with malformed package declaration")
     void shouldReturnEmptyForFileWithMalformedPackageDeclaration() {
-      String javaCode = """
+      String javaCode =
+          """
           package ;
-          
           public class MalformedPackageClass {
             public void method() {}
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
-      Optional<String> packageName = packageDeclarationService.getPackageName(file);
+      packageDeclarationService.getPackageName(file);
       // Should handle malformed package gracefully
-      assertDoesNotThrow(() -> packageDeclarationService.getPackageName(file),
-                        "Should handle malformed package declaration without throwing exception");
+      assertDoesNotThrow(
+          () -> packageDeclarationService.getPackageName(file),
+          "Should handle malformed package declaration without throwing exception");
     }
 
     @Test
     @DisplayName("Should handle null file gracefully")
     void shouldHandleNullFileGracefully() {
-      assertThrows(NullPointerException.class, () -> packageDeclarationService.getPackageName(null),
-                  "Should throw exception for null file");
+      assertThrows(
+          NullPointerException.class,
+          () -> packageDeclarationService.getPackageName(null),
+          "Should throw exception for null file");
     }
 
     @Test
@@ -265,7 +268,6 @@ class PackageDeclarationServiceTest {
     void shouldHandleEmptyFile() {
       String javaCode = "";
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<String> packageName = packageDeclarationService.getPackageName(file);
       assertFalse(packageName.isPresent(), "Should return empty for empty file");
     }
@@ -273,17 +275,15 @@ class PackageDeclarationServiceTest {
     @Test
     @DisplayName("Should handle file with comments before package")
     void shouldHandleFileWithCommentsBeforePackage() {
-      String javaCode = """
+      String javaCode =
+          """
           /*
            * This is a file header comment
            * Author: Test
            */
-          
           // Single line comment
           package io.github.test.comments;
-          
           import java.util.List;
-          
           /**
            * Javadoc for class
            */
@@ -292,49 +292,46 @@ class PackageDeclarationServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       Optional<String> packageName = packageDeclarationService.getPackageName(file);
       assertTrue(packageName.isPresent(), "Should find package name even with comments");
-      assertEquals("io.github.test.comments", packageName.get(), "Should extract correct package name");
+      assertEquals(
+          "io.github.test.comments", packageName.get(), "Should extract correct package name");
     }
   }
 
   @Nested
   @DisplayName("Integration tests")
   class IntegrationTests {
-
     @Test
     @DisplayName("Should work together to analyze package information")
     void shouldWorkTogetherToAnalyzePackageInformation() {
-      String javaCode = """
+      String javaCode =
+          """
           package io.github.syntaxpresso.core.test;
-          
           import java.util.List;
           import java.util.Map;
-          
           public class IntegrationTestClass {
             private List<String> items;
             private Map<String, String> properties;
-            
             public void process() {
               items.forEach(System.out::println);
             }
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       // Test both methods together
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
       Optional<String> packageName = packageDeclarationService.getPackageName(file);
-      
       assertTrue(packageNode.isPresent(), "Should find package declaration node");
       assertTrue(packageName.isPresent(), "Should find package name");
-      
-      assertEquals("io.github.syntaxpresso.core.test", packageName.get(), "Should extract correct package name");
-      
+      assertEquals(
+          "io.github.syntaxpresso.core.test",
+          packageName.get(),
+          "Should extract correct package name");
       // Verify the node contains the package name
       String nodeText = file.getTextFromNode(packageNode.get());
-      assertTrue(nodeText.contains(packageName.get()), "Package node should contain the package name");
+      assertTrue(
+          nodeText.contains(packageName.get()), "Package node should contain the package name");
     }
 
     @Test
@@ -345,27 +342,28 @@ class PackageDeclarationServiceTest {
         "", // Empty file
         "public class NoPackage {}", // No package
         "package single;\npublic class Single {}", // Simple package
-        "package very.long.complex.package.name.with.many.parts;\npublic class Complex {}" // Complex package
+        "package very.long.complex.package.name.with.many.parts;\n"
+            + "public class Complex {}" // Complex package
       };
-      
       for (String javaCode : testCases) {
         TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-        
         Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
         Optional<String> packageName = packageDeclarationService.getPackageName(file);
-        
         // Both methods should be consistent - if one finds a package, the other should too
         // Note: simple packages might behave differently, so we'll be more lenient
         if (javaCode.contains("package ") && !javaCode.contains("package ;")) {
           // For files that should have packages, at least one method should find it
-          assertTrue(packageNode.isPresent() || packageName.isPresent(), 
-                    "At least one method should find package for: " + javaCode.substring(0, Math.min(50, javaCode.length())));
+          assertTrue(
+              packageNode.isPresent() || packageName.isPresent(),
+              "At least one method should find package for: "
+                  + javaCode.substring(0, Math.min(50, javaCode.length())));
         }
-        
         if (packageNode.isPresent() && packageName.isPresent()) {
           String nodeText = file.getTextFromNode(packageNode.get());
-          assertTrue(nodeText.contains(packageName.get()), 
-                    "Package node should contain package name for: " + javaCode.substring(0, Math.min(50, javaCode.length())));
+          assertTrue(
+              nodeText.contains(packageName.get()),
+              "Package node should contain package name for: "
+                  + javaCode.substring(0, Math.min(50, javaCode.length())));
         }
       }
     }
@@ -373,12 +371,11 @@ class PackageDeclarationServiceTest {
     @Test
     @DisplayName("Should handle file with annotations")
     void shouldHandleFileWithAnnotations() {
-      String javaCode = """
+      String javaCode =
+          """
           @file:JvmName("TestUtils")
           package io.github.test.annotations;
-          
           import java.util.List;
-          
           @Deprecated
           public class AnnotatedClass {
             @Override
@@ -388,13 +385,15 @@ class PackageDeclarationServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       // Should handle annotations gracefully (though the syntax above is more Kotlin-like)
       // The service should still work with standard Java
-      assertDoesNotThrow(() -> {
-        packageDeclarationService.getPackageDeclarationNode(file);
-        packageDeclarationService.getPackageName(file);
-      }, "Should handle files with annotations without throwing exceptions");
+      assertDoesNotThrow(
+          () -> {
+            packageDeclarationService.getPackageDeclarationNode(file);
+            packageDeclarationService.getPackageName(file);
+          },
+          "Should handle files with annotations without throwing exceptions");
     }
   }
 }
+

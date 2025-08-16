@@ -26,7 +26,6 @@ public class TypeResolutionService {
     if (file == null || objectNode == null || contextNode == null) {
       return "";
     }
-    
     String objectName = file.getTextFromNode(objectNode);
     if (objectName == null || objectName.isEmpty()) {
       return "";
@@ -164,4 +163,3 @@ public class TypeResolutionService {
     return "";
   }
 }
-
