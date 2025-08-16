@@ -319,6 +319,17 @@ public class JavaService {
     return this.getProgramService().getClassDeclarationService().getClassMethods(file, classNode);
   }
 
+  /**
+   * Creates a new Java file.
+   *
+   * @param cwd The current working directory to search in.
+   * @param packageName The package name for the new file.
+   * @param fileName The name for the new file.
+   * @param fileType The type for the new file (CLASS | INTERFACE | ENUM | RECORD | ANNOTATION).
+   * @param sourceDirectoryType Whether if the file should be created in the main or test module
+   *     (MAIN | TEST).
+   * @return A DataTransferObject containing the new file information or error.
+   */
   public DataTransferObject<CreateNewJavaFileResponse> createNewFile(
       Path cwd,
       String packageName,
