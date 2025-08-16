@@ -60,16 +60,16 @@ public class FormalParameterService {
   /**
    * Finds all formal parameters of a method.
    *
-   * @param methodNode The TSNode of the method declaration.
+   * @param node The TSNode of the method or constructor declaration.
    * @param tsFile The TSFile containing the source code.
    * @return A list of all formal parameter nodes.
    */
-  public List<TSNode> findAllFormalParameters(TSFile file, TSNode methodNode, String typeName) {
-    if (methodNode == null || !"method_declaration".equals(methodNode.getType())) {
+  public List<TSNode> findAllFormalParameters(TSFile file, TSNode node, String typeName) {
+    if (node == null || !"method_declaration".equals(node.getType())) {
       return Collections.emptyList();
     }
     List<TSNode> foundParams = new ArrayList<>();
-    List<TSNode> allParams = file.query(methodNode, FORMAL_PARAMETER_QUERY);
+    List<TSNode> allParams = file.query(node, FORMAL_PARAMETER_QUERY);
     for (TSNode param : allParams) {
       List<TSNode> typeNodes = file.query(param, "(type_identifier) @type");
       for (TSNode typeNode : typeNodes) {

@@ -75,4 +75,3 @@ public class VariableNamingService {
     return currentVariableName;
   }
 }
-
