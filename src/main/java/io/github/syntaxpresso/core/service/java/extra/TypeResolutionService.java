@@ -22,7 +22,15 @@ public class TypeResolutionService {
    * @return The type name of the object, or empty string if not found.
    */
   public String resolveObjectType(TSFile file, TSNode objectNode, TSNode contextNode) {
+    // Handle null parameters gracefully
+    if (file == null || objectNode == null || contextNode == null) {
+      return "";
+    }
+    
     String objectName = file.getTextFromNode(objectNode);
+    if (objectName == null || objectName.isEmpty()) {
+      return "";
+    }
     // Handle 'this' keyword
     if ("this".equals(objectName)) {
       Optional<TSNode> classNode = file.findParentNodeByType(contextNode, "class_declaration");
