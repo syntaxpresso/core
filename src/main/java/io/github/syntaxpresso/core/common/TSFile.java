@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import org.treesitter.TSException;
 import org.treesitter.TSNode;
 import org.treesitter.TSParser;
 import org.treesitter.TSPoint;
@@ -317,10 +318,14 @@ public class TSFile {
     }
     TSNode currentNode = startNode;
     while (currentNode != null) {
-      if (parentType.equals(currentNode.getType())) {
-        return Optional.of(currentNode);
+      try {
+        if (parentType.equals(currentNode.getType())) {
+          return Optional.of(currentNode);
+        }
+        currentNode = currentNode.getParent();
+      } catch (TSException e) {
+        return Optional.empty();
       }
-      currentNode = currentNode.getParent();
     }
     return Optional.empty();
   }
