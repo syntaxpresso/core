@@ -20,7 +20,35 @@ class ProgramServiceTest {
 
   @BeforeEach
   void setUp() {
-    programService = new ProgramService();
+    VariableNamingService variableNamingService = new VariableNamingService();
+    FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+    ImportDeclarationService importDeclarationService = new ImportDeclarationService();
+    PackageDeclarationService packageDeclarationService = new PackageDeclarationService();
+    LocalVariableDeclarationService localVariableDeclarationService =
+        new LocalVariableDeclarationService(variableNamingService);
+    FormalParameterService formalParameterService =
+        new FormalParameterService(localVariableDeclarationService, variableNamingService);
+    MethodDeclarationService methodDeclarationService =
+        new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
+    ClassDeclarationService classDeclarationService =
+        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+    TypeResolutionService typeResolutionService =
+        new TypeResolutionService(
+            formalParameterService,
+            localVariableDeclarationService,
+            fieldDeclarationService,
+            classDeclarationService);
+    programService =
+        new ProgramService(
+            variableNamingService,
+            fieldDeclarationService,
+            importDeclarationService,
+            packageDeclarationService,
+            localVariableDeclarationService,
+            formalParameterService,
+            methodDeclarationService,
+            classDeclarationService,
+            typeResolutionService);
     String javaCode =
         """
         package io.github.syntaxpresso.core;
@@ -47,7 +75,8 @@ class ProgramServiceTest {
   @Test
   @DisplayName("should get package name from program")
   void getPackageName_shouldReturnCorrectPackage() {
-    Optional<String> packageName = programService.getPackageName(testFile);
+    Optional<String> packageName =
+        programService.getPackageDeclarationService().getPackageName(testFile);
     assertTrue(packageName.isPresent());
     assertEquals("io.github.syntaxpresso.core", packageName.get());
   }
@@ -55,21 +84,24 @@ class ProgramServiceTest {
   @Test
   @DisplayName("should get all imports from program")
   void getAllImports_shouldReturnAllImports() {
-    List<TSNode> imports = programService.getAllImports(testFile);
+    List<TSNode> imports =
+        programService.getImportDeclarationService().findAllImportDeclarations(testFile);
     assertEquals(2, imports.size());
   }
 
   @Test
   @DisplayName("should get all classes from program")
   void getAllClasses_shouldReturnAllClasses() {
-    List<TSNode> classes = programService.getAllClasses(testFile);
+    List<TSNode> classes =
+        programService.getClassDeclarationService().findAllClassDeclarations(testFile);
     assertEquals(1, classes.size());
   }
 
   @Test
   @DisplayName("should find class by name")
   void findClassByName_shouldReturnCorrectClass() {
-    Optional<TSNode> classNode = programService.findClassByName(testFile, "Test");
+    Optional<TSNode> classNode =
+        programService.getClassDeclarationService().findClassByName(testFile, "Test");
     assertTrue(classNode.isPresent());
   }
 
@@ -82,14 +114,15 @@ class ProgramServiceTest {
   @Test
   @DisplayName("should get all fields from program")
   void getAllFields_shouldReturnAllFields() {
-    List<TSNode> fields = programService.getAllFields(testFile);
+    List<TSNode> fields = testFile.query("(field_declaration) @field");
     assertEquals(2, fields.size());
   }
 
   @Test
   @DisplayName("should get all methods from program")
   void getAllMethods_shouldReturnAllMethods() {
-    List<TSNode> methods = programService.getAllMethods(testFile);
+    List<TSNode> methods =
+        programService.getMethodDeclarationService().findAllMethodDeclarations(testFile);
     assertEquals(1, methods.size());
   }
 }

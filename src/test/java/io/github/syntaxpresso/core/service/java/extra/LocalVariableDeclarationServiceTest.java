@@ -19,13 +19,8 @@ class LocalVariableDeclarationServiceTest {
 
   @BeforeEach
   void setUp() {
-    // Use ProgramService for consistent service setup
-    ProgramService programService = new ProgramService();
-    localVariableDeclarationService =
-        programService
-            .getClassDeclarationService()
-            .getMethodDeclarationService()
-            .getLocalVariableDeclarationService();
+    VariableNamingService variableNamingService = new VariableNamingService();
+    localVariableDeclarationService = new LocalVariableDeclarationService(variableNamingService);
     String javaCode =
         """
         package io.github.test;
@@ -617,4 +612,3 @@ class LocalVariableDeclarationServiceTest {
     }
   }
 }
-

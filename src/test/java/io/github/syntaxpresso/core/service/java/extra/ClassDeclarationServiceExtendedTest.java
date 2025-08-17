@@ -25,9 +25,16 @@ class ClassDeclarationServiceExtendedTest {
 
   @BeforeEach
   void setUp() {
-    // Use ProgramService for consistent service setup
-    ProgramService programService = new ProgramService();
-    classDeclarationService = programService.getClassDeclarationService();
+    FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+    VariableNamingService variableNamingService = new VariableNamingService();
+    LocalVariableDeclarationService localVariableDeclarationService =
+        new LocalVariableDeclarationService(variableNamingService);
+    FormalParameterService formalParameterService =
+        new FormalParameterService(localVariableDeclarationService, variableNamingService);
+    MethodDeclarationService methodDeclarationService =
+        new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
+    classDeclarationService =
+        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
     String javaCode =
         """
         package io.github.test;
@@ -278,4 +285,3 @@ class ClassDeclarationServiceExtendedTest {
     }
   }
 }
-

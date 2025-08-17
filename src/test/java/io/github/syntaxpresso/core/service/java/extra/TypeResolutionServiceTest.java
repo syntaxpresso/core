@@ -19,9 +19,22 @@ class TypeResolutionServiceTest {
 
   @BeforeEach
   void setUp() {
-    // Set up service dependencies - use actual ProgramService for consistent setup
-    ProgramService programService = new ProgramService();
-    typeResolutionService = programService.getTypeResolutionService();
+    VariableNamingService variableNamingService = new VariableNamingService();
+    FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+    LocalVariableDeclarationService localVariableDeclarationService =
+        new LocalVariableDeclarationService(variableNamingService);
+    FormalParameterService formalParameterService =
+        new FormalParameterService(localVariableDeclarationService, variableNamingService);
+    MethodDeclarationService methodDeclarationService =
+        new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
+    ClassDeclarationService classDeclarationService =
+        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+    typeResolutionService =
+        new TypeResolutionService(
+            formalParameterService,
+            localVariableDeclarationService,
+            fieldDeclarationService,
+            classDeclarationService);
     // Simple test file
     String javaCode =
         """
@@ -294,4 +307,3 @@ class TypeResolutionServiceTest {
     }
   }
 }
-

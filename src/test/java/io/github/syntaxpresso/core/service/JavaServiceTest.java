@@ -118,7 +118,7 @@ class JavaServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      assertTrue(javaService.isMainClass(file));
+      assertTrue(javaService.getProgramService().hasMainClass(file));
     }
 
     @Test
@@ -126,7 +126,7 @@ class JavaServiceTest {
     void isMainClass_whenClassIsNotMain_shouldReturnFalse() {
       String sourceCode = "public class NotMain { }";
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      assertFalse(javaService.isMainClass(file));
+      assertFalse(javaService.getProgramService().hasMainClass(file));
     }
 
     @Test
@@ -140,7 +140,7 @@ class JavaServiceTest {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      assertTrue(javaService.isMainClass(file));
+      assertTrue(javaService.getProgramService().hasMainClass(file));
     }
   }
 

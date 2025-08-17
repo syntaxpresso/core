@@ -19,13 +19,11 @@ class FormalParameterServiceTest {
 
   @BeforeEach
   void setUp() {
-    // Use ProgramService for consistent service setup
-    ProgramService programService = new ProgramService();
+    VariableNamingService variableNamingService = new VariableNamingService();
+    LocalVariableDeclarationService localVariableDeclarationService =
+        new LocalVariableDeclarationService(variableNamingService);
     formalParameterService =
-        programService
-            .getClassDeclarationService()
-            .getMethodDeclarationService()
-            .getFormalParameterService();
+        new FormalParameterService(localVariableDeclarationService, variableNamingService);
     String javaCode =
         """
         package io.github.test;
@@ -493,4 +491,3 @@ class FormalParameterServiceTest {
     }
   }
 }
-
