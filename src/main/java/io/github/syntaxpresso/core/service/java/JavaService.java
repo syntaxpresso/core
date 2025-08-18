@@ -1,4 +1,3 @@
-// TODO: validate command arguments with annotations.
 package io.github.syntaxpresso.core.service.java;
 
 import com.google.common.base.Strings;
@@ -477,6 +476,4 @@ public class JavaService {
       return DataTransferObject.error("Failed to create repository: " + e.getMessage());
     }
   }
-
-
 }

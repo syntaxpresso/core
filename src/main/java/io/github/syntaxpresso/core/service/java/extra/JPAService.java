@@ -55,63 +55,61 @@ public class JPAService {
     return Optional.empty();
   }
 
-   /**
-    * Configures the repository file with JPA imports and interface extension.
-    *
-    * @param repositoryFile The repository TSFile to configure.
-    * @param entityClassName The entity class name.
-    * @param idType The ID field type.
-    * @param entityPackage The entity package name.
-    */
-   public void configureRepositoryFile(
-       TSFile repositoryFile, String entityClassName, String idType, String entityPackage) {
-     this.importDeclarationService.addImport(
-         repositoryFile, "org.springframework.data.jpa.repository.JpaRepository");
-     Optional<String> repositoryPackage = 
-         this.importDeclarationService.getPackageDeclarationService().getPackageName(repositoryFile);
-     if (repositoryPackage.isPresent() && !repositoryPackage.get().equals(entityPackage)) {
-       this.importDeclarationService.addImport(
-           repositoryFile, entityPackage + "." + entityClassName);
-     }
-     
-     this.addImportForIdType(repositoryFile, idType);
-     this.addExtendsClause(repositoryFile, entityClassName, idType);
-   }
+  /**
+   * Configures the repository file with JPA imports and interface extension.
+   *
+   * @param repositoryFile The repository TSFile to configure.
+   * @param entityClassName The entity class name.
+   * @param idType The ID field type.
+   * @param entityPackage The entity package name.
+   */
+  public void configureRepositoryFile(
+      TSFile repositoryFile, String entityClassName, String idType, String entityPackage) {
+    this.importDeclarationService.addImport(
+        repositoryFile, "org.springframework.data.jpa.repository.JpaRepository");
+    Optional<String> repositoryPackage =
+        this.importDeclarationService.getPackageDeclarationService().getPackageName(repositoryFile);
+    if (repositoryPackage.isPresent() && !repositoryPackage.get().equals(entityPackage)) {
+      this.importDeclarationService.addImport(
+          repositoryFile, entityPackage + "." + entityClassName);
+    }
+    this.addImportForIdType(repositoryFile, idType);
+    this.addExtendsClause(repositoryFile, entityClassName, idType);
+  }
 
-   /**
-    * Adds the appropriate import for the ID field type if needed.
-    *
-    * @param repositoryFile The repository TSFile to modify.
-    * @param idType The ID field type.
-    */
-   private void addImportForIdType(TSFile repositoryFile, String idType) {
-     Optional<JavaBasicType> basicType = JavaBasicType.fromTypeName(idType);
-     if (basicType.isPresent() && basicType.get().needsImport()) {
-       this.importDeclarationService.addImport(
-           repositoryFile, basicType.get().getFullyQualifiedName());
-     }
-   }
+  /**
+   * Adds the appropriate import for the ID field type if needed.
+   *
+   * @param repositoryFile The repository TSFile to modify.
+   * @param idType The ID field type.
+   */
+  private void addImportForIdType(TSFile repositoryFile, String idType) {
+    Optional<JavaBasicType> basicType = JavaBasicType.fromTypeName(idType);
+    if (basicType.isPresent() && basicType.get().needsImport()) {
+      this.importDeclarationService.addImport(
+          repositoryFile, basicType.get().getFullyQualifiedName());
+    }
+  }
 
-   /**
-    * Adds extends JpaRepository<EntityClass, IdType> to the repository interface.
-    *
-    * @param repositoryFile The repository TSFile to modify.
-    * @param entityClassName The entity class name.
-    * @param idType The ID field type.
-    */
-   private void addExtendsClause(TSFile repositoryFile, String entityClassName, String idType) {
-     List<TSNode> interfaceNodes = repositoryFile.query("(interface_declaration) @interface");
-     if (interfaceNodes.isEmpty()) {
-       return;
-     }
-     
-     TSNode interfaceNode = interfaceNodes.get(0);
-     TSNode nameNode = interfaceNode.getChildByFieldName("name");
-     if (nameNode == null) {
-       return;
-     }
-     
-     String extendsClause = String.format(" extends JpaRepository<%s, %s>", entityClassName, idType);
-     repositoryFile.insertTextAfterNode(nameNode, extendsClause);
-   }
+  /**
+   * Adds extends JpaRepository<EntityClass, IdType> to the repository interface.
+   *
+   * @param repositoryFile The repository TSFile to modify.
+   * @param entityClassName The entity class name.
+   * @param idType The ID field type.
+   */
+  private void addExtendsClause(TSFile repositoryFile, String entityClassName, String idType) {
+    List<TSNode> interfaceNodes = repositoryFile.query("(interface_declaration) @interface");
+    if (interfaceNodes.isEmpty()) {
+      return;
+    }
+    TSNode interfaceNode = interfaceNodes.get(0);
+    TSNode nameNode = interfaceNode.getChildByFieldName("name");
+    if (nameNode == null) {
+      return;
+    }
+    String extendsClause = String.format(" extends JpaRepository<%s, %s>", entityClassName, idType);
+    repositoryFile.insertTextAfterNode(nameNode, extendsClause);
+  }
 }
+

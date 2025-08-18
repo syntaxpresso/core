@@ -131,4 +131,3 @@ public enum JavaBasicType {
     return Optional.empty();
   }
 }
-

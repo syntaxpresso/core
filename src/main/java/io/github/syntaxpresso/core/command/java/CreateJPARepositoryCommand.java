@@ -13,7 +13,8 @@ import picocli.CommandLine.Option;
 @Command(
     name = "create-jpa-repository",
     description = "Create JPA Repository for the current JPA Entity.")
-public class CreateJPARepositoryCommand implements Callable<DataTransferObject<CreateNewJavaFileResponse>> {
+public class CreateJPARepositoryCommand
+    implements Callable<DataTransferObject<CreateNewJavaFileResponse>> {
   private final JavaService javaService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
