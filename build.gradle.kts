@@ -9,13 +9,11 @@ scmVersion {
     tag {
         prefix.set("v")
     }
-    branchVersionCreator.putAll([
-        'feature/.*': { version, position -> 
-            version + '-' + position.branch.replace('/', '-') + '-SNAPSHOT'
-        },
-        'bugfix/.*': 'simple',
-        'release/.*': 'simple'
-    ])
+	branchVersionCreator.putAll(
+	    mapOf(
+	        "main" to { version, _ -> version }
+	    )
+	)
 }
 
 version = scmVersion.version
