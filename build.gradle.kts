@@ -11,8 +11,7 @@ scmVersion {
     }
     branchVersionCreators.set(
         mapOf(
-            "main" to listOf({ version, _: Any -> version }),
-            "test-release" to listOf({ version, _: Any -> "test-$version" }), // Add test branch
+            "main" to listOf({ version: String, _: Any -> version }),
         ),
     )
 }

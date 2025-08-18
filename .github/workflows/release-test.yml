@@ -3,8 +3,8 @@ name: Release Test
 on:
   push:
     branches:
-      - test-release # Change this to your test branch name
-  workflow_dispatch: # Allows manual triggering from GitHub UI
+      - test-release # Your test branch
+  workflow_dispatch: # Manual trigger
 
 jobs:
   release:
@@ -34,8 +34,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Skip the "Switch to main branch" step for testing
-
       - name: Set up JDK
         uses: graalvm/setup-graalvm@v1
         with:
@@ -51,17 +49,16 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
 
-      - name: Get the new version
+      - name: Get test version
         id: get_version
         if: matrix.os == 'ubuntu-latest'
         run: |
-          # For testing, you can hardcode the increment type or use a default
-          echo "TEST MODE: Incrementing patch version"
-          ./gradlew release -Prelease.incrementer=incrementPatch -Prelease.dryRun
-
-          # Or just get current version without creating a tag
-          echo "VERSION=test-$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_ENV
-          echo "VERSION=test-$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_OUTPUT
+          # Get current version without creating a tag
+          CURRENT_VERSION=$(./gradlew currentVersion -q -Prelease.quiet | tail -n 1)
+          TEST_VERSION="test-${CURRENT_VERSION}-${{ github.run_number }}"
+          echo "VERSION=${TEST_VERSION}" >> $GITHUB_ENV
+          echo "VERSION=${TEST_VERSION}" >> $GITHUB_OUTPUT
+          echo "Test version: ${TEST_VERSION}"
 
       - name: Build native image
         run: ./gradlew nativeBuild
@@ -69,10 +66,17 @@ jobs:
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION || 'test-release' }}
+          tag_name: ${{ steps.get_version.outputs.VERSION || format('test-{0}', github.run_number) }}
           files: ${{ matrix.binary_path }}
           asset_name: ${{ matrix.asset_name }}
-          prerelease: true # Mark as pre-release for testing
-          draft: true # Create as draft so it doesn't appear as latest release
+          prerelease: true # Mark as pre-release
+          draft: true # Create as draft
+          body: |
+            🧪 **Test Release**
+
+            This is a test release from branch: ${{ github.ref_name }}
+            Build number: ${{ github.run_number }}
+
+            ⚠️ This is not a production release - for testing purposes only.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
