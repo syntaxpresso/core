@@ -1,0 +1,78 @@
+name: Release Test
+
+on:
+  push:
+    branches:
+      - test-release # Change this to your test branch name
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: core-linux-amd64
+            binary_path: build/native/nativeCompile/core
+          - os: windows-latest
+            asset_name: core-windows-amd64.exe
+            binary_path: build/native/nativeCompile/core.exe
+          - os: macos-14
+            asset_name: core-macos-aarch64
+            binary_path: build/native/nativeCompile/core
+          - os: macos-latest
+            asset_name: core-macos-x86_64
+            binary_path: build/native/nativeCompile/core
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Skip the "Switch to main branch" step for testing
+
+      - name: Set up JDK
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: "graalvm-community"
+          java-version: "24"
+
+      - name: Grant execute permission for gradlew
+        if: runner.os != 'Windows'
+        run: chmod +x gradlew
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Get the new version
+        id: get_version
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # For testing, you can hardcode the increment type or use a default
+          echo "TEST MODE: Incrementing patch version"
+          ./gradlew release -Prelease.incrementer=incrementPatch -Prelease.dryRun
+
+          # Or just get current version without creating a tag
+          echo "VERSION=test-$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_ENV
+          echo "VERSION=test-$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_OUTPUT
+
+      - name: Build native image
+        run: ./gradlew nativeBuild
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION || 'test-release' }}
+          files: ${{ matrix.binary_path }}
+          asset_name: ${{ matrix.asset_name }}
+          prerelease: true # Mark as pre-release for testing
+          draft: true # Create as draft so it doesn't appear as latest release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
