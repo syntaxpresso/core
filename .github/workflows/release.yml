@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  # Job 1: Handle versioning
+  version:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Switch to the main branch
+        run: git checkout main
+
+      - name: Set up JDK
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: "graalvm-community"
+          java-version: "24"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Create Release Version
+        id: get_version
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
+            echo "Incrementing minor version for feature"
+            ./gradlew release -Prelease.incrementer=incrementMinor
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'bug') }}" == "true" || "${{ contains(github.event.pull_request.labels.*.name, 'task') }}" == "true" ]]; then
+            echo "Incrementing patch version for bug/task"
+            ./gradlew release -Prelease.incrementer=incrementPatch
+          else
+            echo "No versioning label found. Skipping release."
+            exit 0
+          fi
+          VERSION=$(./gradlew currentVersion -q -Prelease.quiet)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Created version: $VERSION"
+
+  # Job 2: Build binaries for all platforms
+  build:
+    needs: version
+    if: needs.version.outputs.version != ''
+    
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: core-linux-amd64
+            binary_path: build/native/nativeCompile/core
+          - os: windows-latest
+            asset_name: core-windows-amd64.exe
+            binary_path: build/native/nativeCompile/core.exe
+          - os: macos-14
+            asset_name: core-macos-aarch64
+            binary_path: build/native/nativeCompile/core
+          - os: macos-latest
+            asset_name: core-macos-x86_64
+            binary_path: build/native/nativeCompile/core
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main  # Ensure we're on main with the new tag
+
+      - name: Set up JDK
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: "graalvm-community"
+          java-version: "24"
+
+      - name: Grant execute permission for gradlew
+        if: runner.os != 'Windows'
+        run: chmod +x gradlew
+
+      - name: Build native image
+        run: ./gradlew nativeBuild
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          files: ${{ matrix.binary_path }}
+          asset_name: ${{ matrix.asset_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
