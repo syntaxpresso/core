@@ -6,31 +6,42 @@ on:
 
 jobs:
   release:
+    # This job only runs if the pull request was merged
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+
     steps:
+      # Step 1: Check out the repository's code
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          # Fetch all history for all branches and tags for axion-release-plugin
+          # Fetch all history for all branches and tags. This is necessary
+          # for the axion-release-plugin to determine the correct version.
           fetch-depth: 0
 
+      # Step 2: Switch to the main branch to fix the "detached HEAD" issue
+      - name: Switch to the main branch
+        run: git checkout main
+
+      # Step 3: Set up the GraalVM JDK
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          distribution: "graalvm"
-          java-version: "21"
+          distribution: 'graalvm'
+          java-version: '24'
 
+      # Step 4: Make the Gradle wrapper executable
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # Step 5: Configure Git user, required by the versioning plugin
       - name: Configure Git
         run: |
           git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          git config user.email "github-actions@github.com"
 
+      # Step 6: Determine version increment based on PR labels and create a new version tag
       - name: Increment version based on label
-        id: versioning
         run: |
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
             echo "Incrementing minor version for feature"
@@ -39,17 +50,20 @@ jobs:
             echo "Incrementing patch version for bug/task"
             ./gradlew release -Prelease.incrementer=incrementPatch
           else
-            echo "No versioning label found. Skipping release."
+            echo "No versioning label ('feature', 'bug', 'task') found. Skipping release."
             exit 0
           fi
 
+      # Step 7: Get the newly created version number to use in the release
       - name: Get the new version
         id: get_version
         run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_OUTPUT
 
+      # Step 8: Build the native executable
       - name: Build native image
         run: ./gradlew nativeBuild
 
+      # Step 9: Create the GitHub Release and upload the native binary
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
