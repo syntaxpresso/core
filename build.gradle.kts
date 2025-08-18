@@ -7,35 +7,6 @@ plugins {
 
 version = scmVersion.version
 
-scmVersion {
-    tag {
-        prefix.set("v")
-        versionSeparator.set("")
-    }
-
-    versionIncrementer.set("incrementPatch")
-
-    hooks {
-        pre(
-            "fileUpdate",
-            mapOf(
-                "file" to "README.md",
-                "pattern" to { version: String, _: HookConfig -> "version: $version" },
-                "replacement" to { version: String, _: HookConfig -> "version: $version" },
-            ),
-        )
-        pre("commit")
-    }
-
-    branchVersionIncrementer.set(
-        mapOf(
-            "master" to "incrementMinor",
-            "main" to "incrementMinor",
-            "feature/.*" to "incrementPatch",
-        ),
-    )
-}
-
 repositories {
     mavenCentral()
     mavenLocal()

@@ -1,151 +1,62 @@
-name: Release with GraalVM Native Images
+name: Release
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
-      - test-release # Your test branch
-  workflow_dispatch:
-    inputs:
-      release_type:
-        description: "Release type (patch/minor/major)"
-        required: false
-        default: "patch"
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
+      - main
+      - test-release
 
 jobs:
-  version:
+  release:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.axion.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
+          # Fetch all history for all branches and tags for axion-release-plugin
           fetch-depth: 0
-          fetch-tags: true
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v3
         with:
-          distribution: "temurin"
-          java-version: "21"
-
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-
-      - name: Axion Release Version
-        id: axion
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            ./gradlew release -Prelease.versionIncrementer=${{ github.event.inputs.release_type }}
-          else
-            ./gradlew release
-          fi
-          VERSION=$(./gradlew currentVersion -q -Prelease.quiet)
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Released version: ${VERSION}"
-
-      - name: Push tags
-        run: |
-          git push --tags
-          git push
-
-  build-native:
-    needs: version
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux
-            arch: amd64
-            graalvm: "24.0.0"
-          - os: windows-latest
-            platform: windows
-            arch: amd64
-            graalvm: "24.0.0"
-          - os: macos-latest
-            platform: darwin
-            arch: amd64
-            graalvm: "24.0.0"
-          - os: macos-14
-            platform: darwin
-            arch: aarch64
-            graalvm: "24.0.0"
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: v${{ needs.version.outputs.version }}
-
-      - name: Setup GraalVM
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: "21"
           distribution: "graalvm"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          native-image-job-reports: "true"
-          native-image-musl: ${{ matrix.platform == 'linux' }}
+          java-version: "24"
 
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew build -x test
-
-      - name: Build Native Image
+      - name: Configure Git
         run: |
-          if [ "${{ matrix.platform }}" == "windows" ]; then
-            ./gradlew nativeCompile
-            BINARY_NAME="app-${{ needs.version.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.exe"
-            mv build/native/nativeCompile/*.exe $BINARY_NAME
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Increment version based on label
+        id: versioning
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
+            echo "Incrementing minor version for feature"
+            ./gradlew release -Prelease.incrementer=incrementMinor
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'bug') }}" == "true" || "${{ contains(github.event.pull_request.labels.*.name, 'task') }}" == "true" ]]; then
+            echo "Incrementing patch version for bug/task"
+            ./gradlew release -Prelease.incrementer=incrementPatch
           else
-            ./gradlew nativeCompile
-            BINARY_NAME="app-${{ needs.version.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}"
-            mv build/native/nativeCompile/app $BINARY_NAME
-            chmod +x $BINARY_NAME
+            echo "No versioning label found. Skipping release."
+            exit 0
           fi
-        shell: bash
 
-      - name: Upload Native Binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-binary-${{ matrix.platform }}-${{ matrix.arch }}
-          path: app-${{ needs.version.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}*
+      - name: Get the new version
+        id: get_version
+        run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_OUTPUT
 
-  create-release:
-    needs: [version, build-native]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+      - name: Build native image
+        run: ./gradlew nativeBuild
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release-artifacts
-
-      - name: Display structure
-        run: ls -la release-artifacts/
-
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.version.outputs.version }}
-          name: Release v${{ needs.version.outputs.version }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            release-artifacts/**/*
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          files: build/native/nativeCompile/core
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
