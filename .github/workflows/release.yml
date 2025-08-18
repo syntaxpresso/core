@@ -1,23 +1,30 @@
 name: Release
+
 on:
   pull_request:
     types: [closed]
+
 jobs:
   release:
     # This job only runs if the pull request was merged
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+
+    # ---- ADD THIS PERMISSIONS BLOCK ----
+    permissions:
+      contents: write # Allows the workflow to push commits and tags
+
     steps:
       # Step 1: Check out the repository's code
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Fetch all history for all branches and tags. This is necessary
-          # for the axion-release-plugin to determine the correct version.
           fetch-depth: 0
-      # Step 2: Switch to the main branch to fix the "detached HEAD" issue
+
+      # Step 2: Switch to the main branch
       - name: Switch to the main branch
         run: git checkout main
+
       # Step 3: Set up the GraalVM JDK
       - name: Set up JDK
         uses: graalvm/setup-graalvm@v1
@@ -29,13 +36,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Step 5: Configure Git user, required by the versioning plugin
+      # Step 5: Configure Git user
       - name: Configure Git
         run: |
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
 
-      # Step 6: Determine version increment based on PR labels and create a new version tag
+      # Step 6: Increment version and create a new tag
       - name: Increment version based on label
         run: |
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
@@ -49,7 +56,7 @@ jobs:
             exit 0
           fi
 
-      # Step 7: Get the newly created version number to use in the release
+      # Step 7: Get the new version number
       - name: Get the new version
         id: get_version
         run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_OUTPUT
@@ -58,7 +65,7 @@ jobs:
       - name: Build native image
         run: ./gradlew nativeBuild
 
-      # Step 9: Create the GitHub Release and upload the native binary
+      # Step 9: Create the GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
