@@ -1,5 +1,6 @@
 package io.github.syntaxpresso.core.command.java;
 
+import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;
@@ -12,7 +13,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "create-jpa-repository",
     description = "Create JPA Repository for the current JPA Entity.")
-public class CreateJPARepositoryCommand implements Callable<DataTransferObject<Void>> {
+public class CreateJPARepositoryCommand implements Callable<DataTransferObject<CreateNewJavaFileResponse>> {
   private final JavaService javaService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
@@ -22,7 +23,7 @@ public class CreateJPARepositoryCommand implements Callable<DataTransferObject<V
   private Path filePath;
 
   @Override
-  public DataTransferObject<Void> call() {
+  public DataTransferObject<CreateNewJavaFileResponse> call() {
     return this.javaService.createJPARepository(this.cwd, this.filePath);
   }
 }
