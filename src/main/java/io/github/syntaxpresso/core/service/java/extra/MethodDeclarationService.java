@@ -85,28 +85,6 @@ public class MethodDeclarationService {
   }
 
   /**
-   * Renames all formal parameters of the specified type across all methods in a file.
-   *
-   * @param file The file containing the source code.
-   * @param currentName The current name of the parameter type (PascalCase).
-   * @param newName The new name for the parameter type (PascalCase).
-   */
-  public void renameFormalParameters(TSFile file, String currentName, String newName) {
-    this.formalParameterService.renameFormalParametersInFile(file, currentName, newName);
-  }
-
-  /**
-   * Renames all local variables of the specified type across all methods in a file.
-   *
-   * @param file The file containing the source code.
-   * @param currentName The current name of the variable type (PascalCase).
-   * @param newName The new name for the variable type (PascalCase).
-   */
-  public void renameLocalVariables(TSFile file, String currentName, String newName) {
-    this.localVariableDeclarationService.renameLocalVariablesInFile(file, currentName, newName);
-  }
-
-  /**
    * Renames a specific method in a file.
    *
    * @param file The file containing the source code.

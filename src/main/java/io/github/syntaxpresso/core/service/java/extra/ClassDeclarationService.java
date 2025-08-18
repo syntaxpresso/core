@@ -30,6 +30,24 @@ public class ClassDeclarationService {
   }
 
   /**
+   * Gets the class name node.
+   *
+   * @param file The TSFile containing the source code.
+   * @param classNode The class declaration node.
+   * @return The class name node, or empty if not found.
+   */
+  public Optional<TSNode> getClassNameNode(TSFile file, TSNode classNode) {
+    if (file == null || classNode == null || !"class_declaration".equals(classNode.getType())) {
+      return Optional.empty();
+    }
+    TSNode nameNode = classNode.getChildByFieldName("name");
+    if (nameNode != null) {
+      return Optional.of(nameNode);
+    }
+    return Optional.empty();
+  }
+
+  /**
    * Gets the class name from a class declaration node.
    *
    * @param file The TSFile containing the source code.
@@ -97,22 +115,6 @@ public class ClassDeclarationService {
   }
 
   /**
-   * Finds all fields of a specific type within a class.
-   *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node.
-   * @param typeName The type name to search for.
-   * @return A list of field declaration nodes with the specified type.
-   */
-  public List<TSNode> findFieldsByType(TSFile file, TSNode classNode, String typeName) {
-    if (file == null || classNode == null || typeName == null) {
-      return Collections.emptyList();
-    }
-    List<TSNode> classFields = this.getClassFields(file, classNode);
-    return this.fieldDeclarationService.filterFieldsByType(file, classFields, typeName);
-  }
-
-  /**
    * Finds all methods with a specific name within a class.
    *
    * @param file The TSFile containing the source code.
@@ -153,26 +155,6 @@ public class ClassDeclarationService {
     if (nameNode != null) {
       file.updateSourceCode(nameNode, newName);
     }
-  }
-
-  /**
-   * Checks if a class has a main method.
-   *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node.
-   * @return True if the class has a main method, false otherwise.
-   */
-  public boolean hasMainMethod(TSFile file, TSNode classNode) {
-    if (file == null || classNode == null) {
-      return false;
-    }
-    List<TSNode> methods = this.findMethodsByName(file, classNode, "main");
-    for (TSNode method : methods) {
-      if (this.methodDeclarationService.isMainMethod(file, method)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**

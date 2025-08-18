@@ -1,5 +1,6 @@
 package io.github.syntaxpresso.core.common;
 
+import io.github.syntaxpresso.core.command.java.CreateJPARepositoryCommand;
 import io.github.syntaxpresso.core.command.java.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.java.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.java.RenameCommand;
@@ -20,6 +21,9 @@ public class CommandFactory implements IFactory {
     }
     if (cls == RenameCommand.class) {
       return (K) new RenameCommand(javaService);
+    }
+    if (cls == CreateJPARepositoryCommand.class) {
+      return (K) new CreateJPARepositoryCommand(javaService);
     }
     return cls.getDeclaredConstructor().newInstance();
   }

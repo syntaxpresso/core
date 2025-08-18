@@ -38,10 +38,13 @@ class MethodDeclarationServiceExtendedTest {
 
   @BeforeEach
   void setUp() {
-    // Use ProgramService for consistent service setup
-    ProgramService programService = new ProgramService();
+    VariableNamingService variableNamingService = new VariableNamingService();
+    LocalVariableDeclarationService localVariableDeclarationService =
+        new LocalVariableDeclarationService(variableNamingService);
+    FormalParameterService formalParameterService =
+        new FormalParameterService(localVariableDeclarationService, variableNamingService);
     methodDeclarationService =
-        programService.getClassDeclarationService().getMethodDeclarationService();
+        new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
     // Original file with method to rename
     String originalJavaCode =
         """
@@ -291,4 +294,3 @@ class MethodDeclarationServiceExtendedTest {
     }
   }
 }
-

@@ -145,7 +145,7 @@ public class ImportDeclarationService {
     }
     String packageName = fullPackageName.substring(0, lastDotIndex);
     String className = fullPackageName.substring(lastDotIndex + 1);
-    addImport(file, packageName, className);
+    this.addImport(file, packageName, className);
   }
 
   /**

@@ -14,9 +14,14 @@ import io.github.syntaxpresso.core.service.extra.ScopeType;
 import io.github.syntaxpresso.core.service.java.extra.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.FieldDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.FormalParameterService;
+import io.github.syntaxpresso.core.service.java.extra.ImportDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.InheritanceService;
+import io.github.syntaxpresso.core.service.java.extra.JPAService;
 import io.github.syntaxpresso.core.service.java.extra.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.MethodDeclarationService;
+import io.github.syntaxpresso.core.service.java.extra.PackageDeclarationService;
 import io.github.syntaxpresso.core.service.java.extra.ProgramService;
+import io.github.syntaxpresso.core.service.java.extra.TypeResolutionService;
 import io.github.syntaxpresso.core.service.java.extra.VariableNamingService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
@@ -29,26 +34,44 @@ import java.util.Optional;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.treesitter.TSNode;
-import org.treesitter.TSQuery;
-import org.treesitter.TSQueryCapture;
-import org.treesitter.TSQueryCursor;
-import org.treesitter.TSQueryMatch;
 
 @Getter
 @NoArgsConstructor
 public class JavaService {
   private final PathHelper pathHelper = new PathHelper();
-  private final ProgramService programService = new ProgramService();
   private final VariableNamingService variableNamingService = new VariableNamingService();
+  private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+  private final ImportDeclarationService importDeclarationService = new ImportDeclarationService();
+  private final PackageDeclarationService packageDeclarationService =
+      new PackageDeclarationService();
   private final LocalVariableDeclarationService localVariableDeclarationService =
       new LocalVariableDeclarationService(variableNamingService);
   private final FormalParameterService formalParameterService =
       new FormalParameterService(localVariableDeclarationService, variableNamingService);
   private final MethodDeclarationService methodDeclarationService =
       new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
-  private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
   private final ClassDeclarationService classDeclarationService =
       new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+  private final TypeResolutionService typeResolutionService =
+      new TypeResolutionService(
+          formalParameterService,
+          localVariableDeclarationService,
+          fieldDeclarationService,
+          classDeclarationService);
+  private final ProgramService programService =
+      new ProgramService(
+          variableNamingService,
+          fieldDeclarationService,
+          importDeclarationService,
+          packageDeclarationService,
+          localVariableDeclarationService,
+          formalParameterService,
+          methodDeclarationService,
+          classDeclarationService,
+          typeResolutionService);
+  private final InheritanceService inheritanceService =
+      new InheritanceService(classDeclarationService, importDeclarationService);
+  private final JPAService jpaService = new JPAService(importDeclarationService);
 
   /**
    * Checks if a directory is a Java project.
@@ -105,16 +128,6 @@ public class JavaService {
       System.err.println("Failed to create directory structure: " + e.getMessage());
       return Optional.empty();
     }
-  }
-
-  /**
-   * Checks if a file contains a main class.
-   *
-   * @param file The file to check.
-   * @return True if the file contains a main class, false otherwise.
-   */
-  public Boolean isMainClass(TSFile file) {
-    return this.programService.hasMainClass(file);
   }
 
   /**
@@ -222,120 +235,46 @@ public class JavaService {
   }
 
   /**
-   * Finds all usages of a class in a file.
+   * Renames the main class within a .java file and renames the file itself.
    *
-   * @param file The file to search in.
-   * @param className The name of the class to find usages of.
-   * @return A list of all nodes representing usages of the class.
+   * <p>This method performs the following steps:
+   *
+   * <ol>
+   *   <li>Parses the Java file to find the main class declaration.
+   *   <li>If no main class is found, it attempts to find the first class declaration.
+   *   <li>Updates the source code in memory to rename the class.
+   *   <li>Writes the updated content to a new file with the new class name.
+   *   <li>Deletes the original file.
+   * </ol>
+   *
+   * @param filePath The absolute path to the .java file to be renamed.
+   * @param newName The new name for the class and the file (without the .java extension).
+   * @return The path to the newly created and renamed file.
+   * @throws IOException if an I/O error occurs during file reading, writing, or deletion, or if no
+   *     class declaration is found in the file.
    */
-  public List<TSNode> findClassUsagesInFile(TSFile file, String className) {
-    List<TSNode> confirmedUsages = new ArrayList<>();
-    String usageQuery = "[(type_identifier) @usage (class_declaration name: (identifier) @usage)]";
-    TSQuery query = new TSQuery(file.getParser().getLanguage(), usageQuery);
-    TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(query, file.getTree().getRootNode());
-    TSQueryMatch match = new TSQueryMatch();
-    while (cursor.nextMatch(match)) {
-      for (TSQueryCapture capture : match.getCaptures()) {
-        TSNode potentialUsage = capture.getNode();
-        String usageName =
-            file.getTextFromRange(potentialUsage.getStartByte(), potentialUsage.getEndByte());
-        if (usageName.equals(className)) {
-          confirmedUsages.add(potentialUsage);
-        }
+  private Path renameFileAndContent(final Path filePath, final String newName) throws IOException {
+    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
+    Optional<TSNode> mainClassNode = this.classDeclarationService.getMainClass(tsFile);
+    if (mainClassNode.isPresent()) {
+      this.classDeclarationService.renameClass(tsFile, mainClassNode.get(), newName);
+      String updatedContent = tsFile.getSourceCode();
+      Path newPath = filePath.resolveSibling(newName + ".java");
+      Files.writeString(newPath, updatedContent);
+      Files.delete(filePath);
+      return newPath;
+    } else {
+      List<TSNode> classes = this.classDeclarationService.findAllClassDeclarations(tsFile);
+      if (!classes.isEmpty()) {
+        this.classDeclarationService.renameClass(tsFile, classes.get(0), newName);
+        String updatedContent = tsFile.getSourceCode();
+        Path newPath = filePath.resolveSibling(newName + ".java");
+        Files.writeString(newPath, updatedContent);
+        Files.delete(filePath);
+        return newPath;
       }
     }
-    return confirmedUsages;
-  }
-
-  /**
-   * Renames a method parameter usage.
-   *
-   * @param file The file containing the source code.
-   * @param methodDeclarationNode The node of the method declaration.
-   * @param currentName The current name of the parameter.
-   * @param newName The new name of the parameter.
-   */
-  public void renameMethodParamUsage(
-      TSFile file, TSNode methodDeclarationNode, String currentName, String newName) {
-    if (!"method_declaration".equals(methodDeclarationNode.getType())) {
-      throw new IllegalArgumentException("Node is not a method_declaration");
-    }
-    TSNode bodyNode = methodDeclarationNode.getChildByFieldName("body");
-    if (bodyNode == null) {
-      return;
-    }
-    List<TSNode> nodesToRename = new ArrayList<>();
-    String queryStr = "(identifier) @id";
-    TSQuery query = new TSQuery(file.getParser().getLanguage(), queryStr);
-    TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(query, bodyNode);
-    TSQueryMatch match = new TSQueryMatch();
-    while (cursor.nextMatch(match)) {
-      for (TSQueryCapture capture : match.getCaptures()) {
-        TSNode idNode = capture.getNode();
-        if (file.getTextFromNode(idNode).equals(currentName)) {
-          TSNode parent = idNode.getParent();
-          if (parent != null && "field_access".equals(parent.getType())) {
-            TSNode objectNode = parent.getChildByFieldName("object");
-            TSNode fieldNode = parent.getChildByFieldName("field");
-            if (objectNode != null
-                && "this".equals(objectNode.getType())
-                && idNode.equals(fieldNode)) {
-              continue;
-            }
-          }
-          nodesToRename.add(idNode);
-        }
-      }
-    }
-    nodesToRename.sort((a, b) -> Integer.compare(b.getStartByte(), a.getStartByte()));
-    for (TSNode node : nodesToRename) {
-      file.updateSourceCode(node, newName);
-    }
-  }
-
-  /**
-   * Finds all classes in a file using the new hierarchical structure.
-   *
-   * @param file The TSFile containing the source code.
-   * @return A list of class declaration nodes.
-   */
-  public List<TSNode> findAllClasses(TSFile file) {
-    return this.programService.getAllClasses(file);
-  }
-
-  /**
-   * Finds a class by name using the new hierarchical structure.
-   *
-   * @param file The TSFile containing the source code.
-   * @param className The name of the class to find.
-   * @return The class declaration node, or empty if not found.
-   */
-  public Optional<TSNode> findClassByName(TSFile file, String className) {
-    return this.programService.findClassByName(file, className);
-  }
-
-  /**
-   * Gets all fields from a specific class using the new hierarchical structure.
-   *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node.
-   * @return A list of field declaration nodes.
-   */
-  public List<TSNode> getFieldsFromClass(TSFile file, TSNode classNode) {
-    return this.getProgramService().getClassDeclarationService().getClassFields(file, classNode);
-  }
-
-  /**
-   * Gets all methods from a specific class using the new hierarchical structure.
-   *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node.
-   * @return A list of method declaration nodes.
-   */
-  public List<TSNode> getMethodsFromClass(TSFile file, TSNode classNode) {
-    return this.getProgramService().getClassDeclarationService().getClassMethods(file, classNode);
+    throw new IOException("No class found in file " + filePath);
   }
 
   /**
@@ -428,10 +367,9 @@ public class JavaService {
     try {
       List<TSFile> allFiles = this.getAllJavaFilesFromCwd(cwd);
       for (TSFile file : allFiles) {
-        boolean isMainClass = this.isMainClass(file);
+        boolean isMainClass = this.programService.hasMainClass(file);
         if (isMainClass) {
-          Optional<String> packageName =
-              this.programService.getPackageDeclarationService().getPackageName(file);
+          Optional<String> packageName = this.packageDeclarationService.getPackageName(file);
           if (packageName.isEmpty()) {
             return DataTransferObject.error(
                 "Main class found, but package name couldn't be determined.");
@@ -475,45 +413,67 @@ public class JavaService {
   }
 
   /**
-   * Renames the main class within a .java file and renames the file itself.
+   * Creates a JPA Repository interface for an entity class.
    *
-   * <p>This method performs the following steps:
-   *
-   * <ol>
-   *   <li>Parses the Java file to find the main class declaration.
-   *   <li>If no main class is found, it attempts to find the first class declaration.
-   *   <li>Updates the source code in memory to rename the class.
-   *   <li>Writes the updated content to a new file with the new class name.
-   *   <li>Deletes the original file.
-   * </ol>
-   *
-   * @param filePath The absolute path to the .java file to be renamed.
-   * @param newName The new name for the class and the file (without the .java extension).
-   * @return The path to the newly created and renamed file.
-   * @throws IOException if an I/O error occurs during file reading, writing, or deletion, or if no
-   *     class declaration is found in the file.
+   * @param cwd The current working directory.
+   * @param entityFilePath The path to the entity file.
+   * @return A DataTransferObject containing the new repository file information or error.
    */
-  private Path renameFileAndContent(final Path filePath, final String newName) throws IOException {
-    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
-    Optional<TSNode> mainClassNode = this.classDeclarationService.getMainClass(tsFile);
-    if (mainClassNode.isPresent()) {
-      this.classDeclarationService.renameClass(tsFile, mainClassNode.get(), newName);
-      String updatedContent = tsFile.getSourceCode();
-      Path newPath = filePath.resolveSibling(newName + ".java");
-      Files.writeString(newPath, updatedContent);
-      Files.delete(filePath);
-      return newPath;
-    } else {
-      List<TSNode> classes = this.classDeclarationService.findAllClassDeclarations(tsFile);
-      if (!classes.isEmpty()) {
-        this.classDeclarationService.renameClass(tsFile, classes.get(0), newName);
-        String updatedContent = tsFile.getSourceCode();
-        Path newPath = filePath.resolveSibling(newName + ".java");
-        Files.writeString(newPath, updatedContent);
-        Files.delete(filePath);
-        return newPath;
-      }
+  public DataTransferObject<CreateNewJavaFileResponse> createJPARepository(
+      Path cwd, Path entityFilePath) {
+    if (!entityFilePath.toString().endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + entityFilePath);
     }
-    throw new IOException("No class found in file " + filePath);
+    try {
+      TSFile entityFile = new TSFile(SupportedLanguage.JAVA, entityFilePath);
+      Optional<String> className = entityFile.getFileNameWithoutExtension();
+      if (className.isEmpty()) {
+        return DataTransferObject.error("Unable to get entity class name");
+      }
+      Optional<String> packageName = this.packageDeclarationService.getPackageName(entityFile);
+      if (packageName.isEmpty()) {
+        return DataTransferObject.error("Unable to get package name");
+      }
+      Optional<TSNode> classDeclarationNode =
+          this.classDeclarationService.findClassByName(entityFile, className.get());
+      if (classDeclarationNode.isEmpty()) {
+        return DataTransferObject.error("No class declaration found in file");
+      }
+      if (!this.jpaService.isJPAEntity(entityFile, classDeclarationNode.get())) {
+        return DataTransferObject.error("Class is not a JPA entity (@Entity annotation not found)");
+      }
+      Optional<InheritanceService.FieldWithFile> idFieldWithFile =
+          this.inheritanceService.findIdFieldInHierarchy(
+              cwd, entityFile, classDeclarationNode.get());
+      if (idFieldWithFile.isEmpty()) {
+        return DataTransferObject.error(
+            "No @Id field found in entity hierarchy. Note: Only local project classes are currently"
+                + " supported.");
+      }
+      Optional<String> idType =
+          this.jpaService.extractFieldType(idFieldWithFile.get().file, idFieldWithFile.get().field);
+      if (idType.isEmpty()) {
+        return DataTransferObject.error("Unable to determine @Id field type");
+      }
+      String repositoryName = className.get() + "Repository";
+      DataTransferObject<CreateNewJavaFileResponse> createResult =
+          this.createNewFile(
+              cwd,
+              packageName.get(),
+              repositoryName,
+              JavaFileTemplate.INTERFACE,
+              SourceDirectoryType.MAIN);
+      if (!createResult.getSucceed()) {
+        return createResult;
+      }
+      TSFile repositoryFile =
+          new TSFile(SupportedLanguage.JAVA, Path.of(createResult.getData().getFilePath()));
+      this.jpaService.configureRepositoryFile(
+          repositoryFile, className.get(), idType.get(), packageName.get());
+      repositoryFile.save();
+      return createResult;
+    } catch (Exception e) {
+      return DataTransferObject.error("Failed to create repository: " + e.getMessage());
+    }
   }
 }
