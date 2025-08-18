@@ -14,7 +14,10 @@ public class InheritanceService {
   private final ClassDeclarationService classDeclarationService;
   private final ImportDeclarationService importDeclarationService;
 
-  /** Container class to hold both the field node and its associated file. */
+  /**
+   * A container class to hold a {@link TSNode} representing a field and its associated {@link
+   * TSFile}.
+   */
   public static class FieldWithFile {
     public final TSNode field;
     public final TSFile file;
@@ -25,7 +28,14 @@ public class InheritanceService {
     }
   }
 
-  /** Finds the superclass name from a class declaration node. */
+  /**
+   * Finds the simple name of the direct superclass from a class declaration node.
+   *
+   * @param file The TSFile containing the class declaration.
+   * @param classDeclarationNode The tree-sitter node representing the class declaration.
+   * @return An {@link Optional} containing the superclass name as a String, or an empty Optional if
+   *     the class does not explicitly extend another class.
+   */
   public Optional<String> getSuperclassName(TSFile file, TSNode classDeclarationNode) {
     List<TSNode> superclassNodes =
         file.query(
@@ -37,7 +47,17 @@ public class InheritanceService {
     return Optional.empty();
   }
 
-  /** Resolves the fully qualified name of a superclass using imports. */
+  /**
+   * Resolves the fully qualified name of a superclass using the context of a given file. It checks
+   * for fully qualified names first, then scans import statements, considers implicit java.lang
+   * imports, and finally assumes the same package if no other information is found.
+   *
+   * @param file The TSFile where the superclass is referenced, providing context for imports and
+   *     package.
+   * @param superclassName The simple or partially qualified name of the superclass.
+   * @return An {@link Optional} containing the fully qualified name of the superclass, or an empty
+   *     Optional if it cannot be resolved.
+   */
   public Optional<String> getFullyQualifiedSuperclass(TSFile file, String superclassName) {
     // First check if it's already fully qualified
     if (superclassName.contains(".")) {
@@ -65,14 +85,32 @@ public class InheritanceService {
     return Optional.empty();
   }
 
-  /** Checks if a superclass exists in the project's source code. */
+  /**
+   * Checks if a class, identified by its fully qualified name, exists as a source file within the
+   * project. It constructs the expected file path from the project root.
+   *
+   * @param projectRoot The root path of the project.
+   * @param fullyQualifiedClassName The fully qualified name of the class to check.
+   * @return {@code true} if the corresponding .java file exists in the project's main source
+   *     directory, {@code false} otherwise.
+   */
   public boolean isLocalClass(Path projectRoot, String fullyQualifiedClassName) {
     String relativePath = fullyQualifiedClassName.replace('.', '/') + ".java";
     Path sourcePath = projectRoot.resolve("src/main/java").resolve(relativePath);
     return Files.exists(sourcePath);
   }
 
-  /** Recursively finds a field with @Id annotation in the class hierarchy. */
+  /**
+   * Recursively finds a field annotated with {@code @Id} within the class hierarchy, starting from
+   * the given class declaration. The search proceeds up the inheritance chain until an {@code @Id}
+   * field is found or the top of the hierarchy is reached.
+   *
+   * @param projectRoot The root path of the project, used to locate source files for superclasses.
+   * @param file The TSFile of the class to begin the search from.
+   * @param classDeclarationNode The tree-sitter node of the class to begin the search from.
+   * @return An {@link Optional} containing a {@link FieldWithFile} record for the {@code @Id} field
+   *     if found, or an empty Optional otherwise.
+   */
   public Optional<FieldWithFile> findIdFieldInHierarchy(
       Path projectRoot, TSFile file, TSNode classDeclarationNode) {
     // First check current class
@@ -98,7 +136,15 @@ public class InheritanceService {
     }
   }
 
-  /** Finds @Id field in the current class. */
+  /**
+   * Finds a field annotated with {@code @Id} directly within the given class declaration node. This
+   * method does not search the class hierarchy.
+   *
+   * @param file The TSFile containing the class.
+   * @param classDeclarationNode The node of the class to search within.
+   * @return An {@link Optional} containing the {@link TSNode} of the field if found, otherwise an
+   *     empty Optional.
+   */
   private Optional<TSNode> findIdFieldInClass(TSFile file, TSNode classDeclarationNode) {
     List<TSNode> allClassFields =
         this.classDeclarationService.getClassFields(file, classDeclarationNode);
@@ -110,7 +156,15 @@ public class InheritanceService {
     return Optional.empty();
   }
 
-  /** Finds @Id field in a local superclass. */
+  /**
+   * Continues the recursive search for an {@code @Id} field in a superclass that is part of the
+   * local project source code.
+   *
+   * @param projectRoot The root path of the project.
+   * @param fullyQualifiedClassName The fully qualified name of the superclass to inspect.
+   * @return An {@link Optional} containing the {@link FieldWithFile} if an {@code @Id} is found in
+   *     the superclass's hierarchy, otherwise an empty Optional.
+   */
   private Optional<FieldWithFile> findIdFieldInLocalSuperclass(
       Path projectRoot, String fullyQualifiedClassName) {
     try {
@@ -130,14 +184,27 @@ public class InheritanceService {
     return Optional.empty();
   }
 
-  /** Finds @Id field in an external superclass - returns empty (not supported for now). */
+  /**
+   * Placeholder for finding an {@code @Id} field in an external (e.g., library) superclass. This
+   * functionality is not currently supported.
+   *
+   * @param projectRoot The root path of the project.
+   * @param fullyQualifiedClassName The fully qualified name of the external superclass.
+   * @return An empty {@link Optional} as this feature is not implemented.
+   */
   private Optional<FieldWithFile> findIdFieldInExternalSuperclass(
       Path projectRoot, String fullyQualifiedClassName) {
     // For now, we only support finding @Id fields in local project files
     return Optional.empty();
   }
 
-  /** Checks if a field has @Id annotation. */
+  /**
+   * Checks if a given field node has an {@code @Id} annotation.
+   *
+   * @param file The TSFile containing the field.
+   * @param fieldNode The {@link TSNode} of the field to check.
+   * @return {@code true} if the field is annotated with {@code @Id}, {@code false} otherwise.
+   */
   private boolean hasIdAnnotation(TSFile file, TSNode fieldNode) {
     List<TSNode> annotations =
         file.query(fieldNode, "(marker_annotation name: (identifier) @annotation.name)");
@@ -150,7 +217,13 @@ public class InheritanceService {
     return false;
   }
 
-  /** Checks if a class is in java.lang package. */
+  /**
+   * Checks if a class name corresponds to a common class in the {@code java.lang} package, which is
+   * implicitly imported.
+   *
+   * @param className The simple name of the class.
+   * @return {@code true} if the class is a known java.lang class, {@code false} otherwise.
+   */
   private boolean isJavaLangClass(String className) {
     return List.of(
             "Object",
@@ -166,4 +239,3 @@ public class InheritanceService {
         .contains(className);
   }
 }
-
