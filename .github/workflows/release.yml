@@ -8,9 +8,25 @@ jobs:
   release:
     # This job only runs if the pull request was merged
     if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
 
-    # ---- ADD THIS PERMISSIONS BLOCK ----
+    # This is the matrix strategy for multi-platform builds
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: core-linux-amd64
+            binary_path: build/native/nativeCompile/core
+          - os: windows-latest
+            asset_name: core-windows-amd64.exe
+            binary_path: build/native/nativeCompile/core.exe
+          - os: macos-14 # This runner is for Apple Silicon (ARM64)
+            asset_name: core-macos-aarch64
+            binary_path: build/native/nativeCompile/core
+          - os: macos-latest # This runner is for Intel Macs (x86_64)
+            asset_name: core-macos-x86_64
+            binary_path: build/native/nativeCompile/core
+
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write # Allows the workflow to push commits and tags
 
@@ -29,11 +45,12 @@ jobs:
       - name: Set up JDK
         uses: graalvm/setup-graalvm@v1
         with:
-          distribution: 'graalvm-community'
-          java-version: '24'
+          distribution: "graalvm-community"
+          java-version: "24"
 
-      # Step 4: Make the Gradle wrapper executable
+      # Step 4: Make the Gradle wrapper executable (not needed on Windows)
       - name: Grant execute permission for gradlew
+        if: runner.os != 'Windows'
         run: chmod +x gradlew
 
       # Step 5: Configure Git user
@@ -42,8 +59,11 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
 
-      # Step 6: Increment version and create a new tag
-      - name: Increment version based on label
+      # Step 6: Get the version number (run this only once)
+      - name: Get the new version
+        id: get_version
+        # We need a unique condition to run this step in only one job of the matrix
+        if: matrix.os == 'ubuntu-latest'
         run: |
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
             echo "Incrementing minor version for feature"
@@ -52,24 +72,24 @@ jobs:
             echo "Incrementing patch version for bug/task"
             ./gradlew release -Prelease.incrementer=incrementPatch
           else
-            echo "No versioning label ('feature', 'bug', 'task') found. Skipping release."
+            echo "No versioning label found. Skipping release."
             exit 0
           fi
+          echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_ENV
+          echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_OUTPUT
 
-      # Step 7: Get the new version number
-      - name: Get the new version
-        id: get_version
-        run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_OUTPUT
-
-      # Step 8: Build the native executable
+      # Step 7: Build the native executable
       - name: Build native image
         run: ./gradlew nativeBuild
 
-      # Step 9: Create the GitHub Release
-      - name: Create GitHub Release
+      # Step 8: Create the GitHub Release and upload binaries
+      - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          files: build/native/nativeCompile/core
+          # The softprops action cleverly handles the matrix:
+          # The first job creates the release, subsequent jobs add to it.
+          tag_name: ${{ steps.get_version.outputs.VERSION || format('v{0}', needs.release.outputs.version) }}
+          files: ${{ matrix.binary_path }}
+          asset_name: ${{ matrix.asset_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
