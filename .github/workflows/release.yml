@@ -1,34 +1,29 @@
 name: Release
-
 on:
   pull_request:
     types: [closed]
-
 jobs:
   release:
     # This job only runs if the pull request was merged
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-
     steps:
       # Step 1: Check out the repository's code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # Fetch all history for all branches and tags. This is necessary
           # for the axion-release-plugin to determine the correct version.
           fetch-depth: 0
-
       # Step 2: Switch to the main branch to fix the "detached HEAD" issue
       - name: Switch to the main branch
         run: git checkout main
-
       # Step 3: Set up the GraalVM JDK
       - name: Set up JDK
-        uses: actions/setup-java@v3
+        uses: graalvm/setup-graalvm@v1
         with:
           distribution: 'graalvm-community'
-          java-version: '24'
+          java-version: 'latest'
 
       # Step 4: Make the Gradle wrapper executable
       - name: Grant execute permission for gradlew
