@@ -27,7 +27,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          distribution: 'graalvm'
+          distribution: 'graalvm-community'
           java-version: '24'
 
       # Step 4: Make the Gradle wrapper executable
