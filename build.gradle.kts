@@ -5,6 +5,15 @@ plugins {
     id("pl.allegro.tech.build.axion-release") version "1.20.1"
 }
 
+scmVersion {
+    tag {
+        prefix.set("v")
+    }
+    branchVersionCreator("main") {
+        "version"
+    }
+}
+
 version = scmVersion.version
 
 repositories {
