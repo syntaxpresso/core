@@ -9,9 +9,11 @@ scmVersion {
     tag {
         prefix.set("v")
     }
-    branchVersionCreator("main") {
-        "version"
-    }
+    branchVersionCreators.set(
+        mapOf(
+            "main" to { version, _ -> version },
+        ),
+    )
 }
 
 version = scmVersion.version
