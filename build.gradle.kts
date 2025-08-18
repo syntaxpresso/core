@@ -5,20 +5,36 @@ plugins {
     id("pl.allegro.tech.build.axion-release") version "1.20.1"
 }
 
-import pl.allegro.tech.build.axion.release.domain.BranchVersionCreatorContext
+version = scmVersion.version
 
 scmVersion {
     tag {
         prefix.set("v")
+        versionSeparator.set("")
     }
-    branchVersionCreators.set(
+
+    versionIncrementer.set("incrementPatch")
+
+    hooks {
+        pre(
+            "fileUpdate",
+            mapOf(
+                "file" to "README.md",
+                "pattern" to { version: String, _: HookConfig -> "version: $version" },
+                "replacement" to { version: String, _: HookConfig -> "version: $version" },
+            ),
+        )
+        pre("commit")
+    }
+
+    branchVersionIncrementer.set(
         mapOf(
-            "main" to listOf({ version: String, _: BranchVersionCreatorContext -> version }),
+            "master" to "incrementMinor",
+            "main" to "incrementMinor",
+            "feature/.*" to "incrementPatch",
         ),
     )
 }
-
-version = scmVersion.version
 
 repositories {
     mavenCentral()

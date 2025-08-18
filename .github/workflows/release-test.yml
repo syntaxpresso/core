@@ -1,82 +1,152 @@
-name: Release Test
+name: Release with GraalVM Native Images
 
 on:
   push:
     branches:
-      - test-release # Your test branch
-  workflow_dispatch: # Manual trigger
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Release type (patch/minor/major)"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
-  release:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.axion.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Axion Release Version
+        id: axion
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ./gradlew release -Prelease.versionIncrementer=${{ github.event.inputs.release_type }}
+          else
+            ./gradlew release
+          fi
+          VERSION=$(./gradlew currentVersion -q -Prelease.quiet)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Released version: ${VERSION}"
+
+      - name: Push tags
+        run: |
+          git push --tags
+          git push
+
+  build-native:
+    needs: version
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
-            asset_name: core-linux-amd64
-            binary_path: build/native/nativeCompile/core
+            platform: linux
+            arch: amd64
+            graalvm: "24.0.0"
           - os: windows-latest
-            asset_name: core-windows-amd64.exe
-            binary_path: build/native/nativeCompile/core.exe
-          - os: macos-14
-            asset_name: core-macos-aarch64
-            binary_path: build/native/nativeCompile/core
+            platform: windows
+            arch: amd64
+            graalvm: "24.0.0"
           - os: macos-latest
-            asset_name: core-macos-x86_64
-            binary_path: build/native/nativeCompile/core
+            platform: darwin
+            arch: amd64
+            graalvm: "24.0.0"
+          - os: macos-14
+            platform: darwin
+            arch: aarch64
+            graalvm: "24.0.0"
 
     runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.version }}
+
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: "21"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: "true"
+          native-image-musl: ${{ matrix.platform == 'linux' }}
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+
+      - name: Build Native Image
+        run: |
+          if [ "${{ matrix.platform }}" == "windows" ]; then
+            ./gradlew nativeCompile
+            BINARY_NAME="app-${{ needs.version.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.exe"
+            mv build/native/nativeCompile/*.exe $BINARY_NAME
+          else
+            ./gradlew nativeCompile
+            BINARY_NAME="app-${{ needs.version.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}"
+            mv build/native/nativeCompile/app $BINARY_NAME
+            chmod +x $BINARY_NAME
+          fi
+        shell: bash
+
+      - name: Upload Native Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-binary-${{ matrix.platform }}-${{ matrix.arch }}
+          path: app-${{ needs.version.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}*
+
+  create-release:
+    needs: [version, build-native]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
+          path: release-artifacts
 
-      - name: Set up JDK
-        uses: graalvm/setup-graalvm@v1
-        with:
-          distribution: "graalvm-community"
-          java-version: "24"
+      - name: Display structure
+        run: ls -la release-artifacts/
 
-      - name: Grant execute permission for gradlew
-        if: runner.os != 'Windows'
-        run: chmod +x gradlew
-
-      - name: Configure Git
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "github-actions@github.com"
-
-      - name: Get test version
-        id: get_version
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          # Get current version without creating a tag
-          CURRENT_VERSION=$(./gradlew currentVersion -q -Prelease.quiet | tail -n 1)
-          TEST_VERSION="test-${CURRENT_VERSION}-${{ github.run_number }}"
-          echo "VERSION=${TEST_VERSION}" >> $GITHUB_ENV
-          echo "VERSION=${TEST_VERSION}" >> $GITHUB_OUTPUT
-          echo "Test version: ${TEST_VERSION}"
-
-      - name: Build native image
-        run: ./gradlew nativeBuild
-
-      - name: Upload Release Asset
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION || format('test-{0}', github.run_number) }}
-          files: ${{ matrix.binary_path }}
-          asset_name: ${{ matrix.asset_name }}
-          prerelease: true # Mark as pre-release
-          draft: true # Create as draft
-          body: |
-            🧪 **Test Release**
-
-            This is a test release from branch: ${{ github.ref_name }}
-            Build number: ${{ github.run_number }}
-
-            ⚠️ This is not a production release - for testing purposes only.
+          tag_name: v${{ needs.version.outputs.version }}
+          name: Release v${{ needs.version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
