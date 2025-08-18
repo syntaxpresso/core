@@ -5,13 +5,15 @@ plugins {
     id("pl.allegro.tech.build.axion-release") version "1.20.1"
 }
 
+import pl.allegro.tech.build.axion.release.domain.BranchVersionCreatorContext
+
 scmVersion {
     tag {
         prefix.set("v")
     }
     branchVersionCreators.set(
         mapOf(
-            "main" to listOf({ version: String, _: pl.allegro.tech.build.axion.release.domain.BranchVersionCreatorContext -> version }),
+            "main" to listOf({ version: String, _: BranchVersionCreatorContext -> version }),
         ),
     )
 }
