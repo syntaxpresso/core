@@ -1,9 +1,10 @@
 name: Release
 
 on:
-  push:
+  pull_request:
+    types: [closed] # Run the workflow only when a PR is closed
     branches:
-      - test-release
+      - "test-release" # Target branch for the PR
 
 jobs:
   release:
