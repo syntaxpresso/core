@@ -11,7 +11,7 @@ scmVersion {
     }
     branchVersionCreators.set(
         mapOf(
-            "main" to listOf({ version, _: Any -> version }),
+            "main" to listOf({ version: String, _: Any -> version }),
         ),
     )
 }
