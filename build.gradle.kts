@@ -2,7 +2,10 @@ plugins {
     application
     id("org.graalvm.buildtools.native") version "0.10.6"
     id("com.gradleup.shadow") version "8.3.0"
+    id("pl.allegro.tech.build.axion-release") version "1.20.1"
 }
+
+version = scmVersion.version
 
 repositories {
     mavenCentral()
