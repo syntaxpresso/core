@@ -3,8 +3,7 @@ name: Release with GraalVM Native Images
 on:
   push:
     branches:
-      - main
-      - master
+      - test-release # Your test branch
   workflow_dispatch:
     inputs:
       release_type:
