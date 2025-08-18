@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          # Fetch all history for all branches and tags for axion-release-plugin
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: "graalvm"
+          java-version: "24"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Increment version based on label
+        id: versioning
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
+            echo "Incrementing minor version for feature"
+            ./gradlew release -Prelease.incrementer=incrementMinor
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'bug') }}" == "true" || "${{ contains(github.event.pull_request.labels.*.name, 'task') }}" == "true" ]]; then
+            echo "Incrementing patch version for bug/task"
+            ./gradlew release -Prelease.incrementer=incrementPatch
+          else
+            echo "No versioning label found. Skipping release."
+            exit 0
+          fi
+
+      - name: Get the new version
+        id: get_version
+        run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_OUTPUT
+
+      - name: Build native image
+        run: ./gradlew nativeBuild
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          files: build/native/nativeCompile/core
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
