@@ -1,3 +1,5 @@
+import pl.allegro.tech.build.axion.release.domain.VersionContext
+
 plugins {
     application
     id("org.graalvm.buildtools.native") version "0.10.6"
@@ -8,17 +10,14 @@ plugins {
 version = scmVersion.version
 
 scmVersion {
-    ignoreUncommittedChanges.set(true)
-    version {
-        creator("versionWithV")
-        serializer("versionWithV") { version, _ -> version }
-    }
-    hooks {
-        pre("fileUpdate")
-        post("commit")
-    }
-    tag {
-        creator("v") { version, _ -> "v$version" }
+    // This will create Git tags like 'v1.0.1' when you run './gradlew release'
+    tag.prefix.set("v")
+
+    // This ensures the version number itself is always clean (e.g., "1.0.1"),
+    // preventing branch names from being added as suffixes.
+    // We explicitly add ': VersionContext' to fix the script compilation error.
+    versionCreator { context: VersionContext ->
+        context.version
     }
 }
 
