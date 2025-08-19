@@ -10,14 +10,12 @@ plugins {
 version = scmVersion.version
 
 scmVersion {
-    // This will create Git tags like 'v1.0.1' when you run './gradlew release'
+    // This will create Git tags like 'v1.0.1'
     tag.prefix.set("v")
 
-    // This ensures the version number itself is always clean (e.g., "1.0.1"),
-    // preventing branch names from being added as suffixes.
-    // We explicitly add ': VersionContext' to fix the script compilation error.
+    // This ensures the version number itself is always clean (e.g., "1.0.1")
     versionCreator { context: VersionContext ->
-        context.version
+        context.version.toString()
     }
 }
 
