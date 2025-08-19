@@ -164,39 +164,45 @@ jobs:
           path: build/native/nativeCompile/${{ matrix.output_name }}
           retention-days: 1
   create-release:
-    needs: [release, build-native]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: binaries
-      - name: List downloaded files
-        run: |
-          echo "Contents of binaries directory:"
-          ls -la binaries/
-          echo ""
-          echo "Contents of each subdirectory:"
-          for dir in binaries/*/; do
-            echo "Contents of $dir:"
-            ls -la "$dir"
-          done
-      - name: Prepare release files
-        run: |
-          mkdir -p release-files
-          cp binaries/binary-linux-amd64/syntaxpresso-linux-amd64 release-files/ || true
-          cp binaries/binary-macos-amd64/syntaxpresso-macos-amd64 release-files/ || true
-          cp binaries/binary-macos-arm64/syntaxpresso-macos-arm64 release-files/ || true
-          cp binaries/binary-windows-amd64/syntaxpresso-windows-amd64.exe release-files/ || true
-          echo "Final release files:"
-          ls -la release-files/
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.release.outputs.version }}
-          generate_release_notes: true
-          files: release-files/*
+      needs: [release, build-native]
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+        - name: Download all artifacts
+          uses: actions/download-artifact@v4
+          with:
+            path: binaries
+        - name: List downloaded files
+          run: |
+            echo "Contents of binaries directory:"
+            ls -la binaries/
+            echo ""
+            echo "Contents of each subdirectory:"
+            for dir in binaries/*/; do
+              echo "Contents of $dir:"
+              ls -la "$dir"
+            done
+        - name: Prepare release files
+          run: |
+            mkdir -p release-files
+            cp binaries/binary-linux-amd64/syntaxpresso-linux-amd64 release-files/ || true
+            cp binaries/binary-macos-amd64/syntaxpresso-macos-amd64 release-files/ || true
+            cp binaries/binary-macos-arm64/syntaxpresso-macos-arm64 release-files/ || true
+            cp binaries/binary-windows-amd64/syntaxpresso-windows-amd64.exe release-files/ || true
+            
+            # Make Unix binaries executable
+            chmod +x release-files/syntaxpresso-linux-amd64 || true
+            chmod +x release-files/syntaxpresso-macos-amd64 || true
+            chmod +x release-files/syntaxpresso-macos-arm64 || true
+            
+            echo "Final release files with permissions:"
+            ls -la release-files/
+        - name: Create GitHub Release
+          uses: softprops/action-gh-release@v2
+          with:
+            tag_name: v${{ needs.release.outputs.version }}
+            generate_release_notes: true
+            files: release-files/*
