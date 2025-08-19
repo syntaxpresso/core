@@ -7,6 +7,21 @@ plugins {
 
 version = scmVersion.version
 
+scmVersion {
+    ignoreUncommittedChanges.set(true)
+    version {
+        creator("versionWithV")
+        serializer("versionWithV") { version, _ -> version }
+    }
+    hooks {
+        pre("fileUpdate")
+        post("commit")
+    }
+    tag {
+        creator("v") { version, _ -> "v$version" }
+    }
+}
+
 repositories {
     mavenCentral()
     mavenLocal()
