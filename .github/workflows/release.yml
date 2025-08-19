@@ -59,24 +59,24 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            arch: x64
+            arch: amd64
             binary_name: core
-            output_name: core-linux-x64
+            output_name: syntaxpresso-linux-amd64
           - os: macos-13
             platform: macos
-            arch: x64
+            arch: amd64
             binary_name: core
-            output_name: core-macos-x64
+            output_name: syntaxpresso-macos-amd64
           - os: macos-latest
             platform: macos
             arch: arm64
             binary_name: core
-            output_name: core-macos-arm64
+            output_name: syntaxpresso-macos-arm64
           - os: windows-latest
             platform: windows
-            arch: x64
+            arch: amd64
             binary_name: core.exe
-            output_name: core-windows-x64.exe
+            output_name: syntaxpresso-windows-amd64.exe
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -146,10 +146,10 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release-files
-          cp binaries/binary-linux-x64/core-linux-x64 release-files/ || true
-          cp binaries/binary-macos-x64/core-macos-x64 release-files/ || true
-          cp binaries/binary-macos-arm64/core-macos-arm64 release-files/ || true
-          cp binaries/binary-windows-x64/core-windows-x64.exe release-files/ || true
+          cp binaries/binary-linux-amd64/syntaxpresso-linux-amd64 release-files/ || true
+          cp binaries/binary-macos-amd64/syntaxpresso-macos-amd64 release-files/ || true
+          cp binaries/binary-macos-arm64/syntaxpresso-macos-arm64 release-files/ || true
+          cp binaries/binary-windows-amd64/syntaxpresso-windows-amd64.exe release-files/ || true
           echo "Final release files:"
           ls -la release-files/
       - name: Create GitHub Release

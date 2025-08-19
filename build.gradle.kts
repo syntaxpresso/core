@@ -31,6 +31,7 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.17")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.19.2")
     implementation("net.java.dev.inflector:inflector:0.7.0")
+    implementation("com.google.code.gson:gson:2.13.1")
 
     testImplementation(libs.junit.jupiter)
     testImplementation("org.slf4j:slf4j-simple:2.0.17")
