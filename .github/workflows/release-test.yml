@@ -16,7 +16,7 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get_version.outputs.VERSION }}
+      version: ${{ steps.create_version.outputs.VERSION }}
     steps:
       - name: Checkout code
         # Updated to the latest major version
@@ -42,25 +42,39 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
-      - name: Increment version and push tag
-        id: versioning
+      - name: Get current version and calculate next
+        id: create_version
         run: |
-          # This logic determines whether to increment the minor or patch version based on PR labels.
+          # Get the current version without creating a tag
+          CURRENT_VERSION=$(./gradlew currentVersion -q -Prelease.quiet | tail -n 1)
+          # Remove any branch suffix
+          CURRENT_VERSION=$(echo "$CURRENT_VERSION" | sed 's/^\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/')
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Parse version components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          
+          # Determine increment type based on PR labels
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
             echo "Incrementing minor version for feature"
-            ./gradlew release -Prelease.incrementer=incrementMinor -Prelease.forceFetchTags -Prelease.disableBranchCheck
+            MINOR=$((MINOR + 1))
+            PATCH=0
           elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'bug') }}" == "true" || "${{ contains(github.event.pull_request.labels.*.name, 'task') }}" == "true" ]]; then
             echo "Incrementing patch version for bug/task"
-            ./gradlew release -Prelease.incrementer=incrementPatch -Prelease.forceFetchTags -Prelease.disableBranchCheck
+            PATCH=$((PATCH + 1))
           else
             echo "No versioning label found ('feature', 'bug', 'task'). Skipping release."
             exit 0
           fi
-
-      - name: Get the new version
-        id: get_version
-        # ✅ FIX: Added '| tail -n 1' to filter out the progress bar from the output.
-        run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet | tail -n 1)" >> $GITHUB_OUTPUT
+          
+          # Create new version
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          # Create and push the tag
+          git tag "v${NEW_VERSION}"
+          git push origin "v${NEW_VERSION}"
 
   # Build native images for multiple platforms
   build-native:
