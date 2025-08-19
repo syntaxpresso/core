@@ -12,11 +12,9 @@ version = scmVersion.version
 scmVersion {
     // This will create Git tags like 'v1.0.1'
     tag.prefix.set("v")
-
-    // This ensures the version number itself is always clean (e.g., "1.0.1")
-    versionCreator { context: VersionContext ->
-        context.version.toString()
-    }
+    
+    // The plugin automatically strips the prefix when setting the version
+    // No need for versionCreator - it handles this by default
 }
 
 repositories {
