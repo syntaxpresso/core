@@ -1,6 +1,6 @@
-package io.github.syntaxpresso.core.command.java;
+package io.github.syntaxpresso.core.command;
 
-import io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse;
+import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;

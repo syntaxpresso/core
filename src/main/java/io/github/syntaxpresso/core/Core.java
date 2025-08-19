@@ -1,15 +1,21 @@
 package io.github.syntaxpresso.core;
 
 import com.google.gson.Gson;
-import io.github.syntaxpresso.core.command.GenerateCommandInfoCommand;
-import io.github.syntaxpresso.core.command.GenericCommand;
-import io.github.syntaxpresso.core.command.JavaCommand;
+import io.github.syntaxpresso.core.command.CreateJPARepositoryCommand;
+import io.github.syntaxpresso.core.command.CreateNewFileCommand;
+import io.github.syntaxpresso.core.command.GetMainClassCommand;
+import io.github.syntaxpresso.core.command.RenameCommand;
 import io.github.syntaxpresso.core.common.CommandFactory;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
 
 @CommandLine.Command(
-    subcommands = {JavaCommand.class, GenericCommand.class, GenerateCommandInfoCommand.class})
+    subcommands = {
+      RenameCommand.class,
+      GetMainClassCommand.class,
+      CreateNewFileCommand.class,
+      CreateJPARepositoryCommand.class
+    })
 public class Core {
   public static void main(String[] args) {
     CommandLine commandLine = new CommandLine(new Core(), new CommandFactory());

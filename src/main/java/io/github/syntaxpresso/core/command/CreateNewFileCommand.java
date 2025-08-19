@@ -1,8 +1,8 @@
-package io.github.syntaxpresso.core.command.java;
+package io.github.syntaxpresso.core.command;
 
-import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
-import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
-import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
+import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
+import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;
@@ -13,8 +13,7 @@ import picocli.CommandLine.Option;
 
 @RequiredArgsConstructor
 @Command(name = "create-new-file", description = "Create a new Java file")
-public class CreateNewFileCommand
-    implements Callable<DataTransferObject<CreateNewJavaFileResponse>> {
+public class CreateNewFileCommand implements Callable<DataTransferObject<CreateNewFileResponse>> {
   private final JavaService javaService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
@@ -43,7 +42,7 @@ public class CreateNewFileCommand
   private SourceDirectoryType sourceDirectoryType = SourceDirectoryType.MAIN;
 
   @Override
-  public DataTransferObject<CreateNewJavaFileResponse> call() {
+  public DataTransferObject<CreateNewFileResponse> call() {
     return this.javaService.createNewFile(
         this.cwd, this.packageName, this.fileName, this.fileType, this.sourceDirectoryType);
   }

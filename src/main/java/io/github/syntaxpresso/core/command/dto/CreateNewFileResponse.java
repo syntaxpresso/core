@@ -1,4 +1,4 @@
-package io.github.syntaxpresso.core.command.java.dto;
+package io.github.syntaxpresso.core.command.dto;
 
 import java.io.Serializable;
 import lombok.*;
@@ -7,6 +7,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CreateNewJavaFileResponse implements Serializable {
+public class CreateNewFileResponse implements Serializable {
   private String filePath;
 }

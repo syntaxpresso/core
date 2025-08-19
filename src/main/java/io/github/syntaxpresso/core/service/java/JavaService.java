@@ -1,11 +1,11 @@
 package io.github.syntaxpresso.core.service.java;
 
 import com.google.common.base.Strings;
-import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
-import io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse;
-import io.github.syntaxpresso.core.command.java.dto.RenameResponse;
-import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
-import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
+import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
+import io.github.syntaxpresso.core.command.dto.RenameResponse;
+import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
+import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
@@ -288,7 +288,7 @@ public class JavaService {
    *     (MAIN | TEST).
    * @return A DataTransferObject containing the new file information or error.
    */
-  public DataTransferObject<CreateNewJavaFileResponse> createNewFile(
+  public DataTransferObject<CreateNewFileResponse> createNewFile(
       Path cwd,
       String packageName,
       String fileName,
@@ -343,8 +343,8 @@ public class JavaService {
       }
       // Attempt to save the file
       file.saveAs(targetPath);
-      CreateNewJavaFileResponse response =
-          CreateNewJavaFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
+      CreateNewFileResponse response =
+          CreateNewFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
       return DataTransferObject.success(response);
     } catch (IOException e) {
       return DataTransferObject.error("Failed to create file: " + e.getMessage());
@@ -419,7 +419,7 @@ public class JavaService {
    * @param entityFilePath The path to the entity file.
    * @return A DataTransferObject containing the new repository file information or error.
    */
-  public DataTransferObject<CreateNewJavaFileResponse> createJPARepository(
+  public DataTransferObject<CreateNewFileResponse> createJPARepository(
       Path cwd, Path entityFilePath) {
     if (!entityFilePath.toString().endsWith(".java")) {
       return DataTransferObject.error("File is not a .java file: " + entityFilePath);
@@ -456,7 +456,7 @@ public class JavaService {
         return DataTransferObject.error("Unable to determine @Id field type");
       }
       String repositoryName = className.get() + "Repository";
-      DataTransferObject<CreateNewJavaFileResponse> createResult =
+      DataTransferObject<CreateNewFileResponse> createResult =
           this.createNewFile(
               cwd,
               packageName.get(),

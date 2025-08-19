@@ -1,6 +1,6 @@
-package io.github.syntaxpresso.core.command.java;
+package io.github.syntaxpresso.core.command;
 
-import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
+import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;
@@ -14,7 +14,7 @@ import picocli.CommandLine.Option;
     name = "create-jpa-repository",
     description = "Create JPA Repository for the current JPA Entity.")
 public class CreateJPARepositoryCommand
-    implements Callable<DataTransferObject<CreateNewJavaFileResponse>> {
+    implements Callable<DataTransferObject<CreateNewFileResponse>> {
   private final JavaService javaService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
@@ -24,7 +24,7 @@ public class CreateJPARepositoryCommand
   private Path filePath;
 
   @Override
-  public DataTransferObject<CreateNewJavaFileResponse> call() {
+  public DataTransferObject<CreateNewFileResponse> call() {
     return this.javaService.createJPARepository(this.cwd, this.filePath);
   }
 }
