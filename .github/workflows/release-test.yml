@@ -15,6 +15,8 @@ jobs:
     # This condition ensures the job only runs if the PR was actually merged.
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - name: Checkout code
         # Updated to the latest major version
@@ -106,7 +108,26 @@ jobs:
 
       - name: Rename binary for platform
         run: |
-          mv build/native/nativeCompile/${{ matrix.binary_name }} build/native/nativeCompile/${{ matrix.output_name }}
+          if [ -f "build/native/nativeCompile/${{ matrix.binary_name }}" ]; then
+            mv "build/native/nativeCompile/${{ matrix.binary_name }}" "build/native/nativeCompile/${{ matrix.output_name }}"
+            echo "Renamed ${{ matrix.binary_name }} to ${{ matrix.output_name }}"
+          else
+            echo "Binary ${{ matrix.binary_name }} not found!"
+            ls -la build/native/nativeCompile/
+            exit 1
+          fi
+        shell: bash
+
+      - name: Verify renamed binary
+        run: |
+          if [ -f "build/native/nativeCompile/${{ matrix.output_name }}" ]; then
+            echo "Successfully created ${{ matrix.output_name }}"
+            ls -la "build/native/nativeCompile/${{ matrix.output_name }}"
+          else
+            echo "Failed to create ${{ matrix.output_name }}"
+            ls -la build/native/nativeCompile/
+            exit 1
+          fi
         shell: bash
 
       - name: Upload binary as artifact
@@ -114,6 +135,7 @@ jobs:
         with:
           name: binary-${{ matrix.platform }}-${{ matrix.arch }}
           path: build/native/nativeCompile/${{ matrix.output_name }}
+          retention-days: 1
 
   # Create the release with all platform binaries
   create-release:
@@ -125,35 +147,36 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up GraalVM
-        uses: actions/setup-java@v4
-        with:
-          distribution: "graalvm"
-          java-version: "24"
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Get the current version
-        id: get_version
-        run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet | tail -n 1)" >> $GITHUB_OUTPUT
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: binaries
 
       - name: List downloaded files
-        run: ls -la binaries/*/
+        run: |
+          echo "Contents of binaries directory:"
+          ls -la binaries/
+          echo ""
+          echo "Contents of each subdirectory:"
+          for dir in binaries/*/; do
+            echo "Contents of $dir:"
+            ls -la "$dir"
+          done
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+          cp binaries/binary-linux-x64/core-linux-x64 release-files/ || true
+          cp binaries/binary-macos-x64/core-macos-x64 release-files/ || true
+          cp binaries/binary-macos-arm64/core-macos-arm64 release-files/ || true
+          cp binaries/binary-windows-x64/core-windows-x64.exe release-files/ || true
+          echo "Final release files:"
+          ls -la release-files/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           # ✅ FIX: Manually add the 'v' prefix to match the Git tag
-          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          tag_name: v${{ needs.release.outputs.version }}
           generate_release_notes: true
-          files: |
-            binaries/binary-linux-x64/core-linux-x64
-            binaries/binary-macos-x64/core-macos-x64
-            binaries/binary-macos-arm64/core-macos-arm64
-            binaries/binary-windows-x64/core-windows-x64.exe
+          files: release-files/*
