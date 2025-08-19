@@ -13,10 +13,8 @@ scmVersion {
     // This will create Git tags like 'v1.0.1'
     tag.prefix.set("v")
     
-    // Disable branch name in version - creates clean versions like '1.0.1'
-    branch.set("main")  // Treat all branches as main to avoid branch suffix
-    
     // The plugin automatically strips the prefix when setting the version
+    // No need for versionCreator - it handles this by default
 }
 
 repositories {
