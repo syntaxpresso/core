@@ -7,6 +7,15 @@ plugins {
 
 version = scmVersion.version
 
+scmVersion {
+    tag.prefix.set("v")
+    versionCreator("simple")
+    checks {
+        uncommittedChanges.set(false)
+        aheadOfRemote.set(false)
+    }
+}
+
 repositories {
     mavenCentral()
     mavenLocal()
