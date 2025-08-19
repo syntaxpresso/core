@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.github.syntaxpresso.core.command.CreateJPARepositoryCommand;
-import io.github.syntaxpresso.core.command.dto.CreateNewJavaFileResponse;
+import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.lang.reflect.Field;
@@ -50,15 +50,15 @@ class CreateJPARepositoryCommandTest {
     @Test
     @DisplayName("should call JavaService.createJPARepository with correct parameters")
     void call_shouldCallJavaServiceWithCorrectParameters() throws Exception {
-      CreateNewJavaFileResponse response =
-          CreateNewJavaFileResponse.builder()
+      CreateNewFileResponse response =
+          CreateNewFileResponse.builder()
               .filePath("/test/project/src/main/java/com/example/UserRepository.java")
               .build();
-      DataTransferObject<CreateNewJavaFileResponse> expectedResult =
+      DataTransferObject<CreateNewFileResponse> expectedResult =
           DataTransferObject.success(response);
       when(javaService.createJPARepository(any(Path.class), any(Path.class)))
           .thenReturn(expectedResult);
-      DataTransferObject<CreateNewJavaFileResponse> result = command.call();
+      DataTransferObject<CreateNewFileResponse> result = command.call();
       verify(javaService).createJPARepository(eq(cwd), eq(filePath));
       assertTrue(result.getSucceed());
       assertNotNull(result.getData());
@@ -70,11 +70,11 @@ class CreateJPARepositoryCommandTest {
     @Test
     @DisplayName("should return error when JavaService fails")
     void call_shouldReturnErrorWhenJavaServiceFails() throws Exception {
-      DataTransferObject<CreateNewJavaFileResponse> expectedResult =
+      DataTransferObject<CreateNewFileResponse> expectedResult =
           DataTransferObject.error("Entity class not found");
       when(javaService.createJPARepository(any(Path.class), any(Path.class)))
           .thenReturn(expectedResult);
-      DataTransferObject<CreateNewJavaFileResponse> result = command.call();
+      DataTransferObject<CreateNewFileResponse> result = command.call();
       assertFalse(result.getSucceed());
       assertEquals("Entity class not found", result.getErrorReason());
     }
@@ -82,14 +82,14 @@ class CreateJPARepositoryCommandTest {
     @Test
     @DisplayName("should handle successful repository creation")
     void call_shouldHandleSuccessfulRepositoryCreation() throws Exception {
-      CreateNewJavaFileResponse response =
-          CreateNewJavaFileResponse.builder()
+      CreateNewFileResponse response =
+          CreateNewFileResponse.builder()
               .filePath("/test/project/src/main/java/com/example/ProductRepository.java")
               .build();
-      DataTransferObject<CreateNewJavaFileResponse> expectedResult =
+      DataTransferObject<CreateNewFileResponse> expectedResult =
           DataTransferObject.success(response);
       when(javaService.createJPARepository(cwd, filePath)).thenReturn(expectedResult);
-      DataTransferObject<CreateNewJavaFileResponse> result = command.call();
+      DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
       assertEquals(
           "/test/project/src/main/java/com/example/ProductRepository.java",
