@@ -6,14 +6,13 @@ plugins {
 }
 
 scmVersion {
-    tag {
-        prefix.set("v")
+    // This will create Git tags like 'v1.0.1'
+    tag.prefix.set("v")
+
+    // This ensures the version number itself is always clean (e.g., "1.0.1")
+    versionCreator { versionFromTag: String, context: VersionContext ->
+        versionFromTag
     }
-	branchVersionCreator.putAll(
-	    mapOf(
-	        "main" to { version, _ -> version }
-	    )
-	)
 }
 
 version = scmVersion.version
