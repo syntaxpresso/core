@@ -55,7 +55,8 @@ jobs:
 
       - name: Get the new version
         id: get_version
-        run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet)" >> $GITHUB_OUTPUT
+        # ✅ FIX: Added '| tail -n 1' to filter out the progress bar from the output.
+        run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet | tail -n 1)" >> $GITHUB_OUTPUT
 
       - name: Build native image
         run: ./gradlew nativeCompile # Using 'nativeCompile' is more specific than 'nativeBuild'
