@@ -11,8 +11,8 @@ scmVersion {
     // This will create Git tags like 'v1.0.1'
     tag.prefix.set("v")
     
-    // Force simple version format without branch names
-    versionIncrementer("incrementPatch")
+    // Force version to be created from tag only, without branch suffix
+    versionCreator("simple")
     
     // Disable checks that might interfere with CI
     checks {
