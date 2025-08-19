@@ -1,5 +1,3 @@
-import pl.allegro.tech.build.axion.release.domain.VersionContext
-
 plugins {
     application
     id("org.graalvm.buildtools.native") version "0.10.6"
@@ -13,8 +11,16 @@ scmVersion {
     // This will create Git tags like 'v1.0.1'
     tag.prefix.set("v")
     
+    // Force simple version format without branch names
+    versionIncrementer("incrementPatch")
+    
+    // Disable checks that might interfere with CI
+    checks {
+        uncommittedChanges.set(false)
+        aheadOfRemote.set(false)
+    }
+    
     // The plugin automatically strips the prefix when setting the version
-    // No need for versionCreator - it handles this by default
 }
 
 repositories {
