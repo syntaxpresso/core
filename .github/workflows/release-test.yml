@@ -24,6 +24,8 @@ jobs:
         with:
           # Fetch all history for all branches and tags for axion-release-plugin
           fetch-depth: 0
+          # Check out the target branch after merge to avoid branch suffixes
+          ref: ${{ github.event.pull_request.base.ref }}
 
       - name: Set up GraalVM
         # Updated to the latest major version
