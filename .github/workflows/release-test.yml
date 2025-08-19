@@ -58,12 +58,102 @@ jobs:
         # ✅ FIX: Added '| tail -n 1' to filter out the progress bar from the output.
         run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet | tail -n 1)" >> $GITHUB_OUTPUT
 
+  # Build native images for multiple platforms
+  build-native:
+    needs: release
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            binary_name: core
+            output_name: core-linux-x64
+          - os: macos-13  # Intel-based macOS runner
+            platform: macos
+            arch: x64
+            binary_name: core
+            output_name: core-macos-x64
+          - os: macos-latest  # ARM64-based macOS runner (M1/M2)
+            platform: macos
+            arch: arm64
+            binary_name: core
+            output_name: core-macos-arm64
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            binary_name: core.exe
+            output_name: core-windows-x64.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up GraalVM
+        uses: actions/setup-java@v4
+        with:
+          distribution: "graalvm"
+          java-version: "24"
+
+      - name: Grant execute permission for gradlew (Unix)
+        if: matrix.platform != 'windows'
+        run: chmod +x gradlew
+
       - name: Build native image
-        run: ./gradlew nativeCompile # Using 'nativeCompile' is more specific than 'nativeBuild'
+        run: ./gradlew nativeCompile
+
+      - name: Rename binary for platform
+        run: |
+          mv build/native/nativeCompile/${{ matrix.binary_name }} build/native/nativeCompile/${{ matrix.output_name }}
+        shell: bash
+
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.platform }}-${{ matrix.arch }}
+          path: build/native/nativeCompile/${{ matrix.output_name }}
+
+  # Create the release with all platform binaries
+  create-release:
+    needs: [release, build-native]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up GraalVM
+        uses: actions/setup-java@v4
+        with:
+          distribution: "graalvm"
+          java-version: "24"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Get the current version
+        id: get_version
+        run: echo "VERSION=$(./gradlew currentVersion -q -Prelease.quiet | tail -n 1)" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: binaries
+
+      - name: List downloaded files
+        run: ls -la binaries/*/
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           # ✅ FIX: Manually add the 'v' prefix to match the Git tag
           tag_name: v${{ steps.get_version.outputs.VERSION }}
           generate_release_notes: true
-          files: build/native/nativeCompile/core
+          files: |
+            binaries/binary-linux-x64/core-linux-x64
+            binaries/binary-macos-x64/core-macos-x64
+            binaries/binary-macos-arm64/core-macos-arm64
+            binaries/binary-windows-x64/core-windows-x64.exe
