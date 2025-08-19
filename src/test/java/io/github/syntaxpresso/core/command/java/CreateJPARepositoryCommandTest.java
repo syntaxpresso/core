@@ -9,7 +9,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
+import io.github.syntaxpresso.core.command.CreateJPARepositoryCommand;
+import io.github.syntaxpresso.core.command.dto.CreateNewJavaFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.lang.reflect.Field;
@@ -107,4 +108,3 @@ class CreateJPARepositoryCommandTest {
     }
   }
 }
-

@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
-import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
-import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.dto.CreateNewJavaFileResponse;
+import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
+import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Files;

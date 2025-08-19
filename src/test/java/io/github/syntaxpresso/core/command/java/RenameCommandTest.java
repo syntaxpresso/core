@@ -2,7 +2,7 @@ package io.github.syntaxpresso.core.command.java;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.syntaxpresso.core.command.java.dto.RenameResponse;
+import io.github.syntaxpresso.core.command.dto.RenameResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.io.IOException;
