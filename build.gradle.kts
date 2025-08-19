@@ -1,3 +1,5 @@
+import pl.allegro.tech.build.axion.release.domain.VersionContext
+
 plugins {
     application
     id("org.graalvm.buildtools.native") version "0.10.6"
