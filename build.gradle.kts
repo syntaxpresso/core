@@ -13,8 +13,8 @@ scmVersion {
     // This will create Git tags like 'v1.0.1'
     tag.prefix.set("v")
     
-    // Use the default version creator which already handles the version correctly
-    // The plugin will automatically strip the prefix from the tag
+    // The plugin automatically strips the prefix when setting the version
+    // No need for versionCreator - it handles this by default
 }
 
 repositories {
