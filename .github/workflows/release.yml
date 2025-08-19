@@ -141,6 +141,11 @@ jobs:
             exit 1
           fi
         shell: bash
+      - name: Make binary executable (Unix)
+        if: matrix.platform != 'windows'
+        run: |
+          chmod +x "build/native/nativeCompile/${{ matrix.output_name }}"
+          echo "Made ${{ matrix.output_name }} executable"
       - name: Verify renamed binary
         run: |
           if [ -f "build/native/nativeCompile/${{ matrix.output_name }}" ]; then
