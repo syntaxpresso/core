@@ -48,10 +48,10 @@ jobs:
           # This logic determines whether to increment the minor or patch version based on PR labels.
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
             echo "Incrementing minor version for feature"
-            ./gradlew release -Prelease.incrementer=incrementMinor
+            ./gradlew release -Prelease.incrementer=incrementMinor -Prelease.forceFetchTags -Prelease.disableBranchCheck
           elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'bug') }}" == "true" || "${{ contains(github.event.pull_request.labels.*.name, 'task') }}" == "true" ]]; then
             echo "Incrementing patch version for bug/task"
-            ./gradlew release -Prelease.incrementer=incrementPatch
+            ./gradlew release -Prelease.incrementer=incrementPatch -Prelease.forceFetchTags -Prelease.disableBranchCheck
           else
             echo "No versioning label found ('feature', 'bug', 'task'). Skipping release."
             exit 0
