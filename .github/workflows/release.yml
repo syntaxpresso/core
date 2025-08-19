@@ -32,10 +32,36 @@ jobs:
       - name: Get current version and calculate next
         id: create_version
         run: |
+          # Get current version from Gradle
           CURRENT_VERSION=$(./gradlew currentVersion -q -Prelease.quiet | tail -n 1)
-          CURRENT_VERSION=$(echo "$CURRENT_VERSION" | sed 's/^\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/')
+          echo "Raw version from Gradle: '$CURRENT_VERSION'"
+          
+          # Clean up the version string more carefully
+          CURRENT_VERSION=$(echo "$CURRENT_VERSION" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          echo "Cleaned current version: '$CURRENT_VERSION'"
+          
+          # Validate we got a proper version
+          if [[ ! "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Could not parse current version. Got: '$CURRENT_VERSION'"
+            echo "Setting fallback version to 0.0.1"
+            CURRENT_VERSION="0.0.1"
+          fi
+          
           echo "Current version: $CURRENT_VERSION"
+          
+          # Parse version components
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          
+          # Validate version components
+          if [[ -z "$MAJOR" || -z "$MINOR" || -z "$PATCH" ]]; then
+            echo "Error: Failed to parse version components"
+            echo "MAJOR='$MAJOR', MINOR='$MINOR', PATCH='$PATCH'"
+            exit 1
+          fi
+          
+          echo "Parsed components - MAJOR: $MAJOR, MINOR: $MINOR, PATCH: $PATCH"
+          
+          # Determine version increment based on labels
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'feature') }}" == "true" ]]; then
             echo "Incrementing minor version for feature"
             MINOR=$((MINOR + 1))
@@ -47,9 +73,20 @@ jobs:
             echo "No versioning label found ('feature', 'bug', 'task'). Skipping release."
             exit 0
           fi
+          
+          # Create new version
           NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           echo "New version: $NEW_VERSION"
+          
+          # Validate new version format
+          if [[ ! "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Generated invalid version format: '$NEW_VERSION'"
+            exit 1
+          fi
+          
+          # Set output and create tag
           echo "VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Creating tag: v${NEW_VERSION}"
           git tag "v${NEW_VERSION}"
           git push origin "v${NEW_VERSION}"
   build-native:
