@@ -60,14 +60,10 @@ jobs:
 
       - name: Build native image
         run: ./gradlew nativeCompile # Using 'nativeCompile' is more specific than 'nativeBuild'
-
       - name: Create GitHub Release
-        # Updated to the latest major version
         uses: softprops/action-gh-release@v2
         with:
-          # The tag is read from the output of the versioning step
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          # This automatically creates release notes from your commit history
+          # ✅ FIX: Manually add the 'v' prefix to match the Git tag
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
           generate_release_notes: true
-          # ⚠️ Ensure 'core' matches the actual output binary name from your build
           files: build/native/nativeCompile/core
