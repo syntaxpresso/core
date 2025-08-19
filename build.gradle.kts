@@ -1,3 +1,5 @@
+import pl.allegro.tech.build.axion.release.domain.VersionContext
+
 plugins {
     application
     id("org.graalvm.buildtools.native") version "0.10.6"
@@ -5,13 +7,17 @@ plugins {
     id("pl.allegro.tech.build.axion-release") version "1.20.1"
 }
 
+version = scmVersion.version
+
 scmVersion {
     // This will create Git tags like 'v1.0.1'
     tag.prefix.set("v")
+
+    // This ensures the version number itself is always clean (e.g., "1.0.1")
+    versionCreator { versionFromTag: String, context: VersionContext ->
+        versionFromTag
     }
 }
-
-version = scmVersion.version
 
 repositories {
     mavenCentral()
