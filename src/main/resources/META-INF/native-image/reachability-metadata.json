@@ -51,9 +51,7 @@
       "methods": [
         {
           "name": "<init>",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
+          "parameterTypes": ["java.lang.String"]
         }
       ]
     },
@@ -61,6 +59,21 @@
       "type": "io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse",
       "allDeclaredFields": true,
       "allDeclaredMethods": true
+    },
+    {
+      "type": "io.github.syntaxpresso.core.command.dto.RenameResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String", "int", "java.lang.String"]
+        }
+      ]
     },
     {
       "type": "io.github.syntaxpresso.core.common.DataTransferObject",
@@ -170,9 +183,7 @@
       "methods": [
         {
           "name": "getBoolean",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
+          "parameterTypes": ["java.lang.String"]
         }
       ]
     },
@@ -201,3 +212,4 @@
     }
   ]
 }
+
