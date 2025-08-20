@@ -42,7 +42,7 @@ public class CreateNewFileCommand implements Callable<DataTransferObject<CreateN
   private JavaFileTemplate fileType;
 
   @Option(
-      names = "--source-directory-type",
+      names = "--source-directory",
       description =
           "Defines if the file should be created in the main or in the test directory (MAIN, TEST)",
       required = false)
