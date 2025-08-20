@@ -4,6 +4,7 @@ import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
 import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
+import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
@@ -19,6 +20,12 @@ public class CreateNewFileCommand
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;
+
+  @Option(
+      names = "--language",
+      description = "The language related to the command execution.",
+      required = true)
+  private SupportedLanguage language;
 
   @Option(
       names = "--package-name",
@@ -43,8 +50,11 @@ public class CreateNewFileCommand
   private SourceDirectoryType sourceDirectoryType = SourceDirectoryType.MAIN;
 
   @Override
-  public DataTransferObject<CreateNewJavaFileResponse> call() {
-    return this.javaService.createNewFile(
-        this.cwd, this.packageName, this.fileName, this.fileType, this.sourceDirectoryType);
+  public DataTransferObject<CreateNewFileResponse> call() {
+    if (this.language.equals(SupportedLanguage.JAVA)) {
+      return this.javaService.createNewFile(
+          this.cwd, this.packageName, this.fileName, this.fileType, this.sourceDirectoryType);
+    }
+    return DataTransferObject.error("Language not supported.");
   }
 }

@@ -2,6 +2,7 @@ package io.github.syntaxpresso.core.command.java;
 
 import io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
+import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
@@ -17,8 +18,17 @@ public class GetMainClassCommand implements Callable<DataTransferObject<GetMainC
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;
 
+  @Option(
+      names = "--language",
+      description = "The language related to the command execution.",
+      required = true)
+  private SupportedLanguage language;
+
   @Override
   public DataTransferObject<GetMainClassResponse> call() {
-    return this.javaService.getMainClass(this.cwd);
+    if (this.language.equals(SupportedLanguage.JAVA)) {
+      return this.javaService.getMainClass(this.cwd);
+    }
+    return DataTransferObject.error("Language not supported.");
   }
 }
