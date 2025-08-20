@@ -1,6 +1,6 @@
 package io.github.syntaxpresso.core;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.syntaxpresso.core.command.CreateJPARepositoryCommand;
 import io.github.syntaxpresso.core.command.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.GetMainClassCommand;
@@ -32,7 +32,11 @@ public class Core {
               try {
                 Object result = ((Callable<?>) userObject).call();
                 if (result != null) {
-                  System.out.println(new Gson().toJson(result));
+                  try {
+                    System.out.println(new ObjectMapper().writeValueAsString(result));
+                  } catch (Exception e) {
+                    System.out.println(result.toString());
+                  }
                 }
                 return 0;
               } catch (Exception e) {
