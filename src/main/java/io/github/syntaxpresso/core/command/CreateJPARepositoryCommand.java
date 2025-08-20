@@ -2,6 +2,7 @@ package io.github.syntaxpresso.core.command;
 
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
+import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
@@ -23,8 +24,17 @@ public class CreateJPARepositoryCommand
   @Option(names = "--file-path", description = "The path to the file", required = true)
   private Path filePath;
 
+  @Option(
+      names = "--language",
+      description = "The language related to the command execution.",
+      required = true)
+  private SupportedLanguage language;
+
   @Override
   public DataTransferObject<CreateNewFileResponse> call() {
-    return this.javaService.createJPARepository(this.cwd, this.filePath);
+    if (this.language.equals(SupportedLanguage.JAVA)) {
+      return this.javaService.createJPARepository(this.cwd, this.filePath);
+    }
+    return DataTransferObject.error("Language not supported.");
   }
 }
