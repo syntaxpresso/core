@@ -119,17 +119,29 @@ public class FieldDeclarationService {
     String[] queries = {
       "(assignment_expression left: (identifier) @usage)",
       "(assignment_expression left: (field_access field: (identifier) @usage))",
-      "(expression_statement (identifier) @usage)"
+      "(assignment_expression right: (identifier) @usage)",
+      "(expression_statement (identifier) @usage)",
+      "(field_access field: (identifier) @usage)",
+      "(method_invocation object: (field_access field: (identifier) @usage))",
+      "(method_invocation object: (identifier) @usage)"
     };
     for (String queryString : queries) {
       List<TSNode> nodes = file.query(queryString);
       for (TSNode node : nodes) {
         String nodeText = file.getTextFromNode(node);
         if (fieldName.equals(nodeText)) {
-          usages.add(node);
+          // Check if this node is already in the list to avoid duplicates
+          boolean alreadyExists = usages.stream().anyMatch(existing -> 
+              existing.getStartByte() == node.getStartByte() && 
+              existing.getEndByte() == node.getEndByte());
+          if (!alreadyExists) {
+            usages.add(node);
+          }
         }
       }
     }
+    // Sort by byte position to ensure proper order for reverse processing
+    usages.sort((a, b) -> Integer.compare(a.getStartByte(), b.getStartByte()));
     return usages;
   }
 
@@ -151,8 +163,13 @@ public class FieldDeclarationService {
       file.updateSourceCode(fieldInstantiationNode.get(), newName);
     }
     if (fieldNameNode.isPresent()) {
-      String newVariableName = StringHelper.pascalToCamel(newName);
-      file.updateSourceCode(fieldNameNode.get(), newVariableName);
+      // Only rename the field name if it matches the original class name in camelCase
+      String currentFieldName = file.getTextFromNode(fieldNameNode.get());
+      String expectedFieldName = StringHelper.pascalToCamel(currentName);
+      if (expectedFieldName.equals(currentFieldName)) {
+        String newVariableName = StringHelper.pascalToCamel(newName);
+        file.updateSourceCode(fieldNameNode.get(), newVariableName);
+      }
     }
     if (fieldTypeNode.isPresent()) {
       file.updateSourceCode(fieldTypeNode.get(), newName);
@@ -185,12 +202,31 @@ public class FieldDeclarationService {
   public void renameClassFields(TSFile file, String currentName, String newName) {
     // Find all field declarations with the specified type
     List<TSNode> fieldDeclarations = findAllFieldDeclarations(file, currentName);
-    // Rename field declarations in reverse order to preserve byte positions
+    
+    // For each field declaration, check if the field name matches the class name pattern
+    // and if so, rename its usages
+    for (TSNode fieldDeclaration : fieldDeclarations) {
+      Optional<TSNode> fieldNameNode = this.getFieldNameNode(fieldDeclaration, file);
+      if (fieldNameNode.isPresent()) {
+        String currentFieldName = file.getTextFromNode(fieldNameNode.get());
+        String expectedFieldName = StringHelper.pascalToCamel(currentName);
+        
+        // Only rename field usages if the field name matches the class name pattern
+        if (expectedFieldName.equals(currentFieldName)) {
+          String newFieldName = StringHelper.pascalToCamel(newName);
+          // Find and rename usages of this specific field
+          List<TSNode> fieldUsages = this.findFieldUsages(file, currentFieldName);
+          for (TSNode usage : fieldUsages.reversed()) {
+            file.updateSourceCode(usage, newFieldName);
+          }
+        }
+      }
+    }
+    
+    // Then rename field declarations in reverse order to preserve byte positions
     for (TSNode fieldDeclaration : fieldDeclarations.reversed()) {
       renameFieldDeclaration(file, fieldDeclaration, currentName, newName);
     }
-    // Rename field usages
-    renameClassField(file, currentName, newName);
   }
 
   /**

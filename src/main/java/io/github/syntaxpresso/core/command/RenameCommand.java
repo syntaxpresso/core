@@ -1,13 +1,16 @@
-package io.github.syntaxpresso.core.command.java;
+package io.github.syntaxpresso.core.command;
 
-import io.github.syntaxpresso.core.command.java.dto.RenameResponse;
-import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.dto.RenameResponse;
+import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
+import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.io.File;
+import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
 import picocli.CommandLine;
+import picocli.CommandLine.Option;
 
 @CommandLine.Command(
     name = "rename",
@@ -17,17 +20,38 @@ import picocli.CommandLine;
 public class RenameCommand implements Callable<DataTransferObject<RenameResponse>> {
   private final JavaService javaService;
 
+  @Option(names = "--cwd", description = "Current Working Directory", required = true)
+  private Path cwd;
+
   @CommandLine.Option(
       names = {"-f", "--file-path"},
       description = "The absolute path to the .java file.",
       required = true)
   private File filePath;
 
+  @Option(
+      names = "--language",
+      description = "The language related to the command execution.",
+      required = true)
+  private SupportedLanguage language;
+
   @CommandLine.Option(
       names = {"-n", "--new-name"},
       description = "The new name for the class/interface/enum.",
       required = true)
   private String newName;
+
+  @CommandLine.Option(
+      names = {"-l", "--line"},
+      description = "The cursor line",
+      required = true)
+  private Integer line;
+
+  @CommandLine.Option(
+      names = {"-c", "--column"},
+      description = "The cursor column",
+      required = true)
+  private Integer column;
 
   @CommandLine.Option(
       names = {"-s", "--source-directory"},
@@ -37,6 +61,9 @@ public class RenameCommand implements Callable<DataTransferObject<RenameResponse
 
   @Override
   public DataTransferObject<RenameResponse> call() {
-    return this.javaService.rename(this.filePath.toPath(), this.newName);
+    if (this.language.equals(SupportedLanguage.JAVA)) {
+      return this.javaService.rename(this.cwd, this.filePath.toPath(), this.line, this.column, this.newName);
+    }
+    return DataTransferObject.error("Language not supported.");
   }
 }

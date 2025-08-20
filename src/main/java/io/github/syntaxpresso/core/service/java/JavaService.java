@@ -1,11 +1,11 @@
 package io.github.syntaxpresso.core.service.java;
 
 import com.google.common.base.Strings;
-import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
-import io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse;
-import io.github.syntaxpresso.core.command.java.dto.RenameResponse;
-import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
-import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
+import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
+import io.github.syntaxpresso.core.command.dto.RenameResponse;
+import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
+import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
@@ -278,6 +278,101 @@ public class JavaService {
   }
 
   /**
+   * Checks if the file should be renamed based on the class name.
+   *
+   * @param file The TSFile to check.
+   * @param currentName The current class name.
+   * @return True if the file should be renamed, false otherwise.
+   */
+  private boolean shouldRenameFileName(TSFile file, String currentName) {
+    String fileName =
+        com.google.common.io.Files.getNameWithoutExtension(file.getFile().getAbsolutePath());
+    return fileName.equals(currentName);
+  }
+
+  /**
+   * Processes a class rename operation across the entire project.
+   *
+   * @param cwd The current working directory.
+   * @param file The file containing the class to rename.
+   * @param node The class identifier node.
+   * @param packageName The package name of the class.
+   * @param currentName The current class name.
+   * @param newName The new class name.
+   * @return A list of modified files.
+   */
+  private List<TSFile> processClassRename(
+      Path cwd, TSFile file, TSNode node, String packageName, String currentName, String newName) {
+    List<TSFile> modifiedFiles = new ArrayList<>();
+    // Update class name and file name, if necessary.
+    file.updateSourceCode(node, newName);
+    if (this.shouldRenameFileName(file, currentName)) {
+      file.rename(newName);
+    }
+    if (file.isModified()) {
+      modifiedFiles.add(file);
+    }
+    // Parse all java files, but skip the current one, as it can't instantiate itself.
+    List<TSFile> allJavaFiles = this.getAllJavaFilesFromCwd(cwd);
+    for (TSFile foundFile : allJavaFiles) {
+      Optional<String> foundFilePackageName =
+          this.packageDeclarationService.getPackageName(foundFile);
+      if (foundFilePackageName.isEmpty()) {
+        continue;
+      }
+      // Skip original file.
+      if (foundFile.getFile().getAbsolutePath().equals(file.getFile().getAbsolutePath())) {
+        continue;
+      }
+      Optional<TSNode> importNode =
+          this.importDeclarationService.getImportDeclarationNode(
+              foundFile, currentName, packageName);
+      if (importNode.isEmpty() && !foundFilePackageName.get().equals(packageName)) {
+        continue;
+      }
+      // Rename usages in different contexts
+      this.localVariableDeclarationService.renameLocalVariablesInFile(
+          foundFile, currentName, newName);
+      this.formalParameterService.renameFormalParametersInFile(foundFile, currentName, newName);
+      this.fieldDeclarationService.renameClassFields(foundFile, currentName, newName);
+      // Update imports if necessary
+      if (!foundFilePackageName.get().equals(packageName)) {
+        this.importDeclarationService.updateImport(
+            foundFile, packageName + "." + currentName, packageName + "." + newName);
+      }
+      if (foundFile.isModified()) {
+        modifiedFiles.add(foundFile);
+      }
+    }
+    return modifiedFiles;
+  }
+
+  /**
+   * Processes a method rename operation.
+   *
+   * @param file The file containing the method to rename.
+   * @param methodDeclarationNode The method declaration node.
+   * @param currentName The current method name.
+   * @param newName The new method name.
+   * @param cwd The current working directory.
+   * @return A list of modified files.
+   */
+  private List<TSFile> processMethodRename(
+      TSFile file, TSNode methodDeclarationNode, String currentName, String newName, Path cwd) {
+    List<TSFile> result =
+        this.methodDeclarationService.renameMethodAndUsages(
+            file,
+            methodDeclarationNode,
+            currentName,
+            newName,
+            cwd,
+            this.typeResolutionService,
+            this.classDeclarationService,
+            this);
+    return result != null ? result : new ArrayList<>();
+  }
+
+  /**
    * Creates a new Java file.
    *
    * @param cwd The current working directory to search in.
@@ -288,7 +383,7 @@ public class JavaService {
    *     (MAIN | TEST).
    * @return A DataTransferObject containing the new file information or error.
    */
-  public DataTransferObject<CreateNewJavaFileResponse> createNewFile(
+  public DataTransferObject<CreateNewFileResponse> createNewFile(
       Path cwd,
       String packageName,
       String fileName,
@@ -343,8 +438,8 @@ public class JavaService {
       }
       // Attempt to save the file
       file.saveAs(targetPath);
-      CreateNewJavaFileResponse response =
-          CreateNewJavaFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
+      CreateNewFileResponse response =
+          CreateNewFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
       return DataTransferObject.success(response);
     } catch (IOException e) {
       return DataTransferObject.error("Failed to create file: " + e.getMessage());
@@ -413,13 +508,125 @@ public class JavaService {
   }
 
   /**
+   * Renames a symbol (class, method, field, etc.) and all its usages based on cursor position.
+   *
+   * @param cwd The current working directory.
+   * @param filePath The absolute path to the .java file.
+   * @param line The cursor line position.
+   * @param column The cursor column position.
+   * @param newName The new name for the symbol.
+   * @return A DataTransferObject containing the result or an error.
+   */
+  public DataTransferObject<RenameResponse> rename(
+      final Path cwd, final Path filePath, final int line, final int column, final String newName) {
+    if (!Files.exists(filePath)) {
+      return DataTransferObject.error("File does not exist: " + filePath);
+    }
+    if (!filePath.toString().endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + filePath);
+    }
+    try {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, filePath);
+      TSNode node = file.getNodeFromPosition(line, column);
+      if (node == null) {
+        return DataTransferObject.error("No symbol found at the specified position.");
+      }
+      String currentName;
+      try {
+        currentName = file.getTextFromRange(node.getStartByte(), node.getEndByte());
+      } catch (Exception e) {
+        return DataTransferObject.error("Error getting text from node: " + e.getMessage());
+      }
+      if (Strings.isNullOrEmpty(currentName)) {
+        return DataTransferObject.error("Unable to determine current symbol name.");
+      }
+      Optional<String> packageName = this.packageDeclarationService.getPackageName(file);
+      if (packageName.isEmpty()) {
+        return DataTransferObject.error("Unable to determine package name.");
+      }
+      // If we hit a method_declaration, class_declaration, etc., try to find the name node
+      if ("method_declaration".equals(node.getType())
+          || "class_declaration".equals(node.getType())) {
+        TSNode nameNode = node.getChildByFieldName("name");
+        if (nameNode != null) {
+          node = nameNode;
+          currentName = file.getTextFromNode(nameNode);
+        } else {
+          return DataTransferObject.error("Unable to find name node in " + node.getType());
+        }
+      }
+      JavaIdentifierType identifierType = this.getIdentifierType(node);
+      if (identifierType == null) {
+        return DataTransferObject.error(
+            "Unable to determine symbol type at cursor position. Node type: "
+                + node.getType()
+                + ", Node text: '"
+                + file.getTextFromNode(node)
+                + "'");
+      }
+      
+      List<TSFile> modifiedFiles = new ArrayList<>();
+      int renamedNodes = 0;
+      
+      if (identifierType.equals(JavaIdentifierType.CLASS_NAME)) {
+        modifiedFiles.addAll(
+            this.processClassRename(cwd, file, node, packageName.get(), currentName, newName));
+        // Count the class name change as 1 node
+        renamedNodes = 1;
+        // Add count for file rename if applicable
+        if (this.shouldRenameFileName(file, currentName)) {
+          renamedNodes += 1;
+        }
+        // Count additional nodes from other files that were modified
+        for (TSFile modifiedFile : modifiedFiles) {
+          if (!modifiedFile.getFile().equals(file.getFile()) && modifiedFile.isModified()) {
+            // Estimate nodes modified in each additional file (conservative estimate)
+            renamedNodes += 1; // At least one reference per file
+          }
+        }
+      } else if (identifierType.equals(JavaIdentifierType.METHOD_NAME)) {
+        TSNode methodDeclarationNode = node.getParent();
+        if (methodDeclarationNode != null) {
+          modifiedFiles.addAll(
+              this.processMethodRename(file, methodDeclarationNode, currentName, newName, cwd));
+          renamedNodes = modifiedFiles.size(); // Approximate count
+        }
+      } else {
+        return DataTransferObject.error("Renaming of " + identifierType + " is not yet supported.");
+      }
+      
+      // Save all modified files
+      for (TSFile modifiedFile : modifiedFiles) {
+        modifiedFile.save();
+        // System.out.println(modifiedFile.getFile().getName());
+      }
+      // For class renames, return the new file path; for others, return the original
+      String resultPath = filePath.toString();
+      if (identifierType.equals(JavaIdentifierType.CLASS_NAME)
+          && this.shouldRenameFileName(file, currentName)) {
+        resultPath = filePath.resolveSibling(newName + ".java").toString();
+      }
+      return DataTransferObject.success(
+          RenameResponse.builder()
+              .filePath(resultPath)
+              .renamedNodes(renamedNodes)
+              .newName(newName)
+              .build());
+    } catch (Exception e) {
+      return DataTransferObject.error("Unexpected error: " + e.getMessage());
+    }
+  }
+  
+
+
+  /**
    * Creates a JPA Repository interface for an entity class.
    *
    * @param cwd The current working directory.
    * @param entityFilePath The path to the entity file.
    * @return A DataTransferObject containing the new repository file information or error.
    */
-  public DataTransferObject<CreateNewJavaFileResponse> createJPARepository(
+  public DataTransferObject<CreateNewFileResponse> createJPARepository(
       Path cwd, Path entityFilePath) {
     if (!entityFilePath.toString().endsWith(".java")) {
       return DataTransferObject.error("File is not a .java file: " + entityFilePath);
@@ -456,7 +663,7 @@ public class JavaService {
         return DataTransferObject.error("Unable to determine @Id field type");
       }
       String repositoryName = className.get() + "Repository";
-      DataTransferObject<CreateNewJavaFileResponse> createResult =
+      DataTransferObject<CreateNewFileResponse> createResult =
           this.createNewFile(
               cwd,
               packageName.get(),

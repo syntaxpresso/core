@@ -1,4 +1,4 @@
-package io.github.syntaxpresso.core.command.java.extra;
+package io.github.syntaxpresso.core.command.extra;
 
 public enum JavaFileTemplate {
   CLASS("package %s;%n%npublic class %s {\n\n}"),

@@ -1,7 +1,8 @@
-package io.github.syntaxpresso.core.command.java;
+package io.github.syntaxpresso.core.command;
 
-import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
+import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
+import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
@@ -14,7 +15,7 @@ import picocli.CommandLine.Option;
     name = "create-jpa-repository",
     description = "Create JPA Repository for the current JPA Entity.")
 public class CreateJPARepositoryCommand
-    implements Callable<DataTransferObject<CreateNewJavaFileResponse>> {
+    implements Callable<DataTransferObject<CreateNewFileResponse>> {
   private final JavaService javaService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
@@ -23,8 +24,17 @@ public class CreateJPARepositoryCommand
   @Option(names = "--file-path", description = "The path to the file", required = true)
   private Path filePath;
 
+  @Option(
+      names = "--language",
+      description = "The language related to the command execution.",
+      required = true)
+  private SupportedLanguage language;
+
   @Override
-  public DataTransferObject<CreateNewJavaFileResponse> call() {
-    return this.javaService.createJPARepository(this.cwd, this.filePath);
+  public DataTransferObject<CreateNewFileResponse> call() {
+    if (this.language.equals(SupportedLanguage.JAVA)) {
+      return this.javaService.createJPARepository(this.cwd, this.filePath);
+    }
+    return DataTransferObject.error("Language not supported.");
   }
 }
