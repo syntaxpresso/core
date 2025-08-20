@@ -62,7 +62,7 @@ public class RenameCommand implements Callable<DataTransferObject<RenameResponse
   @Override
   public DataTransferObject<RenameResponse> call() {
     if (this.language.equals(SupportedLanguage.JAVA)) {
-      return this.javaService.rename(this.filePath.toPath(), this.newName);
+      return this.javaService.rename(this.cwd, this.filePath.toPath(), this.line, this.column, this.newName);
     }
     return DataTransferObject.error("Language not supported.");
   }
