@@ -102,4 +102,13 @@ public class StringHelper {
     }
     return false;
   }
+
+  public static String pascalToSnake(String pascalToSnakeStr){
+    if(Strings.isNullOrEmpty(pascalToSnakeStr)){
+      return pascalToSnakeStr;
+    }
+    pascalToSnakeStr = pascalToSnakeStr.replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2");
+    pascalToSnakeStr = pascalToSnakeStr.replaceAll("([a-z0-9])([A-Z])", "$1_$2");
+    return pascalToSnakeStr.toLowerCase();
+  }
 }
