@@ -1,6 +1,7 @@
 package io.github.syntaxpresso.core.service.java;
 
 import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.command.java.dto.CreateNewJPAEntityResponse;
 import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
 import io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.command.java.dto.RenameResponse;
@@ -23,9 +24,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import io.github.syntaxpresso.core.util.StringHelper;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.treesitter.TSNode;
@@ -515,5 +519,37 @@ public class JavaService {
       }
     }
     throw new IOException("No class found in file " + filePath);
+  }
+
+  public DataTransferObject<CreateNewJPAEntityResponse> createNewJPAEntity(final Path cwd, final String packageName, final String fileName) {
+    DataTransferObject<CreateNewJavaFileResponse> response = createNewFile(cwd, packageName, fileName, JavaFileTemplate.CLASS, SourceDirectoryType.MAIN);
+    if(!response.getSucceed()){
+      return DataTransferObject.error("Unable to create file");
+    }
+
+    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, Paths.get(response.getData().getFilePath()));
+
+    String nameWithoutExtension = tsFile.getFileNameWithoutExtension().orElse(fileName);
+
+    Optional<TSNode> findClassByName = this.classDeclarationService.findClassByName(tsFile, nameWithoutExtension);
+
+    if(findClassByName.isEmpty()){
+      return DataTransferObject.error("Class name does not exist");
+    }
+
+    String snakeName = StringHelper.pascalToSnake(nameWithoutExtension);
+
+    tsFile.insertTextBeforeNode(findClassByName.get(), "@Table(name=\"" + snakeName +"\")\n");
+    tsFile.insertTextBeforeNode(findClassByName.get(), "@Entity\n");
+
+    this.programService.getImportDeclarationService().addImport(tsFile, "jakarta.persistense", "Entity");
+    this.programService.getImportDeclarationService().addImport(tsFile, "jakarta.persistense", "Table");
+
+    try{
+      tsFile.save();
+    } catch (IOException e) {
+      return DataTransferObject.error("Could not save file: " + e.getMessage());
+    }
+    return null;
   }
 }
