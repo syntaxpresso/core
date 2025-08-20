@@ -21,7 +21,6 @@ public class Core {
     CommandLine commandLine = new CommandLine(new Core(), new CommandFactory());
     commandLine.setExecutionStrategy(
         parseResult -> {
-          int exitCode = new CommandLine.RunLast().execute(parseResult);
           if (!parseResult.subcommands().isEmpty()) {
             CommandLine.ParseResult lastSubcommand = parseResult;
             while (!lastSubcommand.subcommands().isEmpty()) {
@@ -35,13 +34,15 @@ public class Core {
                 if (result != null) {
                   System.out.println(new Gson().toJson(result));
                 }
+                return 0;
               } catch (Exception e) {
                 e.printStackTrace();
                 return 1;
               }
             }
           }
-          return exitCode;
+          // Fallback to default execution if no subcommands
+          return new CommandLine.RunLast().execute(parseResult);
         });
     int exitCode = commandLine.execute(args);
     System.exit(exitCode);
