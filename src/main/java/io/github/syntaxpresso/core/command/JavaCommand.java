@@ -1,6 +1,7 @@
 package io.github.syntaxpresso.core.command;
 
 import io.github.syntaxpresso.core.command.java.CreateNewFileCommand;
+import io.github.syntaxpresso.core.command.java.CreateNewJPAEntityCommand;
 import io.github.syntaxpresso.core.command.java.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.java.RenameCommand;
 import picocli.CommandLine.Command;
@@ -12,5 +13,6 @@ import picocli.CommandLine.Command;
       CreateNewFileCommand.class,
       GetMainClassCommand.class,
       RenameCommand.class,
+      CreateNewJPAEntityCommand.class
     })
 public class JavaCommand {}
