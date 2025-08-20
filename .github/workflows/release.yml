@@ -13,6 +13,8 @@ jobs:
     # The 'if' condition ensures this job only runs for merged pull requests
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     # Outputs that can be used by other jobs
     outputs:
       version: ${{ steps.create_version.outputs.VERSION }}
