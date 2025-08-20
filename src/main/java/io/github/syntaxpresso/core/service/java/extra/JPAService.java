@@ -112,4 +112,3 @@ public class JPAService {
     repositoryFile.insertTextAfterNode(nameNode, extendsClause);
   }
 }
-

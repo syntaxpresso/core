@@ -4,7 +4,6 @@ import com.google.common.base.Strings;
 import org.jvnet.inflector.Noun;
 
 public class StringHelper {
-
   /**
    * Checks if a string is in PascalCase (also known as UpperCamelCase).
    *
@@ -92,12 +91,11 @@ public class StringHelper {
     String[] words = camelCaseStr.split("(?=\\p{Upper})");
     if (words.length > 0) {
       String lastWord = words[words.length - 1].toLowerCase();
-      
       // Check if the pluralized form of the singular would match this word
       // This is more reliable than trying to detect if a word is already plural
-      String withoutS = lastWord.endsWith("s") ? lastWord.substring(0, lastWord.length() - 1) : lastWord;
+      String withoutS =
+          lastWord.endsWith("s") ? lastWord.substring(0, lastWord.length() - 1) : lastWord;
       String pluralOfSingular = Noun.pluralOf(withoutS).toLowerCase();
-      
       return lastWord.equals(pluralOfSingular);
     }
     return false;

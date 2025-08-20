@@ -131,9 +131,12 @@ public class FieldDeclarationService {
         String nodeText = file.getTextFromNode(node);
         if (fieldName.equals(nodeText)) {
           // Check if this node is already in the list to avoid duplicates
-          boolean alreadyExists = usages.stream().anyMatch(existing -> 
-              existing.getStartByte() == node.getStartByte() && 
-              existing.getEndByte() == node.getEndByte());
+          boolean alreadyExists =
+              usages.stream()
+                  .anyMatch(
+                      existing ->
+                          existing.getStartByte() == node.getStartByte()
+                              && existing.getEndByte() == node.getEndByte());
           if (!alreadyExists) {
             usages.add(node);
           }
@@ -202,7 +205,6 @@ public class FieldDeclarationService {
   public void renameClassFields(TSFile file, String currentName, String newName) {
     // Find all field declarations with the specified type
     List<TSNode> fieldDeclarations = findAllFieldDeclarations(file, currentName);
-    
     // For each field declaration, check if the field name matches the class name pattern
     // and if so, rename its usages
     for (TSNode fieldDeclaration : fieldDeclarations) {
@@ -210,7 +212,6 @@ public class FieldDeclarationService {
       if (fieldNameNode.isPresent()) {
         String currentFieldName = file.getTextFromNode(fieldNameNode.get());
         String expectedFieldName = StringHelper.pascalToCamel(currentName);
-        
         // Only rename field usages if the field name matches the class name pattern
         if (expectedFieldName.equals(currentFieldName)) {
           String newFieldName = StringHelper.pascalToCamel(newName);
@@ -222,7 +223,6 @@ public class FieldDeclarationService {
         }
       }
     }
-    
     // Then rename field declarations in reverse order to preserve byte positions
     for (TSNode fieldDeclaration : fieldDeclarations.reversed()) {
       renameFieldDeclaration(file, fieldDeclaration, currentName, newName);

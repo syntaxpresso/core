@@ -564,10 +564,8 @@ public class JavaService {
                 + file.getTextFromNode(node)
                 + "'");
       }
-      
       List<TSFile> modifiedFiles = new ArrayList<>();
       int renamedNodes = 0;
-      
       if (identifierType.equals(JavaIdentifierType.CLASS_NAME)) {
         modifiedFiles.addAll(
             this.processClassRename(cwd, file, node, packageName.get(), currentName, newName));
@@ -594,7 +592,6 @@ public class JavaService {
       } else {
         return DataTransferObject.error("Renaming of " + identifierType + " is not yet supported.");
       }
-      
       // Save all modified files
       for (TSFile modifiedFile : modifiedFiles) {
         modifiedFile.save();
@@ -616,8 +613,6 @@ public class JavaService {
       return DataTransferObject.error("Unexpected error: " + e.getMessage());
     }
   }
-  
-
 
   /**
    * Creates a JPA Repository interface for an entity class.

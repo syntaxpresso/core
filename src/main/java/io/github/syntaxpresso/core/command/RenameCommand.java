@@ -24,7 +24,7 @@ public class RenameCommand implements Callable<DataTransferObject<RenameResponse
   private Path cwd;
 
   @CommandLine.Option(
-      names = {"-f", "--file-path"},
+      names = {"--file-path"},
       description = "The absolute path to the .java file.",
       required = true)
   private File filePath;
@@ -36,25 +36,25 @@ public class RenameCommand implements Callable<DataTransferObject<RenameResponse
   private SupportedLanguage language;
 
   @CommandLine.Option(
-      names = {"-n", "--new-name"},
+      names = {"--new-name"},
       description = "The new name for the class/interface/enum.",
       required = true)
   private String newName;
 
   @CommandLine.Option(
-      names = {"-l", "--line"},
+      names = {"--line"},
       description = "The cursor line",
       required = true)
   private Integer line;
 
   @CommandLine.Option(
-      names = {"-c", "--column"},
+      names = {"--column"},
       description = "The cursor column",
       required = true)
   private Integer column;
 
   @CommandLine.Option(
-      names = {"-s", "--source-directory"},
+      names = {"--source-directory"},
       description = "The source directory type (e.g., MAIN, TEST).",
       defaultValue = "MAIN")
   private SourceDirectoryType sourceDirectoryType;
@@ -62,7 +62,8 @@ public class RenameCommand implements Callable<DataTransferObject<RenameResponse
   @Override
   public DataTransferObject<RenameResponse> call() {
     if (this.language.equals(SupportedLanguage.JAVA)) {
-      return this.javaService.rename(this.cwd, this.filePath.toPath(), this.line, this.column, this.newName);
+      return this.javaService.rename(
+          this.cwd, this.filePath.toPath(), this.line, this.column, this.newName);
     }
     return DataTransferObject.error("Language not supported.");
   }

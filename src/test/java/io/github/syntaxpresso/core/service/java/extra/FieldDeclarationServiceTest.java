@@ -396,7 +396,6 @@ class FieldDeclarationServiceTest {
   @Nested
   @DisplayName("Class field renaming tests")
   class ClassFieldRenamingTests {
-    
     @Test
     @DisplayName("Should rename field access expressions correctly")
     void shouldRenameFieldAccessExpressionsCorrectly() {
@@ -404,11 +403,9 @@ class FieldDeclarationServiceTest {
           """
           package org.example.core;
           import org.example.Test;
-          
           public class Core {
             private String teste;
             private Test test;
-          
             public void def(Test param) {
               Test a = new Test();
               param.abc(1);
@@ -418,19 +415,15 @@ class FieldDeclarationServiceTest {
           }
           """;
       TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       // Rename fields when class Test is renamed to NewName
       fieldDeclarationService.renameClassFields(testFile, "Test", "NewName");
-      
       String expectedCode =
           """
           package org.example.core;
           import org.example.Test;
-          
           public class Core {
             private String teste;
             private NewName newName;
-          
             public void def(Test param) {
               Test a = new Test();
               param.abc(1);
@@ -439,11 +432,10 @@ class FieldDeclarationServiceTest {
             }
           }
           """;
-      
       String actualCode = testFile.getSourceCode();
       assertEquals(expectedCode, actualCode, "Should correctly rename field access expressions");
     }
-    
+
     @Test
     @DisplayName("Should handle multiple field access patterns")
     void shouldHandleMultipleFieldAccessPatterns() {
@@ -453,7 +445,6 @@ class FieldDeclarationServiceTest {
             private User user;
             private User admin;
             private User manager = new User();
-            
             public void process() {
               user.getName();
               this.user.setName("test");
@@ -464,27 +455,30 @@ class FieldDeclarationServiceTest {
           }
           """;
       TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       // Rename fields when class User is renamed to Person
       fieldDeclarationService.renameClassFields(testFile, "User", "Person");
-      
       String actualCode = testFile.getSourceCode();
-      
       // Verify field declarations are renamed
-      assertTrue(actualCode.contains("private Person person;"), "Should rename first field declaration");
-      assertTrue(actualCode.contains("private Person admin;"), "Should rename second field declaration"); 
-      assertTrue(actualCode.contains("private Person manager = new Person();"), "Should rename field with initialization");
-      
+      assertTrue(
+          actualCode.contains("private Person person;"), "Should rename first field declaration");
+      assertTrue(
+          actualCode.contains("private Person admin;"), "Should rename second field declaration");
+      assertTrue(
+          actualCode.contains("private Person manager = new Person();"),
+          "Should rename field with initialization");
       // Verify field usages are renamed (only for fields that follow class naming convention)
       assertTrue(actualCode.contains("person.getName();"), "Should rename simple field access");
-      assertTrue(actualCode.contains("this.person.setName(\"test\");"), "Should rename this.field access");
-      assertTrue(actualCode.contains("this.admin.activate();"), "Should keep admin field access as is");
-      assertTrue(actualCode.contains("User temp = this.person;"), "Should keep local variable type as is");
+      assertTrue(
+          actualCode.contains("this.person.setName(\"test\");"), "Should rename this.field access");
+      assertTrue(
+          actualCode.contains("this.admin.activate();"), "Should keep admin field access as is");
+      assertTrue(
+          actualCode.contains("User temp = this.person;"), "Should keep local variable type as is");
       assertTrue(actualCode.contains("temp = person;"), "Should rename field in simple assignment");
-      
-      // Note: method-level instantiations like 'admin = new User()' are not renamed by field renaming logic
+      // Note: method-level instantiations like 'admin = new User()' are not renamed by field
+      // renaming logic
     }
-    
+
     @Test
     @DisplayName("Should preserve parameter names when renaming fields")
     void shouldPreserveParameterNamesWhenRenamingFields() {
@@ -492,7 +486,6 @@ class FieldDeclarationServiceTest {
           """
           public class Service {
             private Manager manager;
-            
             public void handle(Manager param) {
               param.process();
               this.manager.process();
@@ -502,27 +495,24 @@ class FieldDeclarationServiceTest {
           }
           """;
       TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       // Rename fields when class Manager is renamed to Supervisor
       fieldDeclarationService.renameClassFields(testFile, "Manager", "Supervisor");
-      
       String actualCode = testFile.getSourceCode();
-      
       // Field should be renamed
-      assertTrue(actualCode.contains("private Supervisor supervisor;"), "Should rename field declaration");
-      
+      assertTrue(
+          actualCode.contains("private Supervisor supervisor;"), "Should rename field declaration");
       // Parameter should NOT be renamed (it's still the old class)
-      assertTrue(actualCode.contains("public void handle(Manager param)"), "Should preserve parameter type and name");
-      
+      assertTrue(
+          actualCode.contains("public void handle(Manager param)"),
+          "Should preserve parameter type and name");
       // Field access should be renamed
       assertTrue(actualCode.contains("this.supervisor.process();"), "Should rename field access");
-      
       // Parameter usage should NOT be renamed
       assertTrue(actualCode.contains("param.process();"), "Should preserve parameter usage");
       assertTrue(actualCode.contains("Manager local = param;"), "Should preserve local variable");
       assertTrue(actualCode.contains("this.supervisor = local;"), "Should rename field assignment");
     }
-    
+
     @Test
     @DisplayName("Should handle nested field access correctly")
     void shouldHandleNestedFieldAccessCorrectly() {
@@ -530,7 +520,6 @@ class FieldDeclarationServiceTest {
           """
           public class Container {
             private Database database;
-            
             public void connect() {
               this.database.getConnection().open();
               database.getConnection().getMetadata().getVersion();
@@ -538,20 +527,21 @@ class FieldDeclarationServiceTest {
           }
           """;
       TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       // Rename fields when class Database is renamed to DataSource
       fieldDeclarationService.renameClassFields(testFile, "Database", "DataSource");
-      
       String actualCode = testFile.getSourceCode();
-      
       // Field declaration should be renamed
-      assertTrue(actualCode.contains("private DataSource dataSource;"), "Should rename field declaration");
-      
+      assertTrue(
+          actualCode.contains("private DataSource dataSource;"), "Should rename field declaration");
       // Field accesses should be renamed
-      assertTrue(actualCode.contains("this.dataSource.getConnection().open();"), "Should rename this.field in method chain");
-      assertTrue(actualCode.contains("dataSource.getConnection().getMetadata().getVersion();"), "Should rename field in method chain");
+      assertTrue(
+          actualCode.contains("this.dataSource.getConnection().open();"),
+          "Should rename this.field in method chain");
+      assertTrue(
+          actualCode.contains("dataSource.getConnection().getMetadata().getVersion();"),
+          "Should rename field in method chain");
     }
-    
+
     @Test
     @DisplayName("Should handle fields with same name as class correctly")
     void shouldHandleFieldsWithSameNameAsClassCorrectly() {
@@ -559,7 +549,6 @@ class FieldDeclarationServiceTest {
           """
           public class Worker {
             private Task task;
-            
             public void execute() {
               task.run();
               this.task.complete();
@@ -569,24 +558,23 @@ class FieldDeclarationServiceTest {
           }
           """;
       TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
-      // Rename fields when class Task is renamed to Job  
+      // Rename fields when class Task is renamed to Job
       fieldDeclarationService.renameClassFields(testFile, "Task", "Job");
-      
       String actualCode = testFile.getSourceCode();
-      
       // Field declaration should be renamed (Task -> Job, task -> job)
-      assertTrue(actualCode.contains("private Job job;"), "Should rename field declaration correctly");
-      
+      assertTrue(
+          actualCode.contains("private Job job;"), "Should rename field declaration correctly");
       // Field usages should be renamed
       assertTrue(actualCode.contains("job.run();"), "Should rename simple field access");
       assertTrue(actualCode.contains("this.job.complete();"), "Should rename this.field access");
       assertTrue(actualCode.contains("this.job = newTask;"), "Should rename field in assignment");
-      
-      // Local variable should keep original class name (field renaming doesn't affect local variables)
-      assertTrue(actualCode.contains("Task newTask = new Task();"), "Should keep local variable type as is");
+      // Local variable should keep original class name (field renaming doesn't affect local
+      // variables)
+      assertTrue(
+          actualCode.contains("Task newTask = new Task();"),
+          "Should keep local variable type as is");
     }
-    
+
     @Test
     @DisplayName("Should not rename unrelated identifiers")
     void shouldNotRenameUnrelatedIdentifiers() {
@@ -595,7 +583,6 @@ class FieldDeclarationServiceTest {
           public class Controller {
             private Service service;
             private String serviceName;
-            
             public void configure() {
               service.start();
               this.service.configure();
@@ -605,25 +592,24 @@ class FieldDeclarationServiceTest {
           }
           """;
       TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       // Rename fields when class Service is renamed to Handler
       fieldDeclarationService.renameClassFields(testFile, "Service", "Handler");
-      
       String actualCode = testFile.getSourceCode();
-      
       // Field should be renamed
       assertTrue(actualCode.contains("private Handler handler;"), "Should rename Service field");
-      
       // String field should not be renamed
-      assertTrue(actualCode.contains("private String serviceName;"), "Should not rename String field");
-      
+      assertTrue(
+          actualCode.contains("private String serviceName;"), "Should not rename String field");
       // Field usages should be renamed
       assertTrue(actualCode.contains("handler.start();"), "Should rename field usage");
-      assertTrue(actualCode.contains("this.handler.configure();"), "Should rename this.field usage");
-      
+      assertTrue(
+          actualCode.contains("this.handler.configure();"), "Should rename this.field usage");
       // Other identifiers should not be renamed
-      assertTrue(actualCode.contains("System.out.println(serviceName);"), "Should not rename unrelated field");
-      assertTrue(actualCode.contains("String service2 = \"test\";"), "Should not rename local variable");
+      assertTrue(
+          actualCode.contains("System.out.println(serviceName);"),
+          "Should not rename unrelated field");
+      assertTrue(
+          actualCode.contains("String service2 = \"test\";"), "Should not rename local variable");
     }
 
     @Test
@@ -635,10 +621,8 @@ class FieldDeclarationServiceTest {
           }
           """;
       TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      
       // Try to rename fields when no fields exist
       fieldDeclarationService.renameClassFields(testFile, "NonExistent", "NewName");
-      
       String actualCode = testFile.getSourceCode();
       assertEquals(javaCode, actualCode, "Should not modify empty class");
     }
