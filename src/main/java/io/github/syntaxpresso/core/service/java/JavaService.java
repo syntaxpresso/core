@@ -630,15 +630,9 @@ public class JavaService {
         modifiedFile.save();
         // System.out.println(modifiedFile.getFile().getName());
       }
-      // For class renames, return the new file path; for others, return the original
-      String resultPath = filePath.toString();
-      if (identifierType.equals(JavaIdentifierType.CLASS_NAME)
-          && this.shouldRenameFileName(file, currentName)) {
-        resultPath = filePath.resolveSibling(newName + ".java").toString();
-      }
       return DataTransferObject.success(
           RenameResponse.builder()
-              .filePath(resultPath)
+              .filePath(file.getFile().getAbsolutePath())
               .renamedNodes(renamedNodes)
               .newName(newName)
               .build());
