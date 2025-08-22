@@ -90,7 +90,7 @@
       ]
     },
     {
-      "type": "io.github.syntaxpresso.core.command.dto.GetTextFromCursorPositionResponse",
+      "type": "io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse",
       "allDeclaredFields": true,
       "allDeclaredMethods": true,
       "methods": [
@@ -100,48 +100,14 @@
         },
         {
           "name": "<init>",
-          "parameterTypes": ["java.lang.String", "java.lang.String", "java.lang.String"]
+          "parameterTypes": ["java.lang.String", "java.lang.String", "io.github.syntaxpresso.core.service.extra.JavaIdentifierType", "java.lang.String"]
         }
       ]
     },
     {
-      "type": "io.github.syntaxpresso.core.command.dto.GetTextFromCursorPositionResponse",
+      "type": "io.github.syntaxpresso.core.service.extra.JavaIdentifierType",
       "allDeclaredFields": true,
-      "allDeclaredMethods": true,
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "<init>",
-          "parameterTypes": ["java.lang.String", "java.lang.String", "java.lang.String"]
-        },
-        {
-          "name": "getFilePath",
-          "parameterTypes": []
-        },
-        {
-          "name": "getNode",
-          "parameterTypes": []
-        },
-        {
-          "name": "getText",
-          "parameterTypes": []
-        },
-        {
-          "name": "setFilePath",
-          "parameterTypes": ["java.lang.String"]
-        },
-        {
-          "name": "setNode",
-          "parameterTypes": ["java.lang.String"]
-        },
-        {
-          "name": "setText",
-          "parameterTypes": ["java.lang.String"]
-        }
-      ]
+      "allDeclaredMethods": true
     },
     {
       "type": "io.github.syntaxpresso.core.common.DataTransferObject",
