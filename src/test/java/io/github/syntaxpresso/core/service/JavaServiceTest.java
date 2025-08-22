@@ -208,6 +208,7 @@ class JavaServiceTest {
       assertNotNull(result.getData());
       assertEquals("MyClass", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertNotNull(result.getData().getNode());
     }
 
@@ -233,6 +234,7 @@ class JavaServiceTest {
       assertNotNull(result.getData());
       assertEquals("setName", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertNotNull(result.getData().getNode());
     }
 
@@ -257,6 +259,7 @@ class JavaServiceTest {
       assertNotNull(result.getData());
       assertEquals("userName", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertNotNull(result.getData().getNode());
     }
 
@@ -282,6 +285,7 @@ class JavaServiceTest {
       assertNotNull(result.getData());
       assertEquals("newName", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertNotNull(result.getData().getNode());
     }
 
@@ -308,6 +312,7 @@ class JavaServiceTest {
       assertNotNull(result.getData());
       assertEquals("localVar", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertNotNull(result.getData().getNode());
     }
 
@@ -378,6 +383,8 @@ class JavaServiceTest {
       assertTrue(resultNeovim.getSucceed());
       assertEquals("MyClass", resultVSCode.getData().getNodeText());
       assertEquals("MyClass", resultNeovim.getData().getNodeText());
+      assertEquals(SupportedLanguage.JAVA, resultVSCode.getData().getLanguage());
+      assertEquals(SupportedLanguage.JAVA, resultNeovim.getData().getLanguage());
     }
 
     @Test
@@ -411,18 +418,21 @@ class JavaServiceTest {
               filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 3, 20);
       assertTrue(classResult.getSucceed());
       assertEquals("ComplexClass", classResult.getData().getNodeText());
+      assertEquals(SupportedLanguage.JAVA, classResult.getData().getLanguage());
       // Test field name
       DataTransferObject<GetCursorPositionInfoResponse> fieldResult =
           javaService.getTextFromCursorPosition(
               filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 4, 24);
       assertTrue(fieldResult.getSucceed());
       assertEquals("field1", fieldResult.getData().getNodeText());
+      assertEquals(SupportedLanguage.JAVA, fieldResult.getData().getLanguage());
       // Test method name
       DataTransferObject<GetCursorPositionInfoResponse> methodResult =
           javaService.getTextFromCursorPosition(
               filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 10, 25);
       assertTrue(methodResult.getSucceed());
       assertEquals("getField1", methodResult.getData().getNodeText());
+      assertEquals(SupportedLanguage.JAVA, methodResult.getData().getLanguage());
     }
   }
 }

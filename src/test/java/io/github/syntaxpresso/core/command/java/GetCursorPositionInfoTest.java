@@ -70,6 +70,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("identifier")
               .nodeType(JavaIdentifierType.CLASS_NAME)
               .nodeText("User")
@@ -95,6 +96,7 @@ class GetCursorPositionInfoTest {
       assertNotNull(result.getData());
       assertEquals(
           "/test/project/src/main/java/com/example/User.java", result.getData().getFilePath());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertEquals("identifier", result.getData().getNode());
       assertEquals(JavaIdentifierType.CLASS_NAME, result.getData().getNodeType());
       assertEquals("User", result.getData().getNodeText());
@@ -123,6 +125,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("method_declaration")
               .nodeType(JavaIdentifierType.METHOD_NAME)
               .nodeText("getName")
@@ -136,6 +139,7 @@ class GetCursorPositionInfoTest {
       assertTrue(result.getSucceed());
       assertEquals(
           "/test/project/src/main/java/com/example/User.java", result.getData().getFilePath());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertEquals("method_declaration", result.getData().getNode());
       assertEquals(JavaIdentifierType.METHOD_NAME, result.getData().getNodeType());
       assertEquals("getName", result.getData().getNodeText());
@@ -164,6 +168,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("identifier")
               .nodeType(JavaIdentifierType.CLASS_NAME)
               .nodeText("User")
@@ -175,6 +180,7 @@ class GetCursorPositionInfoTest {
           .thenReturn(expectedResult);
       DataTransferObject<GetCursorPositionInfoResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertEquals(JavaIdentifierType.CLASS_NAME, result.getData().getNodeType());
       assertEquals("User", result.getData().getNodeText());
       assertEquals("identifier", result.getData().getNode());
@@ -186,6 +192,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("method_declaration")
               .nodeType(JavaIdentifierType.METHOD_NAME)
               .nodeText("getName")
@@ -197,6 +204,7 @@ class GetCursorPositionInfoTest {
           .thenReturn(expectedResult);
       DataTransferObject<GetCursorPositionInfoResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertEquals(JavaIdentifierType.METHOD_NAME, result.getData().getNodeType());
       assertEquals("getName", result.getData().getNodeText());
       assertEquals("method_declaration", result.getData().getNode());
@@ -208,6 +216,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("field_declaration")
               .nodeType(JavaIdentifierType.FIELD_NAME)
               .nodeText("name")
@@ -219,6 +228,7 @@ class GetCursorPositionInfoTest {
           .thenReturn(expectedResult);
       DataTransferObject<GetCursorPositionInfoResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertEquals(JavaIdentifierType.FIELD_NAME, result.getData().getNodeType());
       assertEquals("name", result.getData().getNodeText());
       assertEquals("field_declaration", result.getData().getNode());
@@ -230,6 +240,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("local_variable_declaration")
               .nodeType(JavaIdentifierType.LOCAL_VARIABLE_NAME)
               .nodeText("localVar")
@@ -241,6 +252,7 @@ class GetCursorPositionInfoTest {
           .thenReturn(expectedResult);
       DataTransferObject<GetCursorPositionInfoResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertEquals(JavaIdentifierType.LOCAL_VARIABLE_NAME, result.getData().getNodeType());
       assertEquals("localVar", result.getData().getNodeText());
       assertEquals("local_variable_declaration", result.getData().getNode());
@@ -252,6 +264,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("formal_parameter")
               .nodeType(JavaIdentifierType.FORMAL_PARAMETER_NAME)
               .nodeText("param")
@@ -263,6 +276,7 @@ class GetCursorPositionInfoTest {
           .thenReturn(expectedResult);
       DataTransferObject<GetCursorPositionInfoResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertEquals(JavaIdentifierType.FORMAL_PARAMETER_NAME, result.getData().getNodeType());
       assertEquals("param", result.getData().getNodeText());
       assertEquals("formal_parameter", result.getData().getNode());
@@ -274,6 +288,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("identifier")
               .nodeType(null)
               .nodeText("Unknown")
@@ -285,6 +300,7 @@ class GetCursorPositionInfoTest {
           .thenReturn(expectedResult);
       DataTransferObject<GetCursorPositionInfoResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertEquals(SupportedLanguage.JAVA, result.getData().getLanguage());
       assertNull(result.getData().getNodeType());
       assertEquals("Unknown", result.getData().getNodeText());
     }
@@ -299,6 +315,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("identifier")
               .nodeType(JavaIdentifierType.CLASS_NAME)
               .nodeText("User")
@@ -313,6 +330,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse data = result.getData();
       assertNotNull(data);
       assertEquals("/test/project/src/main/java/com/example/User.java", data.getFilePath());
+      assertEquals(SupportedLanguage.JAVA, data.getLanguage());
       assertEquals("identifier", data.getNode());
       assertEquals(JavaIdentifierType.CLASS_NAME, data.getNodeType());
       assertEquals("User", data.getNodeText());
@@ -324,6 +342,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/file.java")
+              .language(SupportedLanguage.JAVA)
               .nodeText("text")
               .build();
       DataTransferObject<GetCursorPositionInfoResponse> expectedResult =
@@ -335,6 +354,7 @@ class GetCursorPositionInfoTest {
       assertTrue(result.getSucceed());
       GetCursorPositionInfoResponse data = result.getData();
       assertEquals("/test/file.java", data.getFilePath());
+      assertEquals(SupportedLanguage.JAVA, data.getLanguage());
       assertEquals("text", data.getNodeText());
       assertNull(data.getNode());
       assertNull(data.getNodeType());
@@ -352,6 +372,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/project/src/main/java/com/example/User.java")
+              .language(SupportedLanguage.JAVA)
               .node("identifier")
               .nodeType(JavaIdentifierType.CLASS_NAME)
               .nodeText("User")
@@ -360,6 +381,7 @@ class GetCursorPositionInfoTest {
       String json = objectMapper.writeValueAsString(dto);
       assertNotNull(json);
       assertTrue(json.contains("\"filePath\":\"/test/project/src/main/java/com/example/User.java\""));
+      assertTrue(json.contains("\"language\":\"JAVA\""));
       assertTrue(json.contains("\"node\":\"identifier\""));
       assertTrue(json.contains("\"nodeType\":\"CLASS_NAME\""));
       assertTrue(json.contains("\"nodeText\":\"User\""));
@@ -372,6 +394,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse originalResponse =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/file.java")
+              .language(SupportedLanguage.JAVA)
               .node("method_declaration")
               .nodeType(JavaIdentifierType.METHOD_NAME)
               .nodeText("testMethod")
@@ -391,6 +414,7 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/file.java")
+              .language(SupportedLanguage.JAVA)
               .node("identifier")
               .nodeType(null)
               .nodeText("text")
@@ -399,6 +423,24 @@ class GetCursorPositionInfoTest {
       String json = objectMapper.writeValueAsString(dto);
       assertNotNull(json);
       assertTrue(json.contains("\"nodeType\":null"));
+      assertTrue(json.contains("\"language\":\"JAVA\""));
+    }
+
+    @Test
+    @DisplayName("should serialize language field correctly")
+    void serialization_shouldHandleLanguageField() throws Exception {
+      GetCursorPositionInfoResponse response =
+          GetCursorPositionInfoResponse.builder()
+              .filePath("/test/file.java")
+              .language(SupportedLanguage.JAVA)
+              .nodeText("text")
+              .build();
+      DataTransferObject<GetCursorPositionInfoResponse> dto = DataTransferObject.success(response);
+      String json = objectMapper.writeValueAsString(dto);
+      assertNotNull(json);
+      assertTrue(json.contains("\"language\":\"JAVA\""));
+      assertTrue(json.contains("\"filePath\":\"/test/file.java\""));
+      assertTrue(json.contains("\"succeed\":true"));
     }
   }
 
@@ -411,11 +453,13 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/file.java")
+              .language(SupportedLanguage.JAVA)
               .node("identifier")
               .nodeType(JavaIdentifierType.FIELD_NAME)
               .nodeText("fieldName")
               .build();
       assertEquals("/test/file.java", response.getFilePath());
+      assertEquals(SupportedLanguage.JAVA, response.getLanguage());
       assertEquals("identifier", response.getNode());
       assertEquals(JavaIdentifierType.FIELD_NAME, response.getNodeType());
       assertEquals("fieldName", response.getNodeText());
@@ -427,9 +471,11 @@ class GetCursorPositionInfoTest {
       GetCursorPositionInfoResponse response =
           GetCursorPositionInfoResponse.builder()
               .filePath("/test/file.java")
+              .language(SupportedLanguage.JAVA)
               .nodeText("text")
               .build();
       assertEquals("/test/file.java", response.getFilePath());
+      assertEquals(SupportedLanguage.JAVA, response.getLanguage());
       assertEquals("text", response.getNodeText());
       assertNull(response.getNode());
       assertNull(response.getNodeType());
@@ -440,6 +486,7 @@ class GetCursorPositionInfoTest {
     void constructor_shouldCreateEmptyResponse() {
       GetCursorPositionInfoResponse response = new GetCursorPositionInfoResponse();
       assertNull(response.getFilePath());
+      assertNull(response.getLanguage());
       assertNull(response.getNode());
       assertNull(response.getNodeType());
       assertNull(response.getNodeText());
@@ -450,8 +497,9 @@ class GetCursorPositionInfoTest {
     void constructor_shouldCreateCompleteResponseWithAllArgs() {
       GetCursorPositionInfoResponse response =
           new GetCursorPositionInfoResponse(
-              "/test/file.java", "identifier", JavaIdentifierType.LOCAL_VARIABLE_NAME, "varName");
+              "/test/file.java", SupportedLanguage.JAVA, "identifier", JavaIdentifierType.LOCAL_VARIABLE_NAME, "varName");
       assertEquals("/test/file.java", response.getFilePath());
+      assertEquals(SupportedLanguage.JAVA, response.getLanguage());
       assertEquals("identifier", response.getNode());
       assertEquals(JavaIdentifierType.LOCAL_VARIABLE_NAME, response.getNodeType());
       assertEquals("varName", response.getNodeText());
@@ -462,10 +510,12 @@ class GetCursorPositionInfoTest {
     void setters_shouldUpdateFieldsCorrectly() {
       GetCursorPositionInfoResponse response = new GetCursorPositionInfoResponse();
       response.setFilePath("/updated/file.java");
+      response.setLanguage(SupportedLanguage.JAVA);
       response.setNode("updated_node");
       response.setNodeType(JavaIdentifierType.METHOD_NAME);
       response.setNodeText("updatedText");
       assertEquals("/updated/file.java", response.getFilePath());
+      assertEquals(SupportedLanguage.JAVA, response.getLanguage());
       assertEquals("updated_node", response.getNode());
       assertEquals(JavaIdentifierType.METHOD_NAME, response.getNodeType());
       assertEquals("updatedText", response.getNodeText());

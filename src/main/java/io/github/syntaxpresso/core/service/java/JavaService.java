@@ -544,6 +544,7 @@ public class JavaService {
     GetCursorPositionInfoResponse response =
         GetCursorPositionInfoResponse.builder()
             .filePath(filePath.toString())
+            .language(SupportedLanguage.JAVA)
             .node(node.toString())
             .nodeText(text)
             .nodeType(identifierType)
