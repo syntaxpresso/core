@@ -2,6 +2,7 @@ package io.github.syntaxpresso.core.command;
 
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
+import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;
@@ -29,6 +30,12 @@ public class CreateJPARepositoryCommand
       description = "The language related to the command execution.",
       required = true)
   private SupportedLanguage language;
+
+  @Option(
+      names = "--ide",
+      description = "The IDE the command is being called from.",
+      required = true)
+  private SupportedIDE ide = SupportedIDE.NONE;
 
   @Override
   public DataTransferObject<CreateNewFileResponse> call() {
