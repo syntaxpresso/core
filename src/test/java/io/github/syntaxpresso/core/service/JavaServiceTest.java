@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.syntaxpresso.core.command.dto.GetTextFromCursorPositionResponse;
+import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
 import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
@@ -192,10 +192,8 @@ class JavaServiceTest {
       String sourceCode =
           """
           package com.example;
-          
           public class MyClass {
               private String name;
-              
               public void setName(String name) {
                   this.name = name;
               }
@@ -203,14 +201,12 @@ class JavaServiceTest {
           """;
       Path filePath = tempDir.resolve("MyClass.java");
       Files.writeString(filePath, sourceCode);
-
-      DataTransferObject<GetTextFromCursorPositionResponse> result =
+      DataTransferObject<GetCursorPositionInfoResponse> result =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 3, 14);
-
+              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 2, 14);
       assertTrue(result.getSucceed());
       assertNotNull(result.getData());
-      assertEquals("MyClass", result.getData().getText());
+      assertEquals("MyClass", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
       assertNotNull(result.getData().getNode());
     }
@@ -222,7 +218,6 @@ class JavaServiceTest {
       String sourceCode =
           """
           package com.example;
-          
           public class MyClass {
               public void setName(String name) {
                   // method body
@@ -231,14 +226,12 @@ class JavaServiceTest {
           """;
       Path filePath = tempDir.resolve("MyClass.java");
       Files.writeString(filePath, sourceCode);
-
-      DataTransferObject<GetTextFromCursorPositionResponse> result =
+      DataTransferObject<GetCursorPositionInfoResponse> result =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 4, 17);
-
+              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 3, 17);
       assertTrue(result.getSucceed());
       assertNotNull(result.getData());
-      assertEquals("setName", result.getData().getText());
+      assertEquals("setName", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
       assertNotNull(result.getData().getNode());
     }
@@ -250,7 +243,6 @@ class JavaServiceTest {
       String sourceCode =
           """
           package com.example;
-          
           public class MyClass {
               private String userName;
               private int age;
@@ -258,26 +250,23 @@ class JavaServiceTest {
           """;
       Path filePath = tempDir.resolve("MyClass.java");
       Files.writeString(filePath, sourceCode);
-
-      DataTransferObject<GetTextFromCursorPositionResponse> result =
+      DataTransferObject<GetCursorPositionInfoResponse> result =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 4, 24);
-
+              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 3, 24);
       assertTrue(result.getSucceed());
       assertNotNull(result.getData());
-      assertEquals("userName", result.getData().getText());
+      assertEquals("userName", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
       assertNotNull(result.getData().getNode());
     }
 
     @Test
     @DisplayName("should return parameter name when cursor is on parameter identifier")
-    void getTextFromCursorPosition_onParameterIdentifier_shouldReturnParameterName(@TempDir Path tempDir)
-        throws IOException {
+    void getTextFromCursorPosition_onParameterIdentifier_shouldReturnParameterName(
+        @TempDir Path tempDir) throws IOException {
       String sourceCode =
           """
           package com.example;
-          
           public class MyClass {
               public void setName(String newName) {
                   // method body
@@ -286,26 +275,23 @@ class JavaServiceTest {
           """;
       Path filePath = tempDir.resolve("MyClass.java");
       Files.writeString(filePath, sourceCode);
-
-      DataTransferObject<GetTextFromCursorPositionResponse> result =
+      DataTransferObject<GetCursorPositionInfoResponse> result =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 4, 35);
-
+              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 3, 35);
       assertTrue(result.getSucceed());
       assertNotNull(result.getData());
-      assertEquals("newName", result.getData().getText());
+      assertEquals("newName", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
       assertNotNull(result.getData().getNode());
     }
 
     @Test
     @DisplayName("should return local variable name when cursor is on local variable identifier")
-    void getTextFromCursorPosition_onLocalVariableIdentifier_shouldReturnVariableName(@TempDir Path tempDir)
-        throws IOException {
+    void getTextFromCursorPosition_onLocalVariableIdentifier_shouldReturnVariableName(
+        @TempDir Path tempDir) throws IOException {
       String sourceCode =
           """
           package com.example;
-          
           public class MyClass {
               public void doSomething() {
                   String localVar = "test";
@@ -315,14 +301,12 @@ class JavaServiceTest {
           """;
       Path filePath = tempDir.resolve("MyClass.java");
       Files.writeString(filePath, sourceCode);
-
-      DataTransferObject<GetTextFromCursorPositionResponse> result =
+      DataTransferObject<GetCursorPositionInfoResponse> result =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 5, 20);
-
+              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 4, 20);
       assertTrue(result.getSucceed());
       assertNotNull(result.getData());
-      assertEquals("localVar", result.getData().getText());
+      assertEquals("localVar", result.getData().getNodeText());
       assertEquals(filePath.toString(), result.getData().getFilePath());
       assertNotNull(result.getData().getNode());
     }
@@ -331,11 +315,9 @@ class JavaServiceTest {
     @DisplayName("should return error when file does not exist")
     void getTextFromCursorPosition_fileDoesNotExist_shouldReturnError(@TempDir Path tempDir) {
       Path nonExistentFile = tempDir.resolve("NonExistent.java");
-
-      DataTransferObject<GetTextFromCursorPositionResponse> result =
+      DataTransferObject<GetCursorPositionInfoResponse> result =
           javaService.getTextFromCursorPosition(
               nonExistentFile, SupportedLanguage.JAVA, SupportedIDE.NONE, 1, 1);
-
       assertFalse(result.getSucceed());
       assertEquals("File does not exist: " + nonExistentFile, result.getErrorReason());
     }
@@ -346,11 +328,9 @@ class JavaServiceTest {
         throws IOException {
       Path textFile = tempDir.resolve("NotJava.txt");
       Files.writeString(textFile, "Some content");
-
-      DataTransferObject<GetTextFromCursorPositionResponse> result =
+      DataTransferObject<GetCursorPositionInfoResponse> result =
           javaService.getTextFromCursorPosition(
               textFile, SupportedLanguage.JAVA, SupportedIDE.NONE, 1, 1);
-
       assertFalse(result.getSucceed());
       assertEquals("File is not a .java file: " + textFile, result.getErrorReason());
     }
@@ -362,49 +342,42 @@ class JavaServiceTest {
       String sourceCode =
           """
           package com.example;
-          
           public class MyClass {
           }
           """;
       Path filePath = tempDir.resolve("MyClass.java");
       Files.writeString(filePath, sourceCode);
-
-      DataTransferObject<GetTextFromCursorPositionResponse> result =
+      DataTransferObject<GetCursorPositionInfoResponse> result =
           javaService.getTextFromCursorPosition(
               filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 99, 99);
-
       assertFalse(result.getSucceed());
       assertEquals("No symbol found at the specified position.", result.getErrorReason());
     }
 
     @Test
     @DisplayName("should handle different IDE positioning correctly")
-    void getTextFromCursorPosition_differentIDE_shouldHandlePositioningCorrectly(@TempDir Path tempDir)
-        throws IOException {
+    void getTextFromCursorPosition_differentIDE_shouldHandlePositioningCorrectly(
+        @TempDir Path tempDir) throws IOException {
       String sourceCode =
           """
           package com.example;
-          
           public class MyClass {
           }
           """;
       Path filePath = tempDir.resolve("MyClass.java");
       Files.writeString(filePath, sourceCode);
-
       // Test with different IDE settings
-      DataTransferObject<GetTextFromCursorPositionResponse> resultVSCode =
+      DataTransferObject<GetCursorPositionInfoResponse> resultVSCode =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.VSCODE, 3, 13);
-
-      DataTransferObject<GetTextFromCursorPositionResponse> resultNeovim =
+              filePath, SupportedLanguage.JAVA, SupportedIDE.VSCODE, 2, 13);
+      DataTransferObject<GetCursorPositionInfoResponse> resultNeovim =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.NEOVIM, 3, 13);
-
+              filePath, SupportedLanguage.JAVA, SupportedIDE.NEOVIM, 2, 13);
       // Both should succeed for a reasonable position
       assertTrue(resultVSCode.getSucceed());
       assertTrue(resultNeovim.getSucceed());
-      assertEquals("MyClass", resultVSCode.getData().getText());
-      assertEquals("MyClass", resultNeovim.getData().getText());
+      assertEquals("MyClass", resultVSCode.getData().getNodeText());
+      assertEquals("MyClass", resultNeovim.getData().getNodeText());
     }
 
     @Test
@@ -414,22 +387,17 @@ class JavaServiceTest {
       String sourceCode =
           """
           package com.example.project;
-          
           import java.util.List;
-          
           public class ComplexClass {
               private String field1;
               private int field2;
-              
               public ComplexClass(String field1, int field2) {
                   this.field1 = field1;
                   this.field2 = field2;
               }
-              
               public String getField1() {
                   return field1;
               }
-              
               public void setField1(String field1) {
                   this.field1 = field1;
               }
@@ -437,27 +405,24 @@ class JavaServiceTest {
           """;
       Path filePath = tempDir.resolve("ComplexClass.java");
       Files.writeString(filePath, sourceCode);
-
       // Test class name
-      DataTransferObject<GetTextFromCursorPositionResponse> classResult =
+      DataTransferObject<GetCursorPositionInfoResponse> classResult =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 5, 20);
+              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 3, 20);
       assertTrue(classResult.getSucceed());
-      assertEquals("ComplexClass", classResult.getData().getText());
-
+      assertEquals("ComplexClass", classResult.getData().getNodeText());
       // Test field name
-      DataTransferObject<GetTextFromCursorPositionResponse> fieldResult =
+      DataTransferObject<GetCursorPositionInfoResponse> fieldResult =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 6, 24);
+              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 4, 24);
       assertTrue(fieldResult.getSucceed());
-      assertEquals("field1", fieldResult.getData().getText());
-
+      assertEquals("field1", fieldResult.getData().getNodeText());
       // Test method name
-      DataTransferObject<GetTextFromCursorPositionResponse> methodResult =
+      DataTransferObject<GetCursorPositionInfoResponse> methodResult =
           javaService.getTextFromCursorPosition(
-              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 14, 25);
+              filePath, SupportedLanguage.JAVA, SupportedIDE.NONE, 10, 25);
       assertTrue(methodResult.getSucceed());
-      assertEquals("getField1", methodResult.getData().getText());
+      assertEquals("getField1", methodResult.getData().getNodeText());
     }
   }
 }
