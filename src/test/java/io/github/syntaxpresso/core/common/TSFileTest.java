@@ -2,6 +2,7 @@ package io.github.syntaxpresso.core.common;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -73,7 +74,7 @@ class TSFileTest {
     @Test
     @DisplayName("should update source code from a TSNode")
     void updateSourceCode_fromNode_shouldSucceed() {
-      TSNode node = tsFile.getNodeFromPosition(1, 15);
+      TSNode node = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       assertNotNull(node);
       tsFile.updateSourceCode(node, "UpdatedClass");
       assertEquals("public class UpdatedClass {}", tsFile.getSourceCode());
@@ -154,7 +155,7 @@ class TSFileTest {
     @Test
     @DisplayName("should get a node from a specific position")
     void getNodeFromPosition_shouldReturnCorrectNode() {
-      TSNode node = tsFile.getNodeFromPosition(1, 15); // "MyClass"
+      TSNode node = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE); // "MyClass"
       assertNotNull(node);
       assertEquals("identifier", node.getType());
       assertEquals("MyClass", tsFile.getTextFromRange(node.getStartByte(), node.getEndByte()));
@@ -163,7 +164,7 @@ class TSFileTest {
     @Test
     @DisplayName("should return null for an invalid position")
     void getNodeFromPosition_invalidPosition_shouldReturnNull() {
-      assertNull(tsFile.getNodeFromPosition(99, 99));
+      assertNull(tsFile.getNodeFromPosition(99, 99, SupportedIDE.NONE));
     }
 
     @Test
@@ -272,7 +273,7 @@ class TSFileTest {
     @Test
     @DisplayName("should insert text before a node")
     void insertTextBeforeNode_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       assertNotNull(classIdentifier);
       assertEquals("identifier", classIdentifier.getType());
       tsFile.insertTextBeforeNode(classIdentifier, "Final");
@@ -283,7 +284,7 @@ class TSFileTest {
     @Test
     @DisplayName("should insert text after a node")
     void insertTextAfterNode_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       assertNotNull(classIdentifier);
       assertEquals("identifier", classIdentifier.getType());
       tsFile.insertTextAfterNode(classIdentifier, "Extended");
@@ -294,7 +295,7 @@ class TSFileTest {
     @Test
     @DisplayName("should insert empty string before node without changing content")
     void insertTextBeforeNode_emptyString_shouldNotChangeContent() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       String originalCode = tsFile.getSourceCode();
       tsFile.insertTextBeforeNode(classIdentifier, "");
       assertEquals(originalCode, tsFile.getSourceCode());
@@ -304,7 +305,7 @@ class TSFileTest {
     @Test
     @DisplayName("should insert empty string after node without changing content")
     void insertTextAfterNode_emptyString_shouldNotChangeContent() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       String originalCode = tsFile.getSourceCode();
       tsFile.insertTextAfterNode(classIdentifier, "");
       assertEquals(originalCode, tsFile.getSourceCode());
@@ -315,7 +316,7 @@ class TSFileTest {
     @DisplayName("should handle insertTextBeforeNode with valid tree")
     void insertTextBeforeNode_validTree_shouldSucceed() {
       TSFile validTsFile = new TSFile(language, "class A{}");
-      TSNode node = validTsFile.getNodeFromPosition(1, 7); // Position of 'A'
+      TSNode node = validTsFile.getNodeFromPosition(1, 7, SupportedIDE.NONE); // Position of 'A'
       assertNotNull(node);
       validTsFile.insertTextBeforeNode(node, "My");
       assertEquals("class MyA{}", validTsFile.getSourceCode());
@@ -326,7 +327,7 @@ class TSFileTest {
     @DisplayName("should handle insertTextAfterNode with valid tree")
     void insertTextAfterNode_validTree_shouldSucceed() {
       TSFile validTsFile = new TSFile(language, "class A{}");
-      TSNode node = validTsFile.getNodeFromPosition(1, 7); // Position of 'A'
+      TSNode node = validTsFile.getNodeFromPosition(1, 7, SupportedIDE.NONE); // Position of 'A'
       assertNotNull(node);
       validTsFile.insertTextAfterNode(node, "Extended");
       assertEquals("class AExtended{}", validTsFile.getSourceCode());
@@ -336,7 +337,7 @@ class TSFileTest {
     @Test
     @DisplayName("should insert multiline text before node correctly")
     void insertTextBeforeNode_multilineText_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       String multilineText = "/* Multi\n   line\n   comment */\n";
       tsFile.insertTextBeforeNode(classIdentifier, multilineText);
       assertEquals(
@@ -348,7 +349,7 @@ class TSFileTest {
     @Test
     @DisplayName("should insert multiline text after node correctly")
     void insertTextAfterNode_multilineText_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       String multilineText = "\n/* Multi\n   line\n   comment */";
       tsFile.insertTextAfterNode(classIdentifier, multilineText);
       assertEquals(
@@ -360,7 +361,7 @@ class TSFileTest {
     @Test
     @DisplayName("should handle inserting text with special characters before node")
     void insertTextBeforeNode_specialCharacters_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       String specialText = "@$#%^&*()_";
       tsFile.insertTextBeforeNode(classIdentifier, specialText);
       assertEquals("public class @$#%^&*()_MyClass { void method() {} }", tsFile.getSourceCode());
@@ -370,7 +371,7 @@ class TSFileTest {
     @Test
     @DisplayName("should handle inserting text with special characters after node")
     void insertTextAfterNode_specialCharacters_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       String specialText = "_@$#%^&*()";
       tsFile.insertTextAfterNode(classIdentifier, specialText);
       assertEquals("public class MyClass_@$#%^&*() { void method() {} }", tsFile.getSourceCode());
@@ -426,11 +427,11 @@ class TSFileTest {
     @Test
     @DisplayName("should handle consecutive insertions before and after nodes correctly")
     void insertTextBeforeAndAfterNode_consecutiveInsertions_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15);
+      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
       tsFile.insertTextBeforeNode(classIdentifier, "Base");
       // After the first insertion, need to get the node again since positions changed
       TSNode updatedClassIdentifier =
-          tsFile.getNodeFromPosition(1, 19); // Position shifted by "Base" (4 chars)
+          tsFile.getNodeFromPosition(1, 19, SupportedIDE.NONE); // Position shifted by "Base" (4 chars)
       assertNotNull(updatedClassIdentifier);
       tsFile.insertTextAfterNode(updatedClassIdentifier, "Extended");
       assertEquals("public class BaseMyClassExtended { void method() {} }", tsFile.getSourceCode());
