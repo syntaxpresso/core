@@ -2,8 +2,8 @@ package io.github.syntaxpresso.core.service.java;
 
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
+import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
 import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
-import io.github.syntaxpresso.core.command.dto.GetTextFromCursorPositionResponse;
 import io.github.syntaxpresso.core.command.dto.RenameResponse;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
@@ -509,7 +509,7 @@ public class JavaService {
     }
   }
 
-  public DataTransferObject<GetTextFromCursorPositionResponse> getTextFromCursorPosition(
+  public DataTransferObject<GetCursorPositionInfoResponse> getTextFromCursorPosition(
       Path filePath, SupportedLanguage language, SupportedIDE ide, Integer line, Integer column) {
     if (!Files.exists(filePath)) {
       return DataTransferObject.error("File does not exist: " + filePath);
@@ -523,6 +523,15 @@ public class JavaService {
     if (node == null) {
       return DataTransferObject.error("No symbol found at the specified position.");
     }
+    JavaIdentifierType identifierType = this.getIdentifierType(node, ide);
+    if (identifierType == null) {
+      return DataTransferObject.error(
+          "Unable to determine symbol type at cursor position. Node type: "
+              + node.getType()
+              + ", Node text: '"
+              + file.getTextFromNode(node)
+              + "'");
+    }
     String text;
     try {
       text = file.getTextFromRange(node.getStartByte(), node.getEndByte());
@@ -532,11 +541,12 @@ public class JavaService {
     if (Strings.isNullOrEmpty(text)) {
       return DataTransferObject.error("Unable to determine current symbol name.");
     }
-    GetTextFromCursorPositionResponse response =
-        GetTextFromCursorPositionResponse.builder()
+    GetCursorPositionInfoResponse response =
+        GetCursorPositionInfoResponse.builder()
             .filePath(filePath.toString())
             .node(node.toString())
-            .text(text)
+            .nodeText(text)
+            .nodeType(identifierType)
             .build();
     return DataTransferObject.success(response);
   }

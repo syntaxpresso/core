@@ -1,6 +1,6 @@
 package io.github.syntaxpresso.core.command;
 
-import io.github.syntaxpresso.core.command.dto.GetTextFromCursorPositionResponse;
+import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
@@ -12,9 +12,9 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 @RequiredArgsConstructor
-@Command(name = "get-text", description = "Get text of an specific node based on cursor position.")
-public class GetTextFromCursorPositionCommand
-    implements Callable<DataTransferObject<GetTextFromCursorPositionResponse>> {
+@Command(name = "get-info", description = "Get info of an specific node based on cursor position.")
+public class GetCursorPositionInfo
+    implements Callable<DataTransferObject<GetCursorPositionInfoResponse>> {
   private final JavaService javaService;
 
   @Option(
@@ -48,7 +48,7 @@ public class GetTextFromCursorPositionCommand
   private Integer column;
 
   @Override
-  public DataTransferObject<GetTextFromCursorPositionResponse> call() {
+  public DataTransferObject<GetCursorPositionInfoResponse> call() {
     if (this.language.equals(SupportedLanguage.JAVA)) {
       return this.javaService.getTextFromCursorPosition(
           this.filePath, this.language, this.ide, this.line, this.column);
