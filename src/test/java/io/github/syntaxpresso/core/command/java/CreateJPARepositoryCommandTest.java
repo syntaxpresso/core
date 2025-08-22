@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 import io.github.syntaxpresso.core.command.CreateJPARepositoryCommand;
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
+import io.github.syntaxpresso.core.common.extra.SupportedIDE;
+import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
@@ -42,6 +44,12 @@ class CreateJPARepositoryCommandTest {
     Field filePathField = CreateJPARepositoryCommand.class.getDeclaredField("filePath");
     filePathField.setAccessible(true);
     filePathField.set(command, filePath);
+    Field languageField = CreateJPARepositoryCommand.class.getDeclaredField("language");
+    languageField.setAccessible(true);
+    languageField.set(command, SupportedLanguage.JAVA);
+    Field ideField = CreateJPARepositoryCommand.class.getDeclaredField("ide");
+    ideField.setAccessible(true);
+    ideField.set(command, SupportedIDE.NONE);
   }
 
   @Nested

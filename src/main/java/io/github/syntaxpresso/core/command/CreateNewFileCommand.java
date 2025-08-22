@@ -4,6 +4,7 @@ import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
+import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaService;
 import java.nio.file.Path;
@@ -25,6 +26,12 @@ public class CreateNewFileCommand implements Callable<DataTransferObject<CreateN
       description = "The language related to the command execution.",
       required = true)
   private SupportedLanguage language;
+
+  @Option(
+      names = "--ide",
+      description = "The IDE the command is being called from.",
+      required = true)
+  private SupportedIDE ide = SupportedIDE.NONE;
 
   @Option(
       names = "--package-name",

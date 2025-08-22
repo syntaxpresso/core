@@ -3,11 +3,13 @@ package io.github.syntaxpresso.core.service.java;
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
+import io.github.syntaxpresso.core.command.dto.GetTextFromCursorPositionResponse;
 import io.github.syntaxpresso.core.command.dto.RenameResponse;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
+import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.extra.ScopeType;
@@ -194,7 +196,7 @@ public class JavaService {
    * @param node The node to get the identifier type of.
    * @return The identifier type, or null if not found.
    */
-  public JavaIdentifierType getIdentifierType(TSNode node) {
+  public JavaIdentifierType getIdentifierType(TSNode node, SupportedIDE ide) {
     if (!"identifier".equals(node.getType())) {
       return null;
     }
@@ -229,9 +231,9 @@ public class JavaService {
    * @param column The column number of the node.
    * @return The identifier type, or null if not found.
    */
-  public JavaIdentifierType getIdentifierType(TSFile file, int line, int column) {
-    TSNode node = file.getNodeFromPosition(line, column);
-    return this.getIdentifierType(node);
+  public JavaIdentifierType getIdentifierType(TSFile file, int line, int column, SupportedIDE ide) {
+    TSNode node = file.getNodeFromPosition(line, column, ide);
+    return this.getIdentifierType(node, ide);
   }
 
   /**
@@ -507,6 +509,38 @@ public class JavaService {
     }
   }
 
+  public DataTransferObject<GetTextFromCursorPositionResponse> getTextFromCursorPosition(
+      Path filePath, SupportedLanguage language, SupportedIDE ide, Integer line, Integer column) {
+    if (!Files.exists(filePath)) {
+      return DataTransferObject.error("File does not exist: " + filePath);
+    }
+    if (!filePath.toString().endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + filePath);
+    }
+    TSFile file = new TSFile(language, filePath);
+    // TSFile.getNodeFromPosition expects 1-based coordinates (matching editor conventions)
+    TSNode node = file.getNodeFromPosition(line, column, ide);
+    if (node == null) {
+      return DataTransferObject.error("No symbol found at the specified position.");
+    }
+    String text;
+    try {
+      text = file.getTextFromRange(node.getStartByte(), node.getEndByte());
+    } catch (Exception e) {
+      return DataTransferObject.error("Error getting text from node: " + e.getMessage());
+    }
+    if (Strings.isNullOrEmpty(text)) {
+      return DataTransferObject.error("Unable to determine current symbol name.");
+    }
+    GetTextFromCursorPositionResponse response =
+        GetTextFromCursorPositionResponse.builder()
+            .filePath(filePath.toString())
+            .node(node.toString())
+            .text(text)
+            .build();
+    return DataTransferObject.success(response);
+  }
+
   /**
    * Renames a symbol (class, method, field, etc.) and all its usages based on cursor position.
    *
@@ -518,16 +552,15 @@ public class JavaService {
    * @return A DataTransferObject containing the result or an error.
    */
   public DataTransferObject<RenameResponse> rename(
-      final Path cwd, final Path filePath, final int line, final int column, final String newName) {
-    if (!Files.exists(filePath)) {
-      return DataTransferObject.error("File does not exist: " + filePath);
-    }
-    if (!filePath.toString().endsWith(".java")) {
-      return DataTransferObject.error("File is not a .java file: " + filePath);
-    }
+      final Path cwd,
+      final Path filePath,
+      final SupportedIDE ide,
+      final int line,
+      final int column,
+      final String newName) {
     try {
       TSFile file = new TSFile(SupportedLanguage.JAVA, filePath);
-      TSNode node = file.getNodeFromPosition(line, column);
+      TSNode node = file.getNodeFromPosition(line, column, ide);
       if (node == null) {
         return DataTransferObject.error("No symbol found at the specified position.");
       }
@@ -555,7 +588,7 @@ public class JavaService {
           return DataTransferObject.error("Unable to find name node in " + node.getType());
         }
       }
-      JavaIdentifierType identifierType = this.getIdentifierType(node);
+      JavaIdentifierType identifierType = this.getIdentifierType(node, ide);
       if (identifierType == null) {
         return DataTransferObject.error(
             "Unable to determine symbol type at cursor position. Node type: "

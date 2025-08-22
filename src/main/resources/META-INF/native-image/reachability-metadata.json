@@ -90,6 +90,60 @@
       ]
     },
     {
+      "type": "io.github.syntaxpresso.core.command.dto.GetTextFromCursorPositionResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String", "java.lang.String", "java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "io.github.syntaxpresso.core.command.dto.GetTextFromCursorPositionResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String", "java.lang.String", "java.lang.String"]
+        },
+        {
+          "name": "getFilePath",
+          "parameterTypes": []
+        },
+        {
+          "name": "getNode",
+          "parameterTypes": []
+        },
+        {
+          "name": "getText",
+          "parameterTypes": []
+        },
+        {
+          "name": "setFilePath",
+          "parameterTypes": ["java.lang.String"]
+        },
+        {
+          "name": "setNode",
+          "parameterTypes": ["java.lang.String"]
+        },
+        {
+          "name": "setText",
+          "parameterTypes": ["java.lang.String"]
+        }
+      ]
+    },
+    {
       "type": "io.github.syntaxpresso.core.common.DataTransferObject",
       "allDeclaredFields": true,
       "methods": [
