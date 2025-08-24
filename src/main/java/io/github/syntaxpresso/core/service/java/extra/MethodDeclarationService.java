@@ -18,6 +18,7 @@ public class MethodDeclarationService {
   private static final String METHOD_INVOCATION_QUERY = "(method_invocation) @invocation";
   private final FormalParameterService formalParameterService;
   private final LocalVariableDeclarationService localVariableDeclarationService;
+  private final TypeResolutionService typeResolutionService;
 
   /**
    * Finds all method declaration nodes in the given TSFile.
@@ -129,84 +130,67 @@ public class MethodDeclarationService {
   }
 
   /**
-   * Renames a method and all its usages across multiple files.
+   * Renames a method declaration node.
    *
-   * @param originalFile The file containing the method declaration.
+   * @param file The file containing the method declaration.
    * @param methodDeclarationNode The method declaration node to rename.
-   * @param currentName The current name of the method.
    * @param newName The new name for the method.
-   * @param cwd The current working directory to search for Java files.
-   * @param typeResolutionService Service for resolving object types.
-   * @param classDeclarationService Service for class operations.
-   * @param javaService Service for finding Java files.
-   * @return A list of modified TSFile objects.
+   * @return True if the method was successfully renamed, false otherwise.
    */
-  public List<TSFile> renameMethodAndUsages(
-      TSFile originalFile,
-      TSNode methodDeclarationNode,
-      String currentName,
-      String newName,
-      Path cwd,
-      TypeResolutionService typeResolutionService,
-      ClassDeclarationService classDeclarationService,
-      Object javaService) {
-    // First rename the method declaration
+  public boolean renameMethodDeclaration(TSFile file, TSNode methodDeclarationNode, String newName) {
+    if (file == null || methodDeclarationNode == null || 
+        !"method_declaration".equals(methodDeclarationNode.getType()) || 
+        Strings.isNullOrEmpty(newName)) {
+      return false;
+    }
     TSNode nameNode = methodDeclarationNode.getChildByFieldName("name");
     if (nameNode != null) {
-      originalFile.updateSourceCode(nameNode, newName);
+      file.updateSourceCode(nameNode, newName);
+      return true;
     }
-    if (!originalFile.isModified()) {
-      return null;
+    return false;
+  }
+
+  /**
+   * Finds method usage nodes in a file that match the given method name and belong to the specified class.
+   *
+   * @param file The file to search in.
+   * @param methodName The name of the method to find usages for.
+   * @param className The class name that the method belongs to.
+   * @return A list of method invocation name nodes that should be renamed.
+   */
+  public List<TSNode> findMethodUsagesInFile(TSFile file, String methodName, String className) {
+    if (file == null || Strings.isNullOrEmpty(methodName) || Strings.isNullOrEmpty(className)) {
+      return Collections.emptyList();
     }
-    List<TSFile> modifiedFiles = new ArrayList<>();
-    modifiedFiles.add(originalFile);
-    Optional<TSNode> classDeclarationNode = classDeclarationService.getMainClass(originalFile);
-    if (classDeclarationNode.isEmpty()) {
-      return null;
-    }
-    Optional<String> className =
-        classDeclarationService.getClassName(originalFile, classDeclarationNode.get());
-    if (className.isEmpty()) {
-      return null;
-    }
-    // Use reflection to call getAllJavaFilesFromCwd since we can't import JavaService directly
-    List<TSFile> allJavaFiles;
-    try {
-      java.lang.reflect.Method getAllJavaFilesMethod =
-          javaService.getClass().getMethod("getAllJavaFilesFromCwd", Path.class);
-      @SuppressWarnings("unchecked")
-      List<TSFile> files = (List<TSFile>) getAllJavaFilesMethod.invoke(javaService, cwd);
-      allJavaFiles = files;
-    } catch (Exception e) {
-      return modifiedFiles;
-    }
-    for (TSFile foundFile : allJavaFiles) {
-      List<TSNode> allMethodInvocations = this.findAllMethodInvocations(foundFile);
-      for (TSNode methodInvocation : allMethodInvocations) {
-        Optional<TSNode> methodInvocationObjectNode =
-            this.getMethodInvocationObject(methodInvocation);
-        Optional<TSNode> methodInvocationNameNode = this.getMethodInvocationName(methodInvocation);
-        if (methodInvocationNameNode.isEmpty() || methodInvocationObjectNode.isEmpty()) {
-          continue;
-        }
-        // Check if the method name matches the one we're renaming
-        String methodInvocationName = foundFile.getTextFromNode(methodInvocationNameNode.get());
-        if (!methodInvocationName.equals(currentName)) {
-          continue;
-        }
-        // Resolve the type of the object on which the method is called
-        String objectType =
-            typeResolutionService.resolveObjectType(
-                foundFile, methodInvocationObjectNode.get(), methodInvocation);
-        // Only rename if the object type matches our class
-        if (className.get().equals(objectType)) {
-          foundFile.updateSourceCode(methodInvocationNameNode.get(), newName);
-        }
+    
+    List<TSNode> usagesToRename = new ArrayList<>();
+    List<TSNode> allMethodInvocations = this.findAllMethodInvocations(file);
+    
+    for (TSNode methodInvocation : allMethodInvocations) {
+      Optional<TSNode> methodInvocationObjectNode = this.getMethodInvocationObject(methodInvocation);
+      Optional<TSNode> methodInvocationNameNode = this.getMethodInvocationName(methodInvocation);
+      
+      if (methodInvocationNameNode.isEmpty() || methodInvocationObjectNode.isEmpty()) {
+        continue;
       }
-      if (foundFile.isModified()) {
-        modifiedFiles.add(foundFile);
+      
+      // Check if the method name matches
+      String invocationName = file.getTextFromNode(methodInvocationNameNode.get());
+      if (!methodName.equals(invocationName)) {
+        continue;
+      }
+      
+      // Resolve the type of the object on which the method is called
+      String objectType = this.typeResolutionService.resolveObjectType(
+          file, methodInvocationObjectNode.get(), methodInvocation);
+      
+      // Only include if the object type matches our class
+      if (className.equals(objectType)) {
+        usagesToRename.add(methodInvocationNameNode.get());
       }
     }
-    return modifiedFiles;
+    
+    return usagesToRename;
   }
 }

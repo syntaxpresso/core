@@ -20,15 +20,8 @@ class ClassDeclarationServiceTest {
   @BeforeEach
   void setUp() {
     FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
-    VariableNamingService variableNamingService = new VariableNamingService();
-    LocalVariableDeclarationService localVariableDeclarationService =
-        new LocalVariableDeclarationService(variableNamingService);
-    FormalParameterService formalParameterService =
-        new FormalParameterService(localVariableDeclarationService, variableNamingService);
-    MethodDeclarationService methodDeclarationService =
-        new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
     classDeclarationService =
-        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+        new ClassDeclarationService(fieldDeclarationService);
     String javaCode =
         """
         package io.github.test;

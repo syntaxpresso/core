@@ -50,16 +50,17 @@ public class JavaService {
       new LocalVariableDeclarationService(variableNamingService);
   private final FormalParameterService formalParameterService =
       new FormalParameterService(localVariableDeclarationService, variableNamingService);
-  private final MethodDeclarationService methodDeclarationService =
-      new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
   private final ClassDeclarationService classDeclarationService =
-      new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+      new ClassDeclarationService(fieldDeclarationService);
   private final TypeResolutionService typeResolutionService =
       new TypeResolutionService(
           formalParameterService,
           localVariableDeclarationService,
           fieldDeclarationService,
           classDeclarationService);
+  private final MethodDeclarationService methodDeclarationService =
+      new MethodDeclarationService(
+          formalParameterService, localVariableDeclarationService, typeResolutionService);
   private final ProgramService programService =
       new ProgramService(
           variableNamingService,
@@ -314,7 +315,6 @@ public class JavaService {
     if (file.isModified()) {
       modifiedFiles.add(file);
     }
-    // Parse all java files, but skip the current one, as it can't instantiate itself.
     List<TSFile> allJavaFiles = this.getAllJavaFilesFromCwd(cwd);
     for (TSFile foundFile : allJavaFiles) {
       Optional<String> foundFilePackageName =
@@ -350,28 +350,42 @@ public class JavaService {
   }
 
   /**
-   * Processes a method rename operation.
+   * Processes a method rename operation across the entire project.
    *
+   * @param cwd The current working directory.
    * @param file The file containing the method to rename.
-   * @param methodDeclarationNode The method declaration node.
+   * @param methodDeclarationNode The method declaration node to rename.
    * @param currentName The current method name.
    * @param newName The new method name.
-   * @param cwd The current working directory.
+   * @param className The name of the class containing the method.
    * @return A list of modified files.
    */
   private List<TSFile> processMethodRename(
-      TSFile file, TSNode methodDeclarationNode, String currentName, String newName, Path cwd) {
-    List<TSFile> result =
-        this.methodDeclarationService.renameMethodAndUsages(
-            file,
-            methodDeclarationNode,
-            currentName,
-            newName,
-            cwd,
-            this.typeResolutionService,
-            this.classDeclarationService,
-            this);
-    return result != null ? result : new ArrayList<>();
+      Path cwd,
+      TSFile file,
+      TSNode methodDeclarationNode,
+      String currentName,
+      String newName,
+      String className) {
+    List<TSFile> modifiedFiles = new ArrayList<>();
+    boolean renamed =
+        this.methodDeclarationService.renameMethodDeclaration(file, methodDeclarationNode, newName);
+    if (!renamed || !file.isModified()) {
+      return null;
+    }
+    modifiedFiles.add(file);
+    List<TSFile> allJavaFiles = this.getAllJavaFilesFromCwd(cwd);
+    for (TSFile foundFile : allJavaFiles) {
+      List<TSNode> usageNodes =
+          this.methodDeclarationService.findMethodUsagesInFile(foundFile, currentName, className);
+      for (TSNode usageNode : usageNodes) {
+        foundFile.updateSourceCode(usageNode, newName);
+      }
+      if (foundFile.isModified() && !modifiedFiles.contains(foundFile)) {
+        modifiedFiles.add(foundFile);
+      }
+    }
+    return modifiedFiles;
   }
 
   /**
@@ -629,9 +643,22 @@ public class JavaService {
       } else if (identifierType.equals(JavaIdentifierType.METHOD_NAME)) {
         TSNode methodDeclarationNode = node.getParent();
         if (methodDeclarationNode != null) {
-          modifiedFiles.addAll(
-              this.processMethodRename(file, methodDeclarationNode, currentName, newName, cwd));
-          renamedNodes = modifiedFiles.size(); // Approximate count
+          Optional<TSNode> classDeclarationNode = this.classDeclarationService.getMainClass(file);
+          if (classDeclarationNode.isEmpty()) {
+            return DataTransferObject.error("Unable to find main class declaration in file.");
+          }
+          Optional<String> className =
+              classDeclarationService.getClassName(file, classDeclarationNode.get());
+          if (className.isEmpty()) {
+            return DataTransferObject.error("Unable to determine class name from declaration.");
+          }
+          List<TSFile> renamedMethodFiles =
+              this.processMethodRename(
+                  cwd, file, methodDeclarationNode, currentName, newName, className.get());
+          if (renamedMethodFiles != null) {
+            modifiedFiles.addAll(renamedMethodFiles);
+          }
+          renamedNodes = modifiedFiles.size();
         }
       } else {
         return DataTransferObject.error("Renaming of " + identifierType + " is not yet supported.");
