@@ -350,31 +350,6 @@ public class JavaService {
   }
 
   /**
-   * Processes a method rename operation.
-   *
-   * @param file The file containing the method to rename.
-   * @param methodDeclarationNode The method declaration node.
-   * @param currentName The current method name.
-   * @param newName The new method name.
-   * @param cwd The current working directory.
-   * @return A list of modified files.
-   */
-  private List<TSFile> processMethodRename(
-      TSFile file, TSNode methodDeclarationNode, String currentName, String newName, Path cwd) {
-    List<TSFile> result =
-        this.methodDeclarationService.renameMethodAndUsages(
-            file,
-            methodDeclarationNode,
-            currentName,
-            newName,
-            cwd,
-            this.typeResolutionService,
-            this.classDeclarationService,
-            this);
-    return result != null ? result : new ArrayList<>();
-  }
-
-  /**
    * Creates a new Java file.
    *
    * @param cwd The current working directory to search in.
@@ -629,9 +604,28 @@ public class JavaService {
       } else if (identifierType.equals(JavaIdentifierType.METHOD_NAME)) {
         TSNode methodDeclarationNode = node.getParent();
         if (methodDeclarationNode != null) {
-          modifiedFiles.addAll(
-              this.processMethodRename(file, methodDeclarationNode, currentName, newName, cwd));
-          renamedNodes = modifiedFiles.size(); // Approximate count
+          List<TSFile> allJavaFiles = this.getAllJavaFilesFromCwd(cwd);
+          Optional<TSNode> classDeclarationNode = this.classDeclarationService.getMainClass(file);
+          if (classDeclarationNode.isEmpty()) {
+            return null;
+          }
+          Optional<String> className =
+              classDeclarationService.getClassName(file, classDeclarationNode.get());
+          if (className.isEmpty()) {
+            return null;
+          }
+          List<TSFile> renamedMethodFiles =
+              this.methodDeclarationService.renameMethodAndUsages(
+                  file,
+                  methodDeclarationNode,
+                  currentName,
+                  newName,
+                  cwd,
+                  this.typeResolutionService,
+                  className.get(),
+                  allJavaFiles);
+          modifiedFiles.addAll(renamedMethodFiles);
+          renamedNodes = modifiedFiles.size();
         }
       } else {
         return DataTransferObject.error("Renaming of " + identifierType + " is not yet supported.");

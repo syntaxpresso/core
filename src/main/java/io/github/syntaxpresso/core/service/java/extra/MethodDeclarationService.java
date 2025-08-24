@@ -148,8 +148,8 @@ public class MethodDeclarationService {
       String newName,
       Path cwd,
       TypeResolutionService typeResolutionService,
-      ClassDeclarationService classDeclarationService,
-      Object javaService) {
+      String className,
+      List<TSFile> allJavaFiles) {
     // First rename the method declaration
     TSNode nameNode = methodDeclarationNode.getChildByFieldName("name");
     if (nameNode != null) {
@@ -160,26 +160,7 @@ public class MethodDeclarationService {
     }
     List<TSFile> modifiedFiles = new ArrayList<>();
     modifiedFiles.add(originalFile);
-    Optional<TSNode> classDeclarationNode = classDeclarationService.getMainClass(originalFile);
-    if (classDeclarationNode.isEmpty()) {
-      return null;
-    }
-    Optional<String> className =
-        classDeclarationService.getClassName(originalFile, classDeclarationNode.get());
-    if (className.isEmpty()) {
-      return null;
-    }
     // Use reflection to call getAllJavaFilesFromCwd since we can't import JavaService directly
-    List<TSFile> allJavaFiles;
-    try {
-      java.lang.reflect.Method getAllJavaFilesMethod =
-          javaService.getClass().getMethod("getAllJavaFilesFromCwd", Path.class);
-      @SuppressWarnings("unchecked")
-      List<TSFile> files = (List<TSFile>) getAllJavaFilesMethod.invoke(javaService, cwd);
-      allJavaFiles = files;
-    } catch (Exception e) {
-      return modifiedFiles;
-    }
     for (TSFile foundFile : allJavaFiles) {
       List<TSNode> allMethodInvocations = this.findAllMethodInvocations(foundFile);
       for (TSNode methodInvocation : allMethodInvocations) {
@@ -199,7 +180,7 @@ public class MethodDeclarationService {
             typeResolutionService.resolveObjectType(
                 foundFile, methodInvocationObjectNode.get(), methodInvocation);
         // Only rename if the object type matches our class
-        if (className.get().equals(objectType)) {
+        if (className.equals(objectType)) {
           foundFile.updateSourceCode(methodInvocationNameNode.get(), newName);
         }
       }
