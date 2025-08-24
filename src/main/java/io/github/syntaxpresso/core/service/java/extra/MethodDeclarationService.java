@@ -42,7 +42,7 @@ public class MethodDeclarationService {
     if (file == null || file.getTree() == null) {
       return Collections.emptyList();
     }
-    return file.query(METHOD_INVOCATION_QUERY);
+    return file.query(METHOD_INVOCATION_QUERY).reversed();
   }
 
   /**
@@ -178,7 +178,7 @@ public class MethodDeclarationService {
       List<TSFile> files = (List<TSFile>) getAllJavaFilesMethod.invoke(javaService, cwd);
       allJavaFiles = files;
     } catch (Exception e) {
-      return modifiedFiles; // Return what we have if reflection fails
+      return modifiedFiles;
     }
     for (TSFile foundFile : allJavaFiles) {
       List<TSNode> allMethodInvocations = this.findAllMethodInvocations(foundFile);

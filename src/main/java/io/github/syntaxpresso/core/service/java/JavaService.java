@@ -639,7 +639,6 @@ public class JavaService {
       // Save all modified files
       for (TSFile modifiedFile : modifiedFiles) {
         modifiedFile.save();
-        // System.out.println(modifiedFile.getFile().getName());
       }
       return DataTransferObject.success(
           RenameResponse.builder()
