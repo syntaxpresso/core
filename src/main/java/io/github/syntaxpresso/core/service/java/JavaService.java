@@ -607,12 +607,12 @@ public class JavaService {
           List<TSFile> allJavaFiles = this.getAllJavaFilesFromCwd(cwd);
           Optional<TSNode> classDeclarationNode = this.classDeclarationService.getMainClass(file);
           if (classDeclarationNode.isEmpty()) {
-            return null;
+            return DataTransferObject.error("Unable to find main class declaration in file.");
           }
           Optional<String> className =
               classDeclarationService.getClassName(file, classDeclarationNode.get());
           if (className.isEmpty()) {
-            return null;
+            return DataTransferObject.error("Unable to determine class name from declaration.");
           }
           List<TSFile> renamedMethodFiles =
               this.methodDeclarationService.renameMethodAndUsages(
