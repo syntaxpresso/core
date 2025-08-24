@@ -50,16 +50,16 @@ public class JavaService {
       new LocalVariableDeclarationService(variableNamingService);
   private final FormalParameterService formalParameterService =
       new FormalParameterService(localVariableDeclarationService, variableNamingService);
-  private final MethodDeclarationService methodDeclarationService =
-      new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
   private final ClassDeclarationService classDeclarationService =
-      new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+      new ClassDeclarationService(fieldDeclarationService);
   private final TypeResolutionService typeResolutionService =
       new TypeResolutionService(
           formalParameterService,
           localVariableDeclarationService,
           fieldDeclarationService,
           classDeclarationService);
+  private final MethodDeclarationService methodDeclarationService =
+      new MethodDeclarationService(formalParameterService, localVariableDeclarationService, typeResolutionService);
   private final ProgramService programService =
       new ProgramService(
           variableNamingService,
@@ -621,7 +621,6 @@ public class JavaService {
                   currentName,
                   newName,
                   cwd,
-                  this.typeResolutionService,
                   className.get(),
                   allJavaFiles);
           modifiedFiles.addAll(renamedMethodFiles);

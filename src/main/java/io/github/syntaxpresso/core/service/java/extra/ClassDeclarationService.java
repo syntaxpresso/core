@@ -14,7 +14,6 @@ import org.treesitter.TSNode;
 public class ClassDeclarationService {
   private static final String CLASS_DECLARATION_QUERY = "(class_declaration) @class";
   private final FieldDeclarationService fieldDeclarationService;
-  private final MethodDeclarationService methodDeclarationService;
 
   /**
    * Finds all class declarations in the given TSFile.

@@ -44,7 +44,7 @@ class MethodDeclarationServiceExtendedTest {
     FormalParameterService formalParameterService =
         new FormalParameterService(localVariableDeclarationService, variableNamingService);
     methodDeclarationService =
-        new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
+        new MethodDeclarationService(formalParameterService, localVariableDeclarationService, mockTypeResolutionService);
     // Original file with method to rename
     String originalJavaCode =
         """
@@ -97,17 +97,7 @@ class MethodDeclarationServiceExtendedTest {
         }
       }
       assertNotNull(calculateSumMethod, "Should find calculateSum method");
-      // Mock dependencies
-      TSNode mockClassNode = mock(TSNode.class);
-      when(mockClassDeclarationService.getMainClass(testFile))
-          .thenReturn(Optional.of(mockClassNode));
-      when(mockClassDeclarationService.getClassName(testFile, mockClassNode))
-          .thenReturn(Optional.of("Calculator"));
-      // Create a proper mock with the required method
-      MockJavaServiceClass mockJavaServiceClass = mock(MockJavaServiceClass.class);
-      when(mockJavaServiceClass.getAllJavaFilesFromCwd(any(Path.class)))
-          .thenReturn(List.of(targetFile));
-      mockJavaService = mockJavaServiceClass;
+      // Set up type resolution to return the correct type for method invocations in targetFile
       when(mockTypeResolutionService.resolveObjectType(any(), any(), any()))
           .thenReturn("Calculator");
       // Execute rename
@@ -118,9 +108,8 @@ class MethodDeclarationServiceExtendedTest {
               "calculateSum",
               "computeSum",
               Paths.get("/test"),
-              mockTypeResolutionService,
-              mockClassDeclarationService,
-              mockJavaService);
+              "Calculator",
+              List.of(testFile, targetFile));
       // Verify method was renamed in original file
       assertNotNull(result);
       assertTrue(testFile.isModified());
@@ -133,10 +122,10 @@ class MethodDeclarationServiceExtendedTest {
 
     @Test
     @DisplayName("Should handle missing class gracefully")
-    void shouldHandleMissingClassGracefully() {
+    void testRenameMethodAndUsagesMissingClass() {
       List<TSNode> methods = methodDeclarationService.findAllMethodDeclarations(testFile);
       TSNode firstMethod = methods.get(0);
-      when(mockClassDeclarationService.getMainClass(testFile)).thenReturn(Optional.empty());
+      // The method should still work and return results even if some external checks fail
       List<TSFile> result =
           methodDeclarationService.renameMethodAndUsages(
               testFile,
@@ -144,10 +133,12 @@ class MethodDeclarationServiceExtendedTest {
               "calculateSum",
               "computeSum",
               Paths.get("/test"),
-              mockTypeResolutionService,
-              mockClassDeclarationService,
-              mockJavaService);
-      assertNull(result);
+              "Calculator",
+              List.of(testFile));
+      // Should successfully rename the method in the original file
+      assertNotNull(result);
+      assertTrue(result.contains(testFile));
+      assertTrue(testFile.isModified());
     }
 
     @Test
@@ -155,11 +146,7 @@ class MethodDeclarationServiceExtendedTest {
     void shouldHandleMissingClassNameGracefully() {
       List<TSNode> methods = methodDeclarationService.findAllMethodDeclarations(testFile);
       TSNode firstMethod = methods.get(0);
-      TSNode mockClassNode = mock(TSNode.class);
-      when(mockClassDeclarationService.getMainClass(testFile))
-          .thenReturn(Optional.of(mockClassNode));
-      when(mockClassDeclarationService.getClassName(testFile, mockClassNode))
-          .thenReturn(Optional.empty());
+      // The method should still work with the provided className parameter
       List<TSFile> result =
           methodDeclarationService.renameMethodAndUsages(
               testFile,
@@ -167,10 +154,12 @@ class MethodDeclarationServiceExtendedTest {
               "calculateSum",
               "computeSum",
               Paths.get("/test"),
-              mockTypeResolutionService,
-              mockClassDeclarationService,
-              mockJavaService);
-      assertNull(result);
+              "Calculator",
+              List.of(testFile));
+      // Should successfully rename the method in the original file
+      assertNotNull(result);
+      assertTrue(result.contains(testFile));
+      assertTrue(testFile.isModified());
     }
 
     @Test
@@ -178,13 +167,7 @@ class MethodDeclarationServiceExtendedTest {
     void shouldHandleReflectionErrorsGracefully() throws Exception {
       List<TSNode> methods = methodDeclarationService.findAllMethodDeclarations(testFile);
       TSNode firstMethod = methods.get(0);
-      TSNode mockClassNode = mock(TSNode.class);
-      when(mockClassDeclarationService.getMainClass(testFile))
-          .thenReturn(Optional.of(mockClassNode));
-      when(mockClassDeclarationService.getClassName(testFile, mockClassNode))
-          .thenReturn(Optional.of("Calculator"));
-      // Create a mock that doesn't have the expected method to cause reflection to fail
-      Object mockBadJavaService = new Object(); // Plain Object, will cause method not found
+      // The method should work without relying on reflection
       List<TSFile> result =
           methodDeclarationService.renameMethodAndUsages(
               testFile,
@@ -192,10 +175,9 @@ class MethodDeclarationServiceExtendedTest {
               "calculateSum",
               "computeSum",
               Paths.get("/test"),
-              mockTypeResolutionService,
-              mockClassDeclarationService,
-              mockBadJavaService);
-      // Should return the modified file even if reflection fails
+              "Calculator",
+              List.of(testFile));
+      // Should return the modified file 
       assertNotNull(result);
       assertEquals(1, result.size());
       assertTrue(result.contains(testFile));
@@ -213,17 +195,7 @@ class MethodDeclarationServiceExtendedTest {
           break;
         }
       }
-      TSNode mockClassNode = mock(TSNode.class);
-      when(mockClassDeclarationService.getMainClass(testFile))
-          .thenReturn(Optional.of(mockClassNode));
-      when(mockClassDeclarationService.getClassName(testFile, mockClassNode))
-          .thenReturn(Optional.of("Calculator"));
-      // Create a proper mock with the required method
-      MockJavaServiceClass mockJavaServiceClass = mock(MockJavaServiceClass.class);
-      when(mockJavaServiceClass.getAllJavaFilesFromCwd(any(Path.class)))
-          .thenReturn(List.of(targetFile));
-      mockJavaService = mockJavaServiceClass;
-      // Mock type resolution to return different types
+      // Mock type resolution to return different types for testing selective renaming
       when(mockTypeResolutionService.resolveObjectType(any(), any(), any()))
           .thenReturn("Calculator") // First call
           .thenReturn("String") // Second call - different type
@@ -235,9 +207,8 @@ class MethodDeclarationServiceExtendedTest {
               "calculateSum",
               "computeSum",
               Paths.get("/test"),
-              mockTypeResolutionService,
-              mockClassDeclarationService,
-              mockJavaService);
+              "Calculator",
+              List.of(testFile, targetFile));
       assertNotNull(result);
       // Verify type resolution was called for each method invocation
       verify(mockTypeResolutionService, atLeast(1)).resolveObjectType(any(), any(), any());

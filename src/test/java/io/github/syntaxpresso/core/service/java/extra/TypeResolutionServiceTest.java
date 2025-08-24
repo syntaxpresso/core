@@ -25,10 +25,8 @@ class TypeResolutionServiceTest {
         new LocalVariableDeclarationService(variableNamingService);
     FormalParameterService formalParameterService =
         new FormalParameterService(localVariableDeclarationService, variableNamingService);
-    MethodDeclarationService methodDeclarationService =
-        new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
     ClassDeclarationService classDeclarationService =
-        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+        new ClassDeclarationService(fieldDeclarationService);
     typeResolutionService =
         new TypeResolutionService(
             formalParameterService,

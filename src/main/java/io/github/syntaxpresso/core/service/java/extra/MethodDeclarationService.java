@@ -18,6 +18,7 @@ public class MethodDeclarationService {
   private static final String METHOD_INVOCATION_QUERY = "(method_invocation) @invocation";
   private final FormalParameterService formalParameterService;
   private final LocalVariableDeclarationService localVariableDeclarationService;
+  private final TypeResolutionService typeResolutionService;
 
   /**
    * Finds all method declaration nodes in the given TSFile.
@@ -136,9 +137,8 @@ public class MethodDeclarationService {
    * @param currentName The current name of the method.
    * @param newName The new name for the method.
    * @param cwd The current working directory to search for Java files.
-   * @param typeResolutionService Service for resolving object types.
-   * @param classDeclarationService Service for class operations.
-   * @param javaService Service for finding Java files.
+   * @param className The name of the class containing the method.
+   * @param allJavaFiles List of all Java files to search for usages.
    * @return A list of modified TSFile objects.
    */
   public List<TSFile> renameMethodAndUsages(
@@ -147,7 +147,6 @@ public class MethodDeclarationService {
       String currentName,
       String newName,
       Path cwd,
-      TypeResolutionService typeResolutionService,
       String className,
       List<TSFile> allJavaFiles) {
     // First rename the method declaration
@@ -177,14 +176,14 @@ public class MethodDeclarationService {
         }
         // Resolve the type of the object on which the method is called
         String objectType =
-            typeResolutionService.resolveObjectType(
+            this.typeResolutionService.resolveObjectType(
                 foundFile, methodInvocationObjectNode.get(), methodInvocation);
         // Only rename if the object type matches our class
         if (className.equals(objectType)) {
           foundFile.updateSourceCode(methodInvocationNameNode.get(), newName);
         }
       }
-      if (foundFile.isModified()) {
+      if (foundFile.isModified() && !modifiedFiles.contains(foundFile)) {
         modifiedFiles.add(foundFile);
       }
     }

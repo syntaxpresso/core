@@ -28,16 +28,16 @@ class ProgramServiceTest {
         new LocalVariableDeclarationService(variableNamingService);
     FormalParameterService formalParameterService =
         new FormalParameterService(localVariableDeclarationService, variableNamingService);
-    MethodDeclarationService methodDeclarationService =
-        new MethodDeclarationService(formalParameterService, localVariableDeclarationService);
     ClassDeclarationService classDeclarationService =
-        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+        new ClassDeclarationService(fieldDeclarationService);
     TypeResolutionService typeResolutionService =
         new TypeResolutionService(
             formalParameterService,
             localVariableDeclarationService,
             fieldDeclarationService,
             classDeclarationService);
+    MethodDeclarationService methodDeclarationService =
+        new MethodDeclarationService(formalParameterService, localVariableDeclarationService, typeResolutionService);
     programService =
         new ProgramService(
             variableNamingService,
