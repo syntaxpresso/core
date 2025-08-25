@@ -4,7 +4,7 @@ import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,7 @@ import picocli.CommandLine.Option;
 @Command(name = "get-info", description = "Get info of an specific node based on cursor position.")
 public class GetCursorPositionInfo
     implements Callable<DataTransferObject<GetCursorPositionInfoResponse>> {
-  private final JavaService javaService;
+  private final JavaCommandService javaService;
 
   @Option(
       names = {"--file-path"},

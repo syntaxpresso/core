@@ -9,7 +9,7 @@ import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,12 +20,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("CreateNewFileTest Tests")
 class CreateNewFileTest {
-  private JavaService javaService;
+  private JavaCommandService javaService;
   @TempDir Path tempDir;
 
   @BeforeEach
   void setUp() {
-    javaService = new JavaService();
+    javaService = new JavaCommandService();
   }
 
   @Nested
