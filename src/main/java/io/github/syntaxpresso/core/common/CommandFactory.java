@@ -3,6 +3,7 @@ package io.github.syntaxpresso.core.common;
 import io.github.syntaxpresso.core.command.CreateJPARepositoryCommand;
 import io.github.syntaxpresso.core.command.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.GetCursorPositionInfo;
+import io.github.syntaxpresso.core.command.GetJPAEntityInfoCommand;
 import io.github.syntaxpresso.core.command.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.RenameCommand;
 import io.github.syntaxpresso.core.service.java.JavaCommandService;
@@ -28,6 +29,9 @@ public class CommandFactory implements IFactory {
     }
     if (cls == GetCursorPositionInfo.class) {
       return (K) new GetCursorPositionInfo(javaService);
+    }
+    if (cls == GetJPAEntityInfoCommand.class) {
+      return (K) new GetJPAEntityInfoCommand(javaService);
     }
     return cls.getDeclaredConstructor().newInstance();
   }

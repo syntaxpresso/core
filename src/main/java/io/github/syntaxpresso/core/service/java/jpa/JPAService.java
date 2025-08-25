@@ -16,16 +16,27 @@ public class JPAService {
    * Checks if a class is a JPA entity by looking for @Entity annotation.
    *
    * @param file The TSFile containing the class.
-   * @param classDeclarationNode The class declaration node.
+   * @param mainClassDeclarationNode The class declaration node.
    * @return True if the class is a JPA entity, false otherwise.
    */
-  public boolean isJPAEntity(TSFile file, TSNode classDeclarationNode) {
+  public boolean isJPAEntity(TSFile file, TSNode mainClassDeclarationNode) {
     List<TSNode> annotations =
-        file.query(classDeclarationNode, "(marker_annotation name: (identifier) @annotation.name)");
+        file.query(
+            mainClassDeclarationNode, "(marker_annotation name: (identifier) @annotation.name)");
     for (TSNode annotation : annotations) {
-      String name = file.getTextFromNode(annotation);
-      if ("Entity".equals(name)) {
+      String annotationName = file.getTextFromNode(annotation);
+      if ("jakarta.persistence.Entity".equals(annotationName)) {
         return true;
+      }
+      if ("Entity".equals(annotationName)) {
+        List<TSNode> importNodes = this.importDeclarationService.findAllImportDeclarations(file);
+        for (TSNode importNode : importNodes) {
+          String importName = file.getTextFromNode(annotation);
+          if (importName.equals("jakarta.persistence.Entity")
+              || importName.equals("jakarta.persistence")) {
+            return true;
+          }
+        }
       }
     }
     return false;

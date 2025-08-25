@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.syntaxpresso.core.command.CreateJPARepositoryCommand;
 import io.github.syntaxpresso.core.command.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.GetCursorPositionInfo;
+import io.github.syntaxpresso.core.command.GetJPAEntityInfoCommand;
 import io.github.syntaxpresso.core.command.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.RenameCommand;
 import io.github.syntaxpresso.core.common.CommandFactory;
@@ -16,7 +17,8 @@ import picocli.CommandLine;
       GetMainClassCommand.class,
       CreateNewFileCommand.class,
       CreateJPARepositoryCommand.class,
-      GetCursorPositionInfo.class
+      GetCursorPositionInfo.class,
+      GetJPAEntityInfoCommand.class
     })
 public class Core {
   public static void main(String[] args) {
