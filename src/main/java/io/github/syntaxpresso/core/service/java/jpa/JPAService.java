@@ -147,7 +147,6 @@ public class JPAService {
    * the given class declaration. The search proceeds up the inheritance chain until an {@code @Id}
    * field is found or the top of the hierarchy is reached.
    *
-   * @param inheritanceService TODO
    * @param projectRoot The root path of the project, used to locate source files for superclasses.
    * @param file The TSFile of the class to begin the search from.
    * @param classDeclarationNode The tree-sitter node of the class to begin the search from.
@@ -160,12 +159,14 @@ public class JPAService {
       TSFile file,
       TSNode classDeclarationNode) {
     // First check current class
-    Optional<TSNode> idField = this.findIdFieldInClass(classDeclarationService, file, classDeclarationNode);
+    Optional<TSNode> idField =
+        this.findIdFieldInClass(classDeclarationService, file, classDeclarationNode);
     if (idField.isPresent()) {
       return Optional.of(new FieldWithFile(idField.get(), file));
     }
     // Check superclass
-    Optional<String> superclassName = classDeclarationService.getSuperclassName(file, classDeclarationNode);
+    Optional<String> superclassName =
+        classDeclarationService.getSuperclassName(file, classDeclarationNode);
     if (superclassName.isEmpty()) {
       return Optional.empty(); // No superclass, end recursion
     }
@@ -176,7 +177,8 @@ public class JPAService {
     }
     // Check if superclass is local
     if (classDeclarationService.isLocalClass(projectRoot, fullyQualifiedSuperclass.get())) {
-      return this.findIdFieldInLocalSuperclass(classDeclarationService, projectRoot, fullyQualifiedSuperclass.get());
+      return this.findIdFieldInLocalSuperclass(
+          classDeclarationService, projectRoot, fullyQualifiedSuperclass.get());
     } else {
       return this.findIdFieldInExternalSuperclass(projectRoot, fullyQualifiedSuperclass.get());
     }
@@ -186,7 +188,6 @@ public class JPAService {
    * Finds a field annotated with {@code @Id} directly within the given class declaration node. This
    * method does not search the class hierarchy.
    *
-   * @param inheritanceService TODO
    * @param file The TSFile containing the class.
    * @param classDeclarationNode The node of the class to search within.
    * @return An {@link Optional} containing the {@link TSNode} of the field if found, otherwise an
@@ -194,7 +195,8 @@ public class JPAService {
    */
   Optional<TSNode> findIdFieldInClass(
       ClassDeclarationService classDeclarationService, TSFile file, TSNode classDeclarationNode) {
-    List<TSNode> allClassFields = classDeclarationService.getClassFields(file, classDeclarationNode);
+    List<TSNode> allClassFields =
+        classDeclarationService.getClassFields(file, classDeclarationNode);
     for (TSNode field : allClassFields) {
       if (this.hasIdAnnotation(file, field)) {
         return Optional.of(field);
@@ -207,14 +209,15 @@ public class JPAService {
    * Continues the recursive search for an {@code @Id} field in a superclass that is part of the
    * local project source code.
    *
-   * @param inheritanceService TODO
    * @param projectRoot The root path of the project.
    * @param fullyQualifiedClassName The fully qualified name of the superclass to inspect.
    * @return An {@link Optional} containing the {@link FieldWithFile} if an {@code @Id} is found in
    *     the superclass's hierarchy, otherwise an empty Optional.
    */
   Optional<FieldWithFile> findIdFieldInLocalSuperclass(
-      ClassDeclarationService classDeclarationService, Path projectRoot, String fullyQualifiedClassName) {
+      ClassDeclarationService classDeclarationService,
+      Path projectRoot,
+      String fullyQualifiedClassName) {
     try {
       String relativePath = fullyQualifiedClassName.replace('.', '/') + ".java";
       Path superclassPath = projectRoot.resolve("src/main/java").resolve(relativePath);

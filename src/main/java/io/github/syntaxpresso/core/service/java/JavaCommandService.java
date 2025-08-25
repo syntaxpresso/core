@@ -14,7 +14,7 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
-
+import io.github.syntaxpresso.core.service.java.jpa.JPAService.FieldWithFile;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.io.IOException;
@@ -401,11 +401,12 @@ public class JavaCommandService {
     if (packageName.isEmpty()) {
       return DataTransferObject.error("Unable to get package name");
     }
-    // TODO: Fix inheritance service integration
-    Optional<io.github.syntaxpresso.core.service.java.jpa.JPAService.FieldWithFile> idFieldWithFile = Optional.empty();
+    Optional<FieldWithFile> idFieldWithFile = Optional.empty();
     if (idFieldWithFile.isPresent()) {
       Optional<String> idTypeName =
-          this.jpaService.getJpaOperations().extractFieldType(idFieldWithFile.get().file, idFieldWithFile.get().field);
+          this.jpaService
+              .getJpaOperations()
+              .extractFieldType(idFieldWithFile.get().file, idFieldWithFile.get().field);
       if (idTypeName.isPresent()) {
         Optional<JavaBasicType> idType = JavaBasicType.getByTypeName(idTypeName.get());
         if (idType.isPresent()) {
@@ -433,4 +434,3 @@ public class JavaCommandService {
     return DataTransferObject.success(response);
   }
 }
-
