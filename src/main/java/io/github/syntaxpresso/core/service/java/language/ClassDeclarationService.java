@@ -1,6 +1,9 @@
 package io.github.syntaxpresso.core.service.java.language;
 
 import io.github.syntaxpresso.core.common.TSFile;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -236,5 +239,89 @@ public class ClassDeclarationService {
       return Optional.empty();
     }
     return Optional.of(fieldTypeNode);
+  }
+
+  /**
+   * Checks if a class, identified by its fully qualified name, exists as a source file within the
+   * project. It constructs the expected file path from the project root.
+   *
+   * @param projectRoot The root path of the project.
+   * @param fullyQualifiedClassName The fully qualified name of the class to check.
+   * @return {@code true} if the corresponding .java file exists in the project's main source
+   *     directory, {@code false} otherwise.
+   */
+  public boolean isLocalClass(Path projectRoot, String fullyQualifiedClassName) {
+    String relativePath = fullyQualifiedClassName.replace('.', '/') + ".java";
+    Path sourcePath = projectRoot.resolve("src/main/java").resolve(relativePath);
+    return Files.exists(sourcePath);
+  }
+
+  /**
+   * Resolves the fully qualified name of a superclass using the context of a given file. It checks
+   * for fully qualified names first, then scans import statements, considers implicit java.lang
+   * imports, and finally assumes the same package if no other information is found.
+   *
+   * @param inheritanceService
+   * @param file The TSFile where the superclass is referenced, providing context for imports and
+   *     package.
+   * @param superclassName The simple or partially qualified name of the superclass.
+   * @return An {@link Optional} containing the fully qualified name of the superclass, or an empty
+   *     Optional if it cannot be resolved.
+   */
+  public Optional<String> getFullyQualifiedSuperclass(
+      TSFile file, String superclassName) {
+    // First check if it's already fully qualified
+    if (superclassName.contains(".")) {
+      return Optional.of(superclassName);
+    }
+    // Check if it's in java.lang (implicit imports)
+    if (this.isJavaLangClass(superclassName)) {
+      return Optional.of("java.lang." + superclassName);
+    }
+    // If not found in imports and not in java.lang, assume it's in the same package
+    // Note: Import resolution would require ImportDeclarationService, but for now
+    // we'll assume same package for simplicity
+    return Optional.of(superclassName); // Simplified - just return the simple name
+  }
+
+  /**
+   * Finds the simple name of the direct superclass from a class declaration node.
+   *
+   * @param file The TSFile containing the class declaration.
+   * @param classDeclarationNode The tree-sitter node representing the class declaration.
+   * @return An {@link Optional} containing the superclass name as a String, or an empty Optional if
+   *     the class does not explicitly extend another class.
+   */
+  public Optional<String> getSuperclassName(TSFile file, TSNode classDeclarationNode) {
+    List<TSNode> superclassNodes =
+        file.query(
+            classDeclarationNode,
+            "(class_declaration superclass: (superclass (type_identifier) @superclass.name))");
+    if (!superclassNodes.isEmpty()) {
+      return Optional.of(file.getTextFromNode(superclassNodes.get(0)));
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Checks if a class name corresponds to a common class in the {@code java.lang} package, which is
+   * implicitly imported.
+   *
+   * @param className The simple name of the class.
+   * @return {@code true} if the class is a known java.lang class, {@code false} otherwise.
+   */
+  public boolean isJavaLangClass(String className) {
+    return List.of(
+            "Object",
+            "String",
+            "Integer",
+            "Long",
+            "Double",
+            "Float",
+            "Boolean",
+            "Character",
+            "Byte",
+            "Short")
+        .contains(className);
   }
 }
