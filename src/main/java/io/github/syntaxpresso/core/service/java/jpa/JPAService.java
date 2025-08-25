@@ -31,7 +31,7 @@ public class JPAService {
       if ("Entity".equals(annotationName)) {
         List<TSNode> importNodes = this.importDeclarationService.findAllImportDeclarations(file);
         for (TSNode importNode : importNodes) {
-          String importName = file.getTextFromNode(annotation);
+          String importName = file.getTextFromNode(importNode);
           if (importName.equals("jakarta.persistence.Entity")
               || importName.equals("jakarta.persistence")) {
             return true;

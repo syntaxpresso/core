@@ -3,7 +3,7 @@ package io.github.syntaxpresso.core.command;
 import io.github.syntaxpresso.core.command.dto.GetJPAEntityInfoResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,7 @@ import picocli.CommandLine.Option;
     description = "Get necessary info of an specific Entity to create a JPA repository.")
 public class GetJPAEntityInfoCommand
     implements Callable<DataTransferObject<GetJPAEntityInfoResponse>> {
-  private final JavaService javaService;
+  private final JavaCommandService javaCommandService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;
@@ -35,6 +35,6 @@ public class GetJPAEntityInfoCommand
 
   @Override
   public DataTransferObject<GetJPAEntityInfoResponse> call() {
-    return this.javaService.getJPAEntityInfo(this.cwd, this.filePath, this.ide);
+    return this.javaCommandService.getJPAEntityInfo(this.cwd, this.filePath, this.ide);
   }
 }

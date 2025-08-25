@@ -10,28 +10,28 @@ import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import picocli.CommandLine.IFactory;
 
 public class CommandFactory implements IFactory {
-  private final JavaCommandService javaService = new JavaCommandService();
+  private final JavaCommandService javaCommandService = new JavaCommandService();
 
   @Override
   @SuppressWarnings("unchecked")
   public <K> K create(Class<K> cls) throws Exception {
     if (cls == CreateNewFileCommand.class) {
-      return (K) new CreateNewFileCommand(javaService);
+      return (K) new CreateNewFileCommand(javaCommandService);
     }
     if (cls == GetMainClassCommand.class) {
-      return (K) new GetMainClassCommand(javaService);
+      return (K) new GetMainClassCommand(javaCommandService);
     }
     if (cls == RenameCommand.class) {
-      return (K) new RenameCommand(javaService);
+      return (K) new RenameCommand(javaCommandService);
     }
     if (cls == CreateJPARepositoryCommand.class) {
-      return (K) new CreateJPARepositoryCommand(javaService);
+      return (K) new CreateJPARepositoryCommand(javaCommandService);
     }
     if (cls == GetCursorPositionInfo.class) {
-      return (K) new GetCursorPositionInfo(javaService);
+      return (K) new GetCursorPositionInfo(javaCommandService);
     }
     if (cls == GetJPAEntityInfoCommand.class) {
-      return (K) new GetJPAEntityInfoCommand(javaService);
+      return (K) new GetJPAEntityInfoCommand(javaCommandService);
     }
     return cls.getDeclaredConstructor().newInstance();
   }

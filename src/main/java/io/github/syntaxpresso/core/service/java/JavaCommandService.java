@@ -3,8 +3,10 @@ package io.github.syntaxpresso.core.service.java;
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
+import io.github.syntaxpresso.core.command.dto.GetJPAEntityInfoResponse;
 import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.command.dto.RenameResponse;
+import io.github.syntaxpresso.core.command.extra.JavaBasicType;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
@@ -12,12 +14,14 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
+import io.github.syntaxpresso.core.service.java.jpa.InheritanceService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -86,25 +90,27 @@ public class JavaCommandService {
     }
   }
 
-  /**
-   * Renames the main class within a .java file and renames the file itself.
-   */
+  /** Renames the main class within a .java file and renames the file itself. */
   private Path renameFileAndContent(final Path filePath, final String newName) throws IOException {
     TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
-    Optional<TSNode> mainClassNode = 
+    Optional<TSNode> mainClassNode =
         this.javaLanguageService.getClassDeclarationService().getMainClass(tsFile);
     if (mainClassNode.isPresent()) {
-      this.javaLanguageService.getClassDeclarationService().renameClass(tsFile, mainClassNode.get(), newName);
+      this.javaLanguageService
+          .getClassDeclarationService()
+          .renameClass(tsFile, mainClassNode.get(), newName);
       String updatedContent = tsFile.getSourceCode();
       Path newPath = filePath.resolveSibling(newName + ".java");
       Files.writeString(newPath, updatedContent);
       Files.delete(filePath);
       return newPath;
     } else {
-      List<TSNode> classes = 
+      List<TSNode> classes =
           this.javaLanguageService.getClassDeclarationService().findAllClassDeclarations(tsFile);
       if (!classes.isEmpty()) {
-        this.javaLanguageService.getClassDeclarationService().renameClass(tsFile, classes.get(0), newName);
+        this.javaLanguageService
+            .getClassDeclarationService()
+            .renameClass(tsFile, classes.get(0), newName);
         String updatedContent = tsFile.getSourceCode();
         Path newPath = filePath.resolveSibling(newName + ".java");
         Files.writeString(newPath, updatedContent);
@@ -115,9 +121,7 @@ public class JavaCommandService {
     throw new IOException("No class found in file " + filePath);
   }
 
-  /**
-   * Creates a new Java file.
-   */
+  /** Creates a new Java file. */
   public DataTransferObject<CreateNewFileResponse> createNewFile(
       Path cwd,
       String packageName,
@@ -176,9 +180,7 @@ public class JavaCommandService {
     }
   }
 
-  /**
-   * Finds the main class in the current working directory.
-   */
+  /** Finds the main class in the current working directory. */
   public DataTransferObject<GetMainClassResponse> getMainClass(Path cwd) {
     if (cwd == null || !Files.exists(cwd)) {
       return DataTransferObject.error("Current working directory does not exist.");
@@ -188,7 +190,7 @@ public class JavaCommandService {
       for (TSFile file : allFiles) {
         boolean isMainClass = this.javaLanguageService.getProgramService().hasMainClass(file);
         if (isMainClass) {
-          Optional<String> packageName = 
+          Optional<String> packageName =
               this.javaLanguageService.getPackageDeclarationService().getPackageName(file);
           if (packageName.isEmpty()) {
             return DataTransferObject.error(
@@ -209,9 +211,7 @@ public class JavaCommandService {
     }
   }
 
-  /**
-   * Renames a Java class/interface/enum and its file.
-   */
+  /** Renames a Java class/interface/enum and its file. */
   public DataTransferObject<RenameResponse> rename(final Path filePath, final String newName) {
     if (!Files.exists(filePath)) {
       return DataTransferObject.error("File does not exist: " + filePath);
@@ -270,9 +270,7 @@ public class JavaCommandService {
     return DataTransferObject.success(response);
   }
 
-  /**
-   * Renames a symbol (class, method, field, etc.) and all its usages based on cursor position.
-   */
+  /** Renames a symbol (class, method, field, etc.) and all its usages based on cursor position. */
   public DataTransferObject<RenameResponse> rename(
       final Path cwd,
       final Path filePath,
@@ -295,12 +293,13 @@ public class JavaCommandService {
       if (Strings.isNullOrEmpty(currentName)) {
         return DataTransferObject.error("Unable to determine current symbol name.");
       }
-      Optional<String> packageName = 
+      Optional<String> packageName =
           this.javaLanguageService.getPackageDeclarationService().getPackageName(file);
       if (packageName.isEmpty()) {
         return DataTransferObject.error("Unable to determine package name.");
       }
-      if ("method_declaration".equals(node.getType()) || "class_declaration".equals(node.getType())) {
+      if ("method_declaration".equals(node.getType())
+          || "class_declaration".equals(node.getType())) {
         TSNode nameNode = node.getChildByFieldName("name");
         if (nameNode != null) {
           node = nameNode;
@@ -322,9 +321,10 @@ public class JavaCommandService {
       int renamedNodes = 0;
       if (identifierType.equals(JavaIdentifierType.CLASS_NAME)) {
         modifiedFiles.addAll(
-            this.javaLanguageService.processClassRename(cwd, file, node, packageName.get(), currentName, newName));
+            this.javaLanguageService.processClassRename(
+                cwd, file, node, packageName.get(), currentName, newName));
         renamedNodes = 1;
-        String fileName = 
+        String fileName =
             com.google.common.io.Files.getNameWithoutExtension(file.getFile().getAbsolutePath());
         if (fileName.equals(currentName)) {
           renamedNodes += 1;
@@ -337,13 +337,15 @@ public class JavaCommandService {
       } else if (identifierType.equals(JavaIdentifierType.METHOD_NAME)) {
         TSNode methodDeclarationNode = node.getParent();
         if (methodDeclarationNode != null) {
-          Optional<TSNode> classDeclarationNode = 
+          Optional<TSNode> classDeclarationNode =
               this.javaLanguageService.getClassDeclarationService().getMainClass(file);
           if (classDeclarationNode.isEmpty()) {
             return DataTransferObject.error("Unable to find main class declaration in file.");
           }
           Optional<String> className =
-              this.javaLanguageService.getClassDeclarationService().getClassName(file, classDeclarationNode.get());
+              this.javaLanguageService
+                  .getClassDeclarationService()
+                  .getClassName(file, classDeclarationNode.get());
           if (className.isEmpty()) {
             return DataTransferObject.error("Unable to determine class name from declaration.");
           }
@@ -372,11 +374,68 @@ public class JavaCommandService {
     }
   }
 
-  /**
-   * Creates a JPA Repository interface for an entity class.
-   */
+  /** Creates a JPA Repository interface for an entity class. */
   public DataTransferObject<CreateNewFileResponse> createJPARepository(
       Path cwd, Path entityFilePath) {
     return this.jpaService.createJPARepository(cwd, entityFilePath);
   }
+
+  public DataTransferObject<GetJPAEntityInfoResponse> getJPAEntityInfo(
+      final Path cwd, final Path filePath, final SupportedIDE ide) {
+    if (!filePath.toString().endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + filePath);
+    }
+    TSFile file = new TSFile(SupportedLanguage.JAVA, filePath);
+    GetJPAEntityInfoResponse response = new GetJPAEntityInfoResponse();
+    Optional<TSNode> mainClassNode =
+        this.getJavaLanguageService().getClassDeclarationService().getMainClass(file);
+    if (mainClassNode.isEmpty()) {
+      return DataTransferObject.error("Unable to find main class declaration in file.");
+    }
+    boolean isJPAEntity =
+        this.getJpaService().getJpaOperations().isJPAEntity(file, mainClassNode.get());
+    if (!isJPAEntity) {
+      return DataTransferObject.error("Class is not a JPA entity (@Entity annotation not found)");
+    }
+    Optional<String> packageName =
+        this.getJavaLanguageService().getPackageDeclarationService().getPackageName(file);
+    if (packageName.isEmpty()) {
+      return DataTransferObject.error("Unable to get package name");
+    }
+    Optional<InheritanceService.FieldWithFile> idFieldWithFile =
+        this.jpaService
+            .getInheritanceService()
+            .findIdFieldInHierarchy(cwd, file, mainClassNode.get());
+    if (idFieldWithFile.isPresent()) {
+      Optional<String> idTypeName =
+          this.jpaService
+              .getJpaOperations()
+              .extractFieldType(idFieldWithFile.get().file, idFieldWithFile.get().field);
+      if (idTypeName.isPresent()) {
+        Optional<JavaBasicType> idType = JavaBasicType.getByTypeName(idTypeName.get());
+        if (idType.isPresent()) {
+          response.setIdFieldType(idType.get().getTypeName());
+          response.setIdFieldPackageName(idType.get().getPackageName().get());
+        }
+      }
+    }
+    if (response.getIdFieldType() == null || response.getIdFieldPackageName() == null) {
+      List<Map<String, String>> recommendedTypes = JavaBasicType.getRecommendedIdTypesForJson();
+      response.setRecommendedTypes(recommendedTypes);
+    }
+    Optional<String> className =
+        this.getJavaLanguageService()
+            .getClassDeclarationService()
+            .getClassName(file, mainClassNode.get());
+    if (className.isPresent()) {
+      response.setRecommendedRepositoryName(className.get() + "Repository");
+    } else {
+      response.setRecommendedRepositoryName(file.getFileNameWithoutExtension() + "Repository");
+    }
+    response.setIsJPAEntity(isJPAEntity);
+    response.setEntityPackageName(packageName.get());
+    response.setEntityPath(file.getFile().getAbsolutePath());
+    return DataTransferObject.success(response);
+  }
 }
+
