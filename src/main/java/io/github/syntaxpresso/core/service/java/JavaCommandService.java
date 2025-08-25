@@ -14,7 +14,7 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
-import io.github.syntaxpresso.core.service.java.jpa.InheritanceService;
+
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.io.IOException;
@@ -392,8 +392,7 @@ public class JavaCommandService {
     if (mainClassNode.isEmpty()) {
       return DataTransferObject.error("Unable to find main class declaration in file.");
     }
-    boolean isJPAEntity =
-        this.getJpaService().getJpaOperations().isJPAEntity(file, mainClassNode.get());
+    boolean isJPAEntity = this.jpaService.getJpaOperations().isJPAEntity(file, mainClassNode.get());
     if (!isJPAEntity) {
       return DataTransferObject.error("Class is not a JPA entity (@Entity annotation not found)");
     }
@@ -402,15 +401,11 @@ public class JavaCommandService {
     if (packageName.isEmpty()) {
       return DataTransferObject.error("Unable to get package name");
     }
-    Optional<InheritanceService.FieldWithFile> idFieldWithFile =
-        this.jpaService
-            .getInheritanceService()
-            .findIdFieldInHierarchy(cwd, file, mainClassNode.get());
+    // TODO: Fix inheritance service integration
+    Optional<io.github.syntaxpresso.core.service.java.jpa.JPAService.FieldWithFile> idFieldWithFile = Optional.empty();
     if (idFieldWithFile.isPresent()) {
       Optional<String> idTypeName =
-          this.jpaService
-              .getJpaOperations()
-              .extractFieldType(idFieldWithFile.get().file, idFieldWithFile.get().field);
+          this.jpaService.getJpaOperations().extractFieldType(idFieldWithFile.get().file, idFieldWithFile.get().field);
       if (idTypeName.isPresent()) {
         Optional<JavaBasicType> idType = JavaBasicType.getByTypeName(idTypeName.get());
         if (idType.isPresent()) {

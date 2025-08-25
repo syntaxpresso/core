@@ -5,7 +5,7 @@ import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.jpa.InheritanceService;
+
 import java.nio.file.Path;
 import java.util.Optional;
 import lombok.Data;
@@ -16,15 +16,10 @@ import org.treesitter.TSNode;
 @RequiredArgsConstructor
 public class JPAService {
   private final JavaLanguageService javaLanguageService;
-  private final InheritanceService inheritanceService;
   private final io.github.syntaxpresso.core.service.java.jpa.JPAService jpaOperations;
 
   public JPAService(JavaLanguageService javaLanguageService) {
     this.javaLanguageService = javaLanguageService;
-    this.inheritanceService =
-        new InheritanceService(
-            javaLanguageService.getClassDeclarationService(),
-            javaLanguageService.getImportDeclarationService());
     this.jpaOperations =
         new io.github.syntaxpresso.core.service.java.jpa.JPAService(
             javaLanguageService.getImportDeclarationService());
@@ -63,9 +58,9 @@ public class JPAService {
       if (!this.jpaOperations.isJPAEntity(entityFile, classDeclarationNode.get())) {
         return DataTransferObject.error("Class is not a JPA entity (@Entity annotation not found)");
       }
-      Optional<InheritanceService.FieldWithFile> idFieldWithFile =
-          this.inheritanceService.findIdFieldInHierarchy(
-              cwd, entityFile, classDeclarationNode.get());
+      Optional<io.github.syntaxpresso.core.service.java.jpa.JPAService.FieldWithFile> idFieldWithFile =
+          this.jpaOperations.findIdFieldInHierarchy(
+              this.javaLanguageService.getClassDeclarationService(), cwd, entityFile, classDeclarationNode.get());
       if (idFieldWithFile.isEmpty()) {
         return DataTransferObject.error(
             "No @Id field found in entity hierarchy. Note: Only local project classes are currently"
