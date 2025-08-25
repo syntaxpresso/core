@@ -4,7 +4,7 @@ import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import picocli.CommandLine.Option;
 @RequiredArgsConstructor
 @Command(name = "get-main-class", description = "Get Main class")
 public class GetMainClassCommand implements Callable<DataTransferObject<GetMainClassResponse>> {
-  private final JavaService javaService;
+  private final JavaCommandService javaService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;

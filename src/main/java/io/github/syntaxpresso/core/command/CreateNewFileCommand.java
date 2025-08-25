@@ -6,7 +6,7 @@ import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,7 @@ import picocli.CommandLine.Option;
 @RequiredArgsConstructor
 @Command(name = "create-new-file", description = "Create a new Java file")
 public class CreateNewFileCommand implements Callable<DataTransferObject<CreateNewFileResponse>> {
-  private final JavaService javaService;
+  private final JavaCommandService javaService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;

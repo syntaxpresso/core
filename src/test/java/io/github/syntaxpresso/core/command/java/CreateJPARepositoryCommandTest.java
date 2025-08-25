@@ -14,7 +14,7 @@ import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CreateJPARepositoryCommand Tests")
 class CreateJPARepositoryCommandTest {
-  @Mock private JavaService javaService;
+  @Mock private JavaCommandService javaService;
   private CreateJPARepositoryCommand command;
   private Path cwd;
   private Path filePath;

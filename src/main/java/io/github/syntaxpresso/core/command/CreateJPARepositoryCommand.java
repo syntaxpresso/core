@@ -4,7 +4,7 @@ import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import picocli.CommandLine.Option;
     description = "Create JPA Repository for the current JPA Entity.")
 public class CreateJPARepositoryCommand
     implements Callable<DataTransferObject<CreateNewFileResponse>> {
-  private final JavaService javaService;
+  private final JavaCommandService javaService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;
