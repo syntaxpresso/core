@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,11 +19,11 @@ import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("GetMainClassTest Tests")
 public class GetMainClassTest {
-  private JavaService javaService;
+  private JavaCommandService javaService;
 
   @BeforeEach
   void setUp() {
-    javaService = new JavaService();
+    javaService = new JavaCommandService();
   }
 
   @Nested

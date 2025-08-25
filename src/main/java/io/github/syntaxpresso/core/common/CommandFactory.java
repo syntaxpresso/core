@@ -5,11 +5,11 @@ import io.github.syntaxpresso.core.command.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.GetCursorPositionInfo;
 import io.github.syntaxpresso.core.command.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.RenameCommand;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import picocli.CommandLine.IFactory;
 
 public class CommandFactory implements IFactory {
-  private final JavaService javaService = new JavaService();
+  private final JavaCommandService javaService = new JavaCommandService();
 
   @Override
   @SuppressWarnings("unchecked")

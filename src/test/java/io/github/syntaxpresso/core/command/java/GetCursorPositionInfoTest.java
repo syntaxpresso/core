@@ -16,7 +16,7 @@ import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
@@ -31,7 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GetCursorPositionInfo Tests")
 class GetCursorPositionInfoTest {
-  @Mock private JavaService javaService;
+  @Mock private JavaCommandService javaService;
   private GetCursorPositionInfo command;
   private Path filePath;
   private Integer line;
