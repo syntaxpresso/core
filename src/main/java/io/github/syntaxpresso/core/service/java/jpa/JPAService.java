@@ -8,12 +8,15 @@ import io.github.syntaxpresso.core.service.java.language.JavaBasicType;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
+@Getter
 @RequiredArgsConstructor
 public class JPAService {
   private final ImportDeclarationService importDeclarationService;
+  private final JPAEntityService jpaEntityService;
 
   /**
    * A container class to hold a {@link TSNode} representing a field and its associated {@link
@@ -29,35 +32,7 @@ public class JPAService {
     }
   }
 
-  /**
-   * Checks if a class is a JPA entity by looking for @Entity annotation.
-   *
-   * @param file The TSFile containing the class.
-   * @param mainClassDeclarationNode The class declaration node.
-   * @return True if the class is a JPA entity, false otherwise.
-   */
-  public boolean isJPAEntity(TSFile file, TSNode mainClassDeclarationNode) {
-    List<TSNode> annotations =
-        file.query(
-            mainClassDeclarationNode, "(marker_annotation name: (identifier) @annotation.name)");
-    for (TSNode annotation : annotations) {
-      String annotationName = file.getTextFromNode(annotation);
-      if ("jakarta.persistence.Entity".equals(annotationName)) {
-        return true;
-      }
-      if ("Entity".equals(annotationName)) {
-        List<TSNode> importNodes = this.importDeclarationService.findAllImportDeclarations(file);
-        for (TSNode importNode : importNodes) {
-          String importName = file.getTextFromNode(importNode);
-          if (importName.equals("jakarta.persistence.Entity")
-              || importName.equals("jakarta.persistence")) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
+
 
   /**
    * Extracts the type of a field declaration.

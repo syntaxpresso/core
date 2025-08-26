@@ -5,7 +5,6 @@ import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-
 import java.nio.file.Path;
 import java.util.Optional;
 import lombok.Data;
@@ -20,9 +19,11 @@ public class JPAService {
 
   public JPAService(JavaLanguageService javaLanguageService) {
     this.javaLanguageService = javaLanguageService;
+    io.github.syntaxpresso.core.service.java.jpa.JPAEntityService jpaEntityService = 
+        new io.github.syntaxpresso.core.service.java.jpa.JPAEntityService(this.javaLanguageService);
     this.jpaOperations =
         new io.github.syntaxpresso.core.service.java.jpa.JPAService(
-            javaLanguageService.getImportDeclarationService());
+            this.javaLanguageService.getImportDeclarationService(), jpaEntityService); // TODO: REMOVE DEPENDENCY
   }
 
   /**
@@ -55,12 +56,18 @@ public class JPAService {
       if (classDeclarationNode.isEmpty()) {
         return DataTransferObject.error("No class declaration found in file");
       }
-      if (!this.jpaOperations.isJPAEntity(entityFile, classDeclarationNode.get())) {
+      if (!this.jpaOperations
+          .getJpaEntityService()
+          .isJPAEntity(entityFile)) {
         return DataTransferObject.error("Class is not a JPA entity (@Entity annotation not found)");
       }
-      Optional<io.github.syntaxpresso.core.service.java.jpa.JPAService.FieldWithFile> idFieldWithFile =
-          this.jpaOperations.findIdFieldInHierarchy(
-              this.javaLanguageService.getClassDeclarationService(), cwd, entityFile, classDeclarationNode.get());
+      Optional<io.github.syntaxpresso.core.service.java.jpa.JPAService.FieldWithFile>
+          idFieldWithFile =
+              this.jpaOperations.findIdFieldInHierarchy(
+                  this.javaLanguageService.getClassDeclarationService(),
+                  cwd,
+                  entityFile,
+                  classDeclarationNode.get());
       if (idFieldWithFile.isEmpty()) {
         return DataTransferObject.error(
             "No @Id field found in entity hierarchy. Note: Only local project classes are currently"

@@ -345,11 +345,8 @@ public class ClassDeclarationService {
    * @return List of class annotation nodes.
    */
   public List<TSNode> getAllClassAnnotations(TSFile file, TSNode classDeclarationNode) {
-    List<TSNode> markerAnnotationNodes =
-        file.query(
-            classDeclarationNode, "(class_declaration (modifiers (marker_annotation)) @annotation");
-    List<TSNode> annotationNodes =
-        file.query(classDeclarationNode, "(class_declaration (modifiers (annotation)) @annotation");
+    List<TSNode> markerAnnotationNodes = file.query(classDeclarationNode, "(marker_annotation) @annotation");
+    List<TSNode> annotationNodes = file.query(classDeclarationNode, "(annotation) @annotation");
     annotationNodes.addAll(markerAnnotationNodes);
     return annotationNodes;
   }

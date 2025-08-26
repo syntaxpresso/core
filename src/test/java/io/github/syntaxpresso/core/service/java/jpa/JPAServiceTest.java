@@ -13,6 +13,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.github.syntaxpresso.core.common.TSFile;
+import io.github.syntaxpresso.core.service.java.JavaLanguageService;
+import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
 import java.util.List;
@@ -29,8 +31,10 @@ import org.treesitter.TSNode;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("JPAService Tests")
 class JPAServiceTest {
+  @Mock private JavaLanguageService javaLanguageService;
   @Mock private ImportDeclarationService importDeclarationService;
   @Mock private PackageDeclarationService packageDeclarationService;
+  @Mock private ClassDeclarationService classDeclarationService;
   @Mock private TSFile tsFile;
   @Mock private TSNode classDeclarationNode;
   @Mock private TSNode fieldNode;
@@ -42,7 +46,10 @@ class JPAServiceTest {
 
   @BeforeEach
   void setUp() {
-    jpaService = new JPAService(importDeclarationService);
+    lenient().when(javaLanguageService.getClassDeclarationService()).thenReturn(classDeclarationService);
+    lenient().when(javaLanguageService.getImportDeclarationService()).thenReturn(importDeclarationService);
+    JPAEntityService jpaEntityService = new JPAEntityService(javaLanguageService);
+    jpaService = new JPAService(importDeclarationService, jpaEntityService);
     lenient()
         .when(importDeclarationService.getPackageDeclarationService())
         .thenReturn(packageDeclarationService);
@@ -55,34 +62,30 @@ class JPAServiceTest {
     @DisplayName("should return true when class has @Entity annotation")
     void isJPAEntity_withEntityAnnotation_shouldReturnTrue() {
       TSNode importNode = mock(TSNode.class);
-      lenient()
-          .when(tsFile.query(any(TSNode.class), anyString()))
-          .thenReturn(List.of(annotationNode));
+      lenient().when(classDeclarationService.getAllClassAnnotations(tsFile)).thenReturn(List.of(annotationNode));
       lenient().when(tsFile.getTextFromNode(annotationNode)).thenReturn("Entity");
       lenient()
           .when(importDeclarationService.findAllImportDeclarations(tsFile))
           .thenReturn(List.of(importNode));
       lenient().when(tsFile.getTextFromNode(importNode)).thenReturn("jakarta.persistence.Entity");
-      boolean result = jpaService.isJPAEntity(tsFile, classDeclarationNode);
+      boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
       assertTrue(result);
     }
 
     @Test
     @DisplayName("should return false when class has no @Entity annotation")
     void isJPAEntity_withoutEntityAnnotation_shouldReturnFalse() {
-      lenient()
-          .when(tsFile.query(any(TSNode.class), anyString()))
-          .thenReturn(List.of(annotationNode));
+      lenient().when(classDeclarationService.getAllClassAnnotations(tsFile)).thenReturn(List.of(annotationNode));
       lenient().when(tsFile.getTextFromNode(annotationNode)).thenReturn("Component");
-      boolean result = jpaService.isJPAEntity(tsFile, classDeclarationNode);
+      boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
       assertFalse(result);
     }
 
     @Test
     @DisplayName("should return false when class has no annotations")
     void isJPAEntity_withNoAnnotations_shouldReturnFalse() {
-      lenient().when(tsFile.query(any(TSNode.class), anyString())).thenReturn(List.of());
-      boolean result = jpaService.isJPAEntity(tsFile, classDeclarationNode);
+      lenient().when(classDeclarationService.getAllClassAnnotations(tsFile)).thenReturn(List.of());
+      boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
       assertFalse(result);
     }
 
@@ -92,16 +95,14 @@ class JPAServiceTest {
       TSNode componentAnnotation = mock(TSNode.class);
       TSNode entityAnnotation = mock(TSNode.class);
       TSNode importNode = mock(TSNode.class);
-      lenient()
-          .when(tsFile.query(any(TSNode.class), anyString()))
-          .thenReturn(List.of(componentAnnotation, entityAnnotation));
+      lenient().when(classDeclarationService.getAllClassAnnotations(tsFile)).thenReturn(List.of(componentAnnotation, entityAnnotation));
       lenient().when(tsFile.getTextFromNode(componentAnnotation)).thenReturn("Component");
       lenient().when(tsFile.getTextFromNode(entityAnnotation)).thenReturn("Entity");
       lenient()
           .when(importDeclarationService.findAllImportDeclarations(tsFile))
           .thenReturn(List.of(importNode));
       lenient().when(tsFile.getTextFromNode(importNode)).thenReturn("jakarta.persistence.Entity");
-      boolean result = jpaService.isJPAEntity(tsFile, classDeclarationNode);
+      boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
       assertTrue(result);
     }
   }

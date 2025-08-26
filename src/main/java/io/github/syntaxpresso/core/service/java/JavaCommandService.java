@@ -392,7 +392,8 @@ public class JavaCommandService {
     if (mainClassNode.isEmpty()) {
       return DataTransferObject.error("Unable to find main class declaration in file.");
     }
-    boolean isJPAEntity = this.jpaService.getJpaOperations().isJPAEntity(file, mainClassNode.get());
+    boolean isJPAEntity =
+        this.jpaService.getJpaOperations().getJpaEntityService().isJPAEntity(file);
     if (!isJPAEntity) {
       return DataTransferObject.error("Class is not a JPA entity (@Entity annotation not found)");
     }
