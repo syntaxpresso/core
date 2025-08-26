@@ -1,7 +1,6 @@
 package io.github.syntaxpresso.core.service.java.language;
 
 import io.github.syntaxpresso.core.common.TSFile;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -65,6 +64,20 @@ public class ClassDeclarationService {
       return Optional.of(file.getTextFromNode(nameNode));
     }
     return Optional.empty();
+  }
+
+  /**
+   * Gets the name of the main class in the file.
+   *
+   * @param file The TSFile containing the source code.
+   * @return The main class name, or empty if not found.
+   */
+  public Optional<String> getClassName(TSFile file) {
+    Optional<TSNode> mainClassDeclarationNode = this.getMainClass(file);
+    if (mainClassDeclarationNode.isEmpty()) {
+      return Optional.empty();
+    }
+    return this.getClassName(file, mainClassDeclarationNode.get());
   }
 
   /**
@@ -268,8 +281,7 @@ public class ClassDeclarationService {
    * @return An {@link Optional} containing the fully qualified name of the superclass, or an empty
    *     Optional if it cannot be resolved.
    */
-  public Optional<String> getFullyQualifiedSuperclass(
-      TSFile file, String superclassName) {
+  public Optional<String> getFullyQualifiedSuperclass(TSFile file, String superclassName) {
     // First check if it's already fully qualified
     if (superclassName.contains(".")) {
       return Optional.of(superclassName);
@@ -323,5 +335,36 @@ public class ClassDeclarationService {
             "Byte",
             "Short")
         .contains(className);
+  }
+
+  /**
+   * Gets a list of all class annotation nodes.
+   *
+   * @param file The file the holds the class object of the query.
+   * @param classDeclarationNode The class declaration node object of the query.
+   * @return List of class annotation nodes.
+   */
+  public List<TSNode> getAllClassAnnotations(TSFile file, TSNode classDeclarationNode) {
+    List<TSNode> markerAnnotationNodes =
+        file.query(
+            classDeclarationNode, "(class_declaration (modifiers (marker_annotation)) @annotation");
+    List<TSNode> annotationNodes =
+        file.query(classDeclarationNode, "(class_declaration (modifiers (annotation)) @annotation");
+    annotationNodes.addAll(markerAnnotationNodes);
+    return annotationNodes;
+  }
+
+  /**
+   * Gets all annotation nodes for the main class in the file.
+   *
+   * @param file The TSFile containing the source code.
+   * @return List of annotation nodes for the main class.
+   */
+  public List<TSNode> getAllClassAnnotations(TSFile file) {
+    Optional<TSNode> mainClassNode = this.getMainClass(file);
+    if (mainClassNode.isEmpty()) {
+      return List.of();
+    }
+    return this.getAllClassAnnotations(file, mainClassNode.get());
   }
 }
