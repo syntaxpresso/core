@@ -1,9 +1,9 @@
 package io.github.syntaxpresso.core.common;
 
-import io.github.syntaxpresso.core.command.java.CreateNewFileCommand;
+import io.github.syntaxpresso.core.command.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.CreateNewJPAEntityCommand;
-import io.github.syntaxpresso.core.command.java.GetMainClassCommand;
-import io.github.syntaxpresso.core.command.java.RenameCommand;
+import io.github.syntaxpresso.core.command.GetMainClassCommand;
+import io.github.syntaxpresso.core.command.RenameCommand;
 import io.github.syntaxpresso.core.command.CreateJPARepositoryCommand;
 import io.github.syntaxpresso.core.command.GetCursorPositionInfo;
 import io.github.syntaxpresso.core.command.GetJPAEntityInfoCommand;
