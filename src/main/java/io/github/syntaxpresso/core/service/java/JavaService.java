@@ -531,16 +531,28 @@ public class JavaService {
 
     String nameWithoutExtension = tsFile.getFileNameWithoutExtension().orElse(fileName);
 
-    Optional<TSNode> findClassByName = this.classDeclarationService.findClassByName(tsFile, nameWithoutExtension);
-
-    if(findClassByName.isEmpty()){
-      return DataTransferObject.error("Class name does not exist");
-    }
-
     String snakeName = StringHelper.pascalToSnake(nameWithoutExtension);
 
-    tsFile.insertTextBeforeNode(findClassByName.get(), "@Table(name=\"" + snakeName +"\")\n");
-    tsFile.insertTextBeforeNode(findClassByName.get(), "@Entity\n");
+    String tableAnnotation = "@Table(name=\"" + snakeName +"\")\n";
+    List<TSFile> file = this.getAllJavaFilesFromCwd(cwd);
+
+    for(TSFile files : file){
+      List<TSNode> annotations = this.classDeclarationService.getAllClassAnnotationNodes(files);
+      for(TSNode a : annotations){
+        String annotationText = tsFile.getTextFromNode(a);
+        if (annotationText.contains(snakeName)) {
+          return DataTransferObject.error("JPA entity does exists");
+        }
+      }
+    }
+
+   //tsFile.insertTextBeforeNode(, tableAnnotation);
+   //tsFile.insertTextBeforeNode(findClassByName.get(), "@Entity\n");
+
+    /**
+    List<TSNode> annotation = this.classDeclarationService.getAllClassAnnotationNodes(tsFile);
+    System.out.println(tsFile.getTextFromNode(annotation.getLast()));
+     **/
 
     this.programService.getImportDeclarationService().addImport(tsFile, "jakarta.persistense", "Entity");
     this.programService.getImportDeclarationService().addImport(tsFile, "jakarta.persistense", "Table");

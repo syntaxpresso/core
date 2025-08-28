@@ -256,4 +256,15 @@ public class ClassDeclarationService {
     }
     return Optional.of(fieldTypeNode);
   }
+
+  public List<TSNode> getAllClassAnnotationNodes(TSFile file) {
+    if (file == null || file.getTree() == null) {
+      return Collections.emptyList();
+    }
+    List<TSNode> markerAnnotationNode = file.query("(class_declaration(modifiers(marker_annotation)@annotation))");
+    List<TSNode> annotationNode = file.query("(class_declaration(modifiers(annotation)@annotation))");
+    annotationNode.addAll(markerAnnotationNode);
+    return annotationNode;
+  }
+  
 }

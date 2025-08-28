@@ -29,6 +29,7 @@ public class CreateNewJPAEntityCommand
 
   @Override
   public DataTransferObject<CreateNewJPAEntityResponse> call() throws Exception {
+    System.out.println(1);
     return this.javaService.createNewJPAEntity(cwd, packageName, fileName);
   }
 }
