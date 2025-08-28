@@ -1,10 +1,10 @@
 package io.github.syntaxpresso.core.service.java.jpa;
 
+import io.github.syntaxpresso.core.command.extra.JavaBasicType;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.JavaBasicType;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -31,8 +31,6 @@ public class JPAService {
       this.file = file;
     }
   }
-
-
 
   /**
    * Extracts the type of a field declaration.
@@ -89,7 +87,7 @@ public class JPAService {
    * @param idType The ID field type.
    */
   private void addImportForIdType(TSFile repositoryFile, String idType) {
-    Optional<JavaBasicType> basicType = JavaBasicType.fromTypeName(idType);
+    Optional<JavaBasicType> basicType = JavaBasicType.getByTypeName(idType);
     if (basicType.isPresent() && basicType.get().needsImport()) {
       this.importDeclarationService.addImport(
           repositoryFile, basicType.get().getFullyQualifiedName());
