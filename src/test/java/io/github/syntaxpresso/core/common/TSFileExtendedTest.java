@@ -156,11 +156,9 @@ class TSFileExtendedTest {
       List<TSNode> localVars = testFile.query("(local_variable_declaration) @var");
       if (!localVars.isEmpty()) {
         TSNode localVar = localVars.get(0);
-        
         // Should be able to find method_declaration (parent)
         Optional<TSNode> methodDecl = testFile.findParentNodeByType(localVar, "method_declaration");
         assertTrue(methodDecl.isPresent(), "Should find method_declaration ancestor");
-        
         // Should be able to find class_declaration (grandparent)
         Optional<TSNode> classDecl = testFile.findParentNodeByType(localVar, "class_declaration");
         assertTrue(classDecl.isPresent(), "Should find class_declaration ancestor");
@@ -168,7 +166,6 @@ class TSFileExtendedTest {
         // If no local variables, test with method nodes
         List<TSNode> methods = testFile.query("(method_declaration) @method");
         assertFalse(methods.isEmpty(), "Should have methods to test with");
-        
         TSNode method = methods.get(0);
         Optional<TSNode> classDecl = testFile.findParentNodeByType(method, "class_declaration");
         assertTrue(classDecl.isPresent(), "Should find class_declaration ancestor from method");
@@ -212,4 +209,3 @@ class TSFileExtendedTest {
     }
   }
 }
-

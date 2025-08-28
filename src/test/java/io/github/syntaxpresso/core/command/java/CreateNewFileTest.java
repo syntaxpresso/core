@@ -5,11 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse;
-import io.github.syntaxpresso.core.command.java.extra.JavaFileTemplate;
-import io.github.syntaxpresso.core.command.java.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
+import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
+import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
-import io.github.syntaxpresso.core.service.java.JavaService;
+import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,12 +20,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("CreateNewFileTest Tests")
 class CreateNewFileTest {
-  private JavaService javaService;
+  private JavaCommandService javaService;
   @TempDir Path tempDir;
 
   @BeforeEach
   void setUp() {
-    javaService = new JavaService();
+    javaService = new JavaCommandService();
   }
 
   @Nested
@@ -34,7 +34,7 @@ class CreateNewFileTest {
     @Test
     @DisplayName("should fail when --cwd does not exist")
     void execute_withNonExistentCwd_shouldReturnError() {
-      DataTransferObject<CreateNewJavaFileResponse> result =
+      DataTransferObject<CreateNewFileResponse> result =
           javaService.createNewFile(
               Path.of("/invalid/path"),
               "io.github",
@@ -48,7 +48,7 @@ class CreateNewFileTest {
     @Test
     @DisplayName("should fail when --packageName is empty")
     void execute_withEmptyPackageName_shouldReturnError() {
-      DataTransferObject<CreateNewJavaFileResponse> result =
+      DataTransferObject<CreateNewFileResponse> result =
           javaService.createNewFile(
               tempDir, "", "MyClass.java", JavaFileTemplate.CLASS, SourceDirectoryType.MAIN);
       assertFalse(result.getSucceed());
@@ -58,7 +58,7 @@ class CreateNewFileTest {
     @Test
     @DisplayName("should fail when --fileName is empty")
     void execute_withEmptyFileName_shouldReturnError() {
-      DataTransferObject<CreateNewJavaFileResponse> result =
+      DataTransferObject<CreateNewFileResponse> result =
           javaService.createNewFile(
               tempDir, "io.github", "", JavaFileTemplate.CLASS, SourceDirectoryType.MAIN);
       assertFalse(result.getSucceed());
@@ -74,7 +74,7 @@ class CreateNewFileTest {
     void call_shouldCreateJavaFileSuccessfully() throws Exception {
       Path targetPath = tempDir.resolve("src/main/java/io/github");
       Files.createDirectories(targetPath);
-      DataTransferObject<CreateNewJavaFileResponse> result =
+      DataTransferObject<CreateNewFileResponse> result =
           javaService.createNewFile(
               tempDir,
               "io.github",
@@ -90,7 +90,7 @@ class CreateNewFileTest {
     @Test
     @DisplayName("should return error when source directory is missing")
     void shouldReturnErrorWhenSourceDirectoryIsMissing() {
-      DataTransferObject<CreateNewJavaFileResponse> result =
+      DataTransferObject<CreateNewFileResponse> result =
           javaService.createNewFile(
               tempDir,
               "io.github",

@@ -13,6 +13,7 @@ build/
 .settings
 .springBeans
 .sts4-cache
+AGENTS.md
 kls_database.db
 bin/
 !**/src/main/**/bin/

@@ -1,6 +1,7 @@
 package io.github.syntaxpresso.core.common;
 
 import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import java.io.File;
 import java.io.IOException;
@@ -253,7 +254,7 @@ public class TSFile {
    * @return The {@link TSNode} at the specified position, or null if not found.
    * @throws IllegalStateException if the source code has not been parsed yet.
    */
-  public TSNode getNodeFromPosition(int line, int column) {
+  public TSNode getNodeFromPosition(int line, int column, SupportedIDE ide) {
     if (this.tree == null) {
       throw new IllegalStateException("Tree is not set; cannot get a node by position.");
     }
@@ -264,6 +265,9 @@ public class TSFile {
     TSPoint endPoint = rootNode.getEndPoint();
     int requestedLine = line - 1;
     int requestedColumn = column - 1;
+    if (ide.equals(SupportedIDE.NEOVIM) || ide.equals(SupportedIDE.VSCODE)) {
+      requestedColumn++;
+    }
     if (requestedLine > endPoint.getRow()
         || (requestedLine == endPoint.getRow() && requestedColumn > endPoint.getColumn())) {
       return null;

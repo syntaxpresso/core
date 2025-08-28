@@ -17,7 +17,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class PathHelper {
-
   /**
    * Recursively finds all files in a directory that match a given language's file extension and
    * converts them into a list of {@link TSFile} objects.

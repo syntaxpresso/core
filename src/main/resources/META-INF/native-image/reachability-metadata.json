@@ -45,20 +45,67 @@
       ]
     },
     {
-      "type": "io.github.syntaxpresso.core.command.java.dto.CreateNewJavaFileResponse",
+      "type": "io.github.syntaxpresso.core.command.dto.CreateNewFileResponse",
       "allDeclaredFields": true,
       "allDeclaredMethods": true,
       "methods": [
         {
           "name": "<init>",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String"]
         }
       ]
     },
     {
-      "type": "io.github.syntaxpresso.core.command.java.dto.GetMainClassResponse",
+      "type": "io.github.syntaxpresso.core.command.dto.GetMainClassResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String", "java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "io.github.syntaxpresso.core.command.dto.RenameResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String", "int", "java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String", "java.lang.String", "io.github.syntaxpresso.core.service.extra.JavaIdentifierType", "java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "io.github.syntaxpresso.core.service.extra.JavaIdentifierType",
       "allDeclaredFields": true,
       "allDeclaredMethods": true
     },
@@ -170,9 +217,7 @@
       "methods": [
         {
           "name": "getBoolean",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
+          "parameterTypes": ["java.lang.String"]
         }
       ]
     },
@@ -201,3 +246,4 @@
     }
   ]
 }
+
