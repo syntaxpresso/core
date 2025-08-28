@@ -1,5 +1,3 @@
-[0.003s][warning][os,container] Cgroup memory controller path at '/sys/fs/cgroup' seems to have moved to '/../../../app.slice/app-tmux.slice/tmux-spawn-7a6066b2-de6e-4409-a169-ad12758a6eed.scope', detected limits won't be accurate
-[0.003s][warning][os,container] Cgroup cpu controller path at '/sys/fs/cgroup' seems to have moved to '/../../../app.slice/app-tmux.slice/tmux-spawn-7a6066b2-de6e-4409-a169-ad12758a6eed.scope', detected limits won't be accurate
 package io.github.syntaxpresso.core.service.java.jpa;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
