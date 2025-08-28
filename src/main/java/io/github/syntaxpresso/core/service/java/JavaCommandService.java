@@ -1,11 +1,7 @@
 package io.github.syntaxpresso.core.service.java;
 
 import com.google.common.base.Strings;
-import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
-import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
-import io.github.syntaxpresso.core.command.dto.GetJPAEntityInfoResponse;
-import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
-import io.github.syntaxpresso.core.command.dto.RenameResponse;
+import io.github.syntaxpresso.core.command.dto.*;
 import io.github.syntaxpresso.core.command.extra.JavaBasicType;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
@@ -20,9 +16,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import io.github.syntaxpresso.core.util.StringHelper;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.treesitter.TSNode;
@@ -433,5 +432,54 @@ public class JavaCommandService {
     response.setEntityPackageName(packageName.get());
     response.setEntityPath(file.getFile().getAbsolutePath());
     return DataTransferObject.success(response);
+  }
+
+  public DataTransferObject<CreateNewJPAEntityResponse>
+      createNewJPAEntity(final Path cwd, final String packageName, final String fileName) {
+    DataTransferObject<CreateNewFileResponse> response =
+        createNewFile(cwd, packageName, fileName, JavaFileTemplate.CLASS, SourceDirectoryType.MAIN);
+    if (!response.getSucceed()) {
+      return DataTransferObject.error("Unable to create file");
+    }
+
+    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, Paths.get(response.getData().getFilePath()));
+
+    String nameWithoutExtension = tsFile.getFileNameWithoutExtension().orElse(fileName);
+
+    String snakeName = StringHelper.pascalToSnake(nameWithoutExtension);
+
+    String tableAnnotation = "@Table(name=\"" + snakeName + "\")\n";
+    List<TSFile> files = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
+
+    for (TSFile file : files) {
+      List<TSNode> annotations = this.javaLanguageService.getClassDeclarationService().getAllClassAnnotations(file);
+      for (TSNode a : annotations) {
+        String annotationText = tsFile.getTextFromNode(a);
+        if (annotationText.contains(snakeName)) {
+          return DataTransferObject.error("JPA entity does exists");
+        }
+      }
+    }
+
+    // tsFile.insertTextBeforeNode(, tableAnnotation);
+    // tsFile.insertTextBeforeNode(findClassByName.get(), "@Entity\n");
+
+    /**
+     * List<TSNode> annotation = this.classDeclarationService.getAllClassAnnotationNodes(tsFile);
+     * System.out.println(tsFile.getTextFromNode(annotation.getLast()));
+     */
+    this.javaLanguageService
+        .getImportDeclarationService()
+        .addImport(tsFile, "jakarta.persistense", "Entity");
+    this.javaLanguageService
+        .getImportDeclarationService()
+        .addImport(tsFile, "jakarta.persistense", "Table");
+
+    try {
+      tsFile.save();
+    } catch (IOException e) {
+      return DataTransferObject.error("Could not save file: " + e.getMessage());
+    }
+    return null;
   }
 }

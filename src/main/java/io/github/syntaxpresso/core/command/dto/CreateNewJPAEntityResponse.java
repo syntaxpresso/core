@@ -1,4 +1,4 @@
-package io.github.syntaxpresso.core.command.java.dto;
+package io.github.syntaxpresso.core.command.dto;
 
 import java.io.Serializable;
 import lombok.*;
