@@ -2,8 +2,10 @@ package io.github.syntaxpresso.core.service.java.jpa;
 
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
+import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
@@ -89,5 +91,37 @@ public class JPAEntityService {
               .orElse(null);
     }
     return Optional.ofNullable(entityName);
+  }
+
+  public void testQuery() {
+    String sourceCode =
+        "class Example {\n"
+            + "  @MyAnnotation(keyA = \"value1\", keyB = \"value2\")\n"
+            + "  void method() {}\n"
+            + "}";
+    TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
+    String queryString =
+        "(annotation"
+            + "  name: (identifier) @annotation_name"
+            + "  arguments: (annotation_argument_list"
+            + "    (element_value_pair"
+            + "      key: (identifier) @key"
+            + "      value: (_) @value"
+            + "    ) @pair"
+            + "  )"
+            + ")";
+    List<Map<String, TSNode>> nodes = file.queryForCaptures(queryString);
+    for (Map<String, TSNode> matchMap : nodes) {
+      TSNode annotationNameNode = matchMap.get("annotation_name");
+      TSNode keyNode = matchMap.get("key");
+      TSNode valueNode = matchMap.get("value");
+      // Now you can safely get the text, knowing they belong together!
+      String annotationName = file.getTextFromNode(annotationNameNode);
+      String keyText = file.getTextFromNode(keyNode);
+      String valueText = file.getTextFromNode(valueNode);
+
+      System.out.printf(
+          "Annotation: '%s' -> Key: '%s', Value: %s%n", annotationName, keyText, valueText);
+    }
   }
 }
