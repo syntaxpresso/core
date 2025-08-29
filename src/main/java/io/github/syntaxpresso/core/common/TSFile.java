@@ -441,6 +441,40 @@ public class TSFile {
   }
 
   /**
+   * Common helper method to execute Tree-sitter queries with custom match processing. This method
+   * handles the standard query execution pattern and delegates match processing to the provided
+   * consumer function.
+   *
+   * @param node The node to run the query on.
+   * @param queryString The Tree-sitter query string.
+   * @param matchProcessor Function to process each match and query pair.
+   * @param <T> The type of results to return.
+   * @return A list of results from the match processor, or empty list if query fails.
+   */
+  private <T> List<T> executeQuery(
+      TSNode node,
+      String queryString,
+      java.util.function.Function<java.util.Map.Entry<TSQueryMatch, TSQuery>, List<T>>
+          matchProcessor) {
+    List<T> results = new ArrayList<>();
+    try {
+      TSQuery query = new TSQuery(this.getParser().getLanguage(), queryString);
+      TSQueryCursor cursor = new TSQueryCursor();
+      cursor.exec(query, node);
+      TSQueryMatch match = new TSQueryMatch();
+      while (cursor.nextMatch(match)) {
+        // Create a map entry to pass both match and query to the processor
+        java.util.Map.Entry<TSQueryMatch, TSQuery> entry =
+            new java.util.AbstractMap.SimpleEntry<>(match, query);
+        results.addAll(matchProcessor.apply(entry));
+      }
+    } catch (TSException e) {
+      return new ArrayList<>();
+    }
+    return results;
+  }
+
+  /**
    * Executes a Tree-sitter query on a specific node and returns the captured nodes. Duplicates are
    * automatically removed while preserving insertion order.
    *
@@ -450,15 +484,20 @@ public class TSFile {
    */
   public List<TSNode> query(TSNode node, String queryString) {
     Set<TSNode> foundNodes = new LinkedHashSet<>();
-    TSQuery query = new TSQuery(this.getParser().getLanguage(), queryString);
-    TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(query, node);
-    TSQueryMatch match = new TSQueryMatch();
-    while (cursor.nextMatch(match)) {
-      for (TSQueryCapture capture : match.getCaptures()) {
-        foundNodes.add(capture.getNode());
-      }
-    }
+    List<TSNode> nodes =
+        executeQuery(
+            node,
+            queryString,
+            entry -> {
+              TSQueryMatch match = entry.getKey();
+              List<TSNode> capturedNodes = new ArrayList<>();
+              for (TSQueryCapture capture : match.getCaptures()) {
+                capturedNodes.add(capture.getNode());
+              }
+              return capturedNodes;
+            });
+    // Add all nodes to LinkedHashSet to remove duplicates while preserving order
+    foundNodes.addAll(nodes);
     return new ArrayList<>(foundNodes)
         .stream()
             .sorted(Comparator.comparingInt(TSNode::getStartByte))
@@ -515,31 +554,31 @@ public class TSFile {
    *     matches are found or if the query execution fails.
    */
   public List<Map<String, TSNode>> queryForCaptures(TSNode node, String queryString) {
-    List<Map<String, TSNode>> allMatches = new ArrayList<>();
-    try {
-      TSQuery query = new TSQuery(this.getParser().getLanguage(), queryString);
-      TSQueryCursor cursor = new TSQueryCursor();
-      cursor.exec(query, node);
-      TSQueryMatch match = new TSQueryMatch();
-      while (cursor.nextMatch(match)) {
-        Map<String, TSNode> matchMap = new HashMap<>();
-        for (TSQueryCapture capture : match.getCaptures()) {
-          String captureName = query.getCaptureNameForId(capture.getIndex());
-          matchMap.put(captureName, capture.getNode());
-        }
-        allMatches.add(matchMap);
-      }
-      // Sort by start byte.
-      allMatches.sort(
-          (m1, m2) -> {
-            if (m1.isEmpty() || m2.isEmpty()) return 0;
-            TSNode n1 = m1.values().iterator().next();
-            TSNode n2 = m2.values().iterator().next();
-            return Integer.compare(n1.getStartByte(), n2.getStartByte());
-          });
-    } catch (TSException e) {
-      return new ArrayList<>();
-    }
+    List<Map<String, TSNode>> allMatches =
+        executeQuery(
+            node,
+            queryString,
+            entry -> {
+              TSQueryMatch match = entry.getKey();
+              TSQuery query = entry.getValue();
+
+              Map<String, TSNode> matchMap = new HashMap<>();
+              for (TSQueryCapture capture : match.getCaptures()) {
+                String captureName = query.getCaptureNameForId(capture.getIndex());
+                matchMap.put(captureName, capture.getNode());
+              }
+              // Return single match as list
+              return java.util.Collections.singletonList(matchMap);
+            });
+    // Sort by start byte for consistency
+    allMatches.sort(
+        (m1, m2) -> {
+          if (m1.isEmpty() || m2.isEmpty()) return 0;
+          TSNode n1 = m1.values().iterator().next();
+          TSNode n2 = m2.values().iterator().next();
+          return Integer.compare(n1.getStartByte(), n2.getStartByte());
+        });
+
     return allMatches;
   }
 
