@@ -1,7 +1,7 @@
 package io.github.syntaxpresso.core.command;
 
 import io.github.syntaxpresso.core.command.dto.RenameResponse;
-import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
@@ -64,7 +64,7 @@ public class RenameCommand implements Callable<DataTransferObject<RenameResponse
       names = {"--source-directory"},
       description = "The source directory type (e.g., MAIN, TEST).",
       defaultValue = "MAIN")
-  private SourceDirectoryType sourceDirectoryType;
+  private JavaSourceDirectoryType sourceDirectoryType;
 
   @Override
   public DataTransferObject<RenameResponse> call() {

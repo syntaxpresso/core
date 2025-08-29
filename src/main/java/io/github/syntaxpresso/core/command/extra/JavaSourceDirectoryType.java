@@ -1,6 +1,6 @@
 package io.github.syntaxpresso.core.command.extra;
 
-public enum SourceDirectoryType {
+public enum JavaSourceDirectoryType {
   MAIN,
   TEST
 }
