@@ -361,6 +361,9 @@ public class TSFile {
    * @return The optional of the file name without extension as String;
    */
   public Optional<String> getFileNameWithoutExtension() {
+    if (this.file == null) {
+      return Optional.empty();
+    }
     String fileName = com.google.common.io.Files.getNameWithoutExtension(this.file.getName());
     if (fileName == null) {
       return Optional.empty();
