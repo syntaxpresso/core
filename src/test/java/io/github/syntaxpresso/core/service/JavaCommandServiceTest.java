@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
-import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
@@ -79,7 +79,7 @@ class JavaCommandServiceTest {
     void findFilePath_forMain_shouldReturnCorrectPath(@TempDir Path tempDir) throws IOException {
       String packageName = "com.example";
       Optional<Path> result =
-          javaCommandService.findFilePath(tempDir, packageName, SourceDirectoryType.MAIN);
+          javaCommandService.findFilePath(tempDir, packageName, JavaSourceDirectoryType.MAIN);
       assertTrue(result.isPresent());
       assertTrue(result.get().endsWith(Path.of("src", "main", "java", "com", "example")));
       assertTrue(Files.isDirectory(result.get()));
@@ -90,7 +90,7 @@ class JavaCommandServiceTest {
     void findFilePath_forTest_shouldReturnCorrectPath(@TempDir Path tempDir) throws IOException {
       String packageName = "com.example.test";
       Optional<Path> result =
-          javaCommandService.findFilePath(tempDir, packageName, SourceDirectoryType.TEST);
+          javaCommandService.findFilePath(tempDir, packageName, JavaSourceDirectoryType.TEST);
       assertTrue(result.isPresent());
       assertTrue(result.get().endsWith(Path.of("src", "test", "java", "com", "example", "test")));
       assertTrue(Files.isDirectory(result.get()));
@@ -102,7 +102,7 @@ class JavaCommandServiceTest {
       Path invalidPath = Path.of("non_existent_directory");
       String packageName = "com.example";
       Optional<Path> result =
-          javaCommandService.findFilePath(invalidPath, packageName, SourceDirectoryType.MAIN);
+          javaCommandService.findFilePath(invalidPath, packageName, JavaSourceDirectoryType.MAIN);
       assertFalse(result.isPresent());
     }
   }
