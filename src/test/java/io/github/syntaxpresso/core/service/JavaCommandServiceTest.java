@@ -360,4 +360,360 @@ class JavaCommandServiceTest {
       assertEquals(SupportedLanguage.JAVA, methodResult.getData().getLanguage());
     }
   }
+
+  @Nested
+  @DisplayName("parseSourceCommand()")
+  class ParseSourceCommandTests {
+    @Test
+    @DisplayName("should parse valid Java source code successfully")
+    void parseSourceCommand_withValidJavaSourceCode_shouldReturnSuccess() {
+      String sourceCode = "public class TestClass { private String name; }";
+      Path filePath = Path.of("/test/TestClass.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.NONE;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(sourceCode, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(sourceCode, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should parse complex Java source code successfully")
+    void parseSourceCommand_withComplexJavaSourceCode_shouldReturnSuccess() {
+      String complexSourceCode =
+          """
+          package com.example.test;
+          import java.util.List;
+          import java.util.ArrayList;
+          
+          /**
+           * A test class for complex parsing
+           */
+          public class ComplexTestClass {
+              private final String name;
+              private List<Integer> numbers;
+              
+              public ComplexTestClass(String name) {
+                  this.name = name;
+                  this.numbers = new ArrayList<>();
+              }
+              
+              public void addNumber(int number) {
+                  if (number > 0) {
+                      numbers.add(number);
+                  }
+              }
+              
+              public List<Integer> getNumbers() {
+                  return new ArrayList<>(numbers);
+              }
+              
+              @Override
+              public String toString() {
+                  return "ComplexTestClass{name='" + name + "', numbers=" + numbers + "}";
+              }
+          }
+          """;
+      Path filePath = Path.of("/src/main/java/com/example/test/ComplexTestClass.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.VSCODE;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(complexSourceCode, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(complexSourceCode, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should parse Java interface successfully")
+    void parseSourceCommand_withJavaInterface_shouldReturnSuccess() {
+      String interfaceSourceCode =
+          """
+          package com.example.interfaces;
+          
+          /**
+           * Test interface
+           */
+          public interface TestInterface {
+              void doSomething();
+              String getName();
+              default void defaultMethod() {
+                  System.out.println("Default implementation");
+              }
+          }
+          """;
+      Path filePath = Path.of("/src/main/java/com/example/interfaces/TestInterface.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.NEOVIM;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(interfaceSourceCode, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(interfaceSourceCode, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should parse Java enum successfully")
+    void parseSourceCommand_withJavaEnum_shouldReturnSuccess() {
+      String enumSourceCode =
+          """
+          package com.example.enums;
+          
+          public enum Color {
+              RED("Red Color"),
+              GREEN("Green Color"),
+              BLUE("Blue Color");
+              
+              private final String description;
+              
+              Color(String description) {
+                  this.description = description;
+              }
+              
+              public String getDescription() {
+                  return description;
+              }
+          }
+          """;
+      Path filePath = Path.of("/src/main/java/com/example/enums/Color.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.NONE;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(enumSourceCode, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(enumSourceCode, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should parse Java annotation successfully")
+    void parseSourceCommand_withJavaAnnotation_shouldReturnSuccess() {
+      String annotationSourceCode =
+          """
+          package com.example.annotations;
+          
+          import java.lang.annotation.ElementType;
+          import java.lang.annotation.Retention;
+          import java.lang.annotation.RetentionPolicy;
+          import java.lang.annotation.Target;
+          
+          @Target(ElementType.TYPE)
+          @Retention(RetentionPolicy.RUNTIME)
+          public @interface TestAnnotation {
+              String value() default "";
+              int priority() default 0;
+          }
+          """;
+      Path filePath = Path.of("/src/main/java/com/example/annotations/TestAnnotation.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.VSCODE;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(annotationSourceCode, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(annotationSourceCode, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should handle empty source code")
+    void parseSourceCommand_withEmptySourceCode_shouldReturnSuccess() {
+      String emptySourceCode = "";
+      Path filePath = Path.of("/test/Empty.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.NONE;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(emptySourceCode, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(emptySourceCode, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should handle whitespace-only source code")
+    void parseSourceCommand_withWhitespaceOnlySourceCode_shouldReturnSuccess() {
+      String whitespaceSourceCode = "   \n\n\t  \n  ";
+      Path filePath = Path.of("/test/Whitespace.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.NEOVIM;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(whitespaceSourceCode, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(whitespaceSourceCode, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should handle null file path")
+    void parseSourceCommand_withNullFilePath_shouldReturnSuccess() {
+      String sourceCode = "public class TestClass {}";
+      Path filePath = null;
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.NONE;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(sourceCode, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(sourceCode, result.getData().getSourceCode());
+      assertEquals(null, result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should handle invalid Java syntax gracefully")
+    void parseSourceCommand_withInvalidJavaSyntax_shouldStillReturnSuccess() {
+      // Note: The current implementation doesn't validate syntax, it just stores the source code
+      String invalidSourceCode = "public class { invalid syntax }{{{";
+      Path filePath = Path.of("/test/Invalid.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.VSCODE;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(invalidSourceCode, filePath, language, ide);
+
+      // Current implementation doesn't perform syntax validation, so it should still succeed
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(invalidSourceCode, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should handle very large source code")
+    void parseSourceCommand_withLargeSourceCode_shouldReturnSuccess() {
+      StringBuilder largeSourceCode = new StringBuilder("public class LargeClass {\n");
+      for (int i = 0; i < 1000; i++) {
+        largeSourceCode
+            .append("    private String field")
+            .append(i)
+            .append(" = \"value")
+            .append(i)
+            .append("\";\n");
+      }
+      largeSourceCode.append("    public void method() {\n");
+      for (int i = 0; i < 1000; i++) {
+        largeSourceCode
+            .append("        System.out.println(field")
+            .append(i)
+            .append(");\n");
+      }
+      largeSourceCode.append("    }\n}");
+
+      String sourceCode = largeSourceCode.toString();
+      Path filePath = Path.of("/test/LargeClass.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.NONE;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(sourceCode, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(sourceCode, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should handle source code with special characters and Unicode")
+    void parseSourceCommand_withSpecialCharactersAndUnicode_shouldReturnSuccess() {
+      String sourceCodeWithSpecialChars =
+          """
+          package com.example.unicode;
+          
+          /**
+           * Test class with Unicode: 测试类 🚀
+           */
+          public class UnicodeTestClass {
+              private String message = "Hello, 世界! 🌍";
+              private String emoji = "😀😃😄😁";
+              
+              public void printMessage() {
+                  System.out.println("Message: " + message);
+                  System.out.println("Emojis: " + emoji);
+              }
+          }
+          """;
+      Path filePath = Path.of("/src/main/java/com/example/unicode/UnicodeTestClass.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+      SupportedIDE ide = SupportedIDE.VSCODE;
+
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> result =
+          javaCommandService.parseSourceCommand(sourceCodeWithSpecialChars, filePath, language, ide);
+
+      assertTrue(result.getSucceed());
+      assertNotNull(result.getData());
+      assertEquals(sourceCodeWithSpecialChars, result.getData().getSourceCode());
+      assertEquals(filePath.toString(), result.getData().getFilePath());
+      assertEquals(ide, result.getData().getIde());
+      assertTrue(result.getData().isParseSuccess());
+    }
+
+    @Test
+    @DisplayName("should work with all supported IDEs")
+    void parseSourceCommand_withAllSupportedIDEs_shouldReturnSuccess() {
+      String sourceCode = "public class IDETestClass { private String ide; }";
+      Path filePath = Path.of("/test/IDETestClass.java");
+      SupportedLanguage language = SupportedLanguage.JAVA;
+
+      // Test with NONE
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> noneResult =
+          javaCommandService.parseSourceCommand(sourceCode, filePath, language, SupportedIDE.NONE);
+      assertTrue(noneResult.getSucceed());
+      assertEquals(SupportedIDE.NONE, noneResult.getData().getIde());
+
+      // Test with VSCODE
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> vscodeResult =
+          javaCommandService.parseSourceCommand(sourceCode, filePath, language, SupportedIDE.VSCODE);
+      assertTrue(vscodeResult.getSucceed());
+      assertEquals(SupportedIDE.VSCODE, vscodeResult.getData().getIde());
+
+      // Test with NEOVIM
+      DataTransferObject<io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse> neovimResult =
+          javaCommandService.parseSourceCommand(sourceCode, filePath, language, SupportedIDE.NEOVIM);
+      assertTrue(neovimResult.getSucceed());
+      assertEquals(SupportedIDE.NEOVIM, neovimResult.getData().getIde());
+    }
+  }
 }
