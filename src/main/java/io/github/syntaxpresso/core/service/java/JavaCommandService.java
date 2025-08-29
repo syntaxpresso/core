@@ -437,19 +437,25 @@ public class JavaCommandService {
   }
 
   /**
-   * Parses source code and creates a ParseSourceCodeResponse containing the parsed file and IDE information.
+   * Parses source code and creates a ParseSourceCodeResponse containing the parsed file and IDE
+   * information.
    *
    * @param sourceCode The source code to parse.
    * @param filePath The path to the file (may be null if parsing raw source code).
    * @param language The programming language of the source code.
    * @param ide The IDE being used for context.
-   * @return A DataTransferObject containing the ParseSourceCodeResponse with parsed file information.
+   * @return A DataTransferObject containing the ParseSourceCodeResponse with parsed file
+   *     information.
    */
   public DataTransferObject<ParseSourceCodeResponse> parseSourceCommand(
       String sourceCode, Path filePath, SupportedLanguage language, SupportedIDE ide) {
-    TSFile file = new TSFile(language, sourceCode);
     ParseSourceCodeResponse response =
-        ParseSourceCodeResponse.builder().file(file).ide(ide).build();
+        ParseSourceCodeResponse.builder()
+            .ide(ide)
+            .sourceCode(sourceCode)
+            .filePath(filePath != null ? filePath.toString() : null)
+            .parseSuccess(true)
+            .build();
     return DataTransferObject.success(response);
   }
 

@@ -49,7 +49,7 @@ public class ParseSourceCodeCommand
       DataTransferObject<ParseSourceCodeResponse> response =
           this.javaCommandService.parseSourceCommand(sourceCode, filePath, language, ide);
       if (this.ide.equals(SupportedIDE.NONE)) {
-        System.out.println(response.getData().getFile().getSourceCode());
+        System.out.println(response.getData().getSourceCode());
         return response;
       } else {
         return DataTransferObject.success();
