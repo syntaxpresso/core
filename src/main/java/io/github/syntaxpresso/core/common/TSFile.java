@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import org.treesitter.TSException;
 import org.treesitter.TSNode;
@@ -31,8 +32,11 @@ import org.treesitter.TSTree;
 
 @Getter
 public class TSFile {
+  @JsonIgnore
   private final TSParser parser;
+  @JsonIgnore
   private File file;
+  @JsonIgnore
   private TSTree tree;
   private String sourceCode;
   private Path newPath;
@@ -313,6 +317,7 @@ public class TSFile {
    * @return The file.
    * @throws IllegalStateException if the file has not been set.
    */
+  @JsonIgnore
   public File getFile() {
     if (this.file == null) {
       throw new IllegalStateException("File is not set.");
@@ -360,7 +365,11 @@ public class TSFile {
    *
    * @return The optional of the file name without extension as String;
    */
+  @JsonIgnore
   public Optional<String> getFileNameWithoutExtension() {
+    if (this.file == null) {
+      return Optional.empty();
+    }
     String fileName = com.google.common.io.Files.getNameWithoutExtension(this.file.getName());
     if (fileName == null) {
       return Optional.empty();
