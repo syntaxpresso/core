@@ -5,6 +5,7 @@ import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
 import io.github.syntaxpresso.core.command.dto.GetJPAEntityInfoResponse;
 import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
+import io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse;
 import io.github.syntaxpresso.core.command.dto.RenameResponse;
 import io.github.syntaxpresso.core.command.extra.JavaBasicType;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
@@ -432,6 +433,23 @@ public class JavaCommandService {
     response.setIsJPAEntity(isJPAEntity);
     response.setEntityPackageName(packageName.get());
     response.setEntityPath(file.getFile().getAbsolutePath());
+    return DataTransferObject.success(response);
+  }
+
+  /**
+   * Parses source code and creates a ParseSourceCodeResponse containing the parsed file and IDE information.
+   *
+   * @param sourceCode The source code to parse.
+   * @param filePath The path to the file (may be null if parsing raw source code).
+   * @param language The programming language of the source code.
+   * @param ide The IDE being used for context.
+   * @return A DataTransferObject containing the ParseSourceCodeResponse with parsed file information.
+   */
+  public DataTransferObject<ParseSourceCodeResponse> parseSourceCommand(
+      String sourceCode, Path filePath, SupportedLanguage language, SupportedIDE ide) {
+    TSFile file = new TSFile(language, sourceCode);
+    ParseSourceCodeResponse response =
+        ParseSourceCodeResponse.builder().file(file).ide(ide).build();
     return DataTransferObject.success(response);
   }
 
