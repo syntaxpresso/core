@@ -8,7 +8,7 @@ import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.command.dto.RenameResponse;
 import io.github.syntaxpresso.core.command.extra.JavaBasicType;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
-import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
@@ -59,7 +59,7 @@ public class JavaCommandService {
    * @return An optional containing the path to the file, or empty if not found.
    */
   public Optional<Path> findFilePath(
-      Path rootDir, String packageName, SourceDirectoryType sourceDirectoryType) {
+      Path rootDir, String packageName, JavaSourceDirectoryType sourceDirectoryType) {
     if (rootDir == null || !Files.isDirectory(rootDir)) {
       return Optional.empty();
     }
@@ -70,7 +70,7 @@ public class JavaCommandService {
       return Optional.empty();
     }
     final String srcDirName =
-        (sourceDirectoryType == SourceDirectoryType.MAIN) ? "src/main/java" : "src/test/java";
+        (sourceDirectoryType == JavaSourceDirectoryType.MAIN) ? "src/main/java" : "src/test/java";
     try {
       Optional<Path> sourceDirOptional =
           this.pathHelper.findDirectoryRecursively(rootDir, srcDirName);
@@ -127,7 +127,7 @@ public class JavaCommandService {
       String packageName,
       String fileName,
       JavaFileTemplate fileType,
-      SourceDirectoryType sourceDirectoryType) {
+      JavaSourceDirectoryType sourceDirectoryType) {
     if (cwd == null || !Files.exists(cwd)) {
       return DataTransferObject.error("Current working directory does not exist.");
     }
@@ -144,7 +144,7 @@ public class JavaCommandService {
       return DataTransferObject.error("Source directory type is required.");
     }
     final String srcDirName =
-        (sourceDirectoryType == SourceDirectoryType.MAIN) ? "src/main/java" : "src/test/java";
+        (sourceDirectoryType == JavaSourceDirectoryType.MAIN) ? "src/main/java" : "src/test/java";
     try {
       Optional<Path> sourceDirOptional = this.pathHelper.findDirectoryRecursively(cwd, srcDirName);
       if (sourceDirOptional.isEmpty()) {
@@ -433,5 +433,9 @@ public class JavaCommandService {
     response.setEntityPackageName(packageName.get());
     response.setEntityPath(file.getFile().getAbsolutePath());
     return DataTransferObject.success(response);
+  }
+
+  public void testCommand() {
+    this.jpaService.getJpaOperations().getJpaEntityService().testQuery();
   }
 }
