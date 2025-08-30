@@ -1,12 +1,14 @@
 package io.github.syntaxpresso.core.service.java.language;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -304,6 +306,211 @@ class ImportDeclarationServiceTest {
       assertTrue(thirdImport.containsKey("class"));
       assertEquals("java.util", file.getTextFromNode(thirdImport.get("package")));
       assertEquals("Map", file.getTextFromNode(thirdImport.get("class")));
+    }
+  }
+
+  @Nested
+  @DisplayName("getImportDeclarationMap(TSFile, String, String)")
+  class GetImportDeclarationMapTests {
+
+    @Test
+    @DisplayName("should return empty when no imports exist")
+    void getImportDeclarationMap_withNoImports_shouldReturnEmpty() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, BASIC_CLASS);
+      Optional<Map<String, TSNode>> result =
+          importService.getImportDeclarationMap(file, "List", "java.util");
+      assertFalse(result.isPresent());
+    }
+
+    @Test
+    @DisplayName("should return empty when only package declaration exists")
+    void getImportDeclarationMap_withOnlyPackage_shouldReturnEmpty() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
+      Optional<Map<String, TSNode>> result =
+          importService.getImportDeclarationMap(file, "List", "java.util");
+      assertFalse(result.isPresent());
+    }
+
+    @Test
+    @DisplayName("should find exact class import match")
+    void getImportDeclarationMap_withExactMatch_shouldReturnImport() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      Optional<Map<String, TSNode>> result =
+          importService.getImportDeclarationMap(file, "List", "java.util");
+      assertTrue(result.isPresent());
+      Map<String, TSNode> importMap = result.get();
+      assertTrue(importMap.containsKey("class"));
+      assertTrue(importMap.containsKey("package"));
+      assertTrue(importMap.containsKey("importDeclaration"));
+      assertEquals("java.util", file.getTextFromNode(importMap.get("package")));
+      assertEquals("List", file.getTextFromNode(importMap.get("class")));
+    }
+
+    @Test
+    @DisplayName("should find wildcard import match")
+    void getImportDeclarationMap_withWildcardMatch_shouldReturnWildcardImport() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_WILDCARD_IMPORT);
+      Optional<Map<String, TSNode>> result =
+          importService.getImportDeclarationMap(file, "List", "java.util");
+      assertTrue(result.isPresent());
+      Map<String, TSNode> importMap = result.get();
+      assertTrue(importMap.containsKey("isWildCard"));
+      assertTrue(importMap.containsKey("package"));
+      assertTrue(importMap.containsKey("importDeclaration"));
+      assertEquals("java.util", file.getTextFromNode(importMap.get("package")));
+    }
+
+    @Test
+    @DisplayName("should find correct import among multiple imports")
+    void getImportDeclarationMap_withMultipleImports_shouldFindCorrectOne() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MULTIPLE_IMPORTS);
+      // Test finding List
+      Optional<Map<String, TSNode>> listResult =
+          importService.getImportDeclarationMap(file, "List", "java.util");
+      assertTrue(listResult.isPresent());
+      assertEquals("List", file.getTextFromNode(listResult.get().get("class")));
+      // Test finding Map
+      Optional<Map<String, TSNode>> mapResult =
+          importService.getImportDeclarationMap(file, "Map", "java.util");
+      assertTrue(mapResult.isPresent());
+      assertEquals("Map", file.getTextFromNode(mapResult.get().get("class")));
+      // Test finding IOException
+      Optional<Map<String, TSNode>> ioResult =
+          importService.getImportDeclarationMap(file, "IOException", "java.io");
+      assertTrue(ioResult.isPresent());
+      assertEquals("IOException", file.getTextFromNode(ioResult.get().get("class")));
+    }
+
+    @Test
+    @DisplayName("should prioritize wildcard over missing specific import")
+    void getImportDeclarationMap_withWildcardAndMissingSpecific_shouldReturnWildcard() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MIXED_IMPORTS);
+      // Ask for ArrayList (not specifically imported but covered by java.util.*)
+      // Note: java.util.* is not in our current mixed imports, let's use java.io.*
+      Optional<Map<String, TSNode>> result =
+          importService.getImportDeclarationMap(file, "File", "java.io");
+      assertTrue(result.isPresent());
+      Map<String, TSNode> importMap = result.get();
+      assertTrue(importMap.containsKey("isWildCard"));
+      assertEquals("java.io", file.getTextFromNode(importMap.get("package")));
+    }
+
+    @Test
+    @DisplayName("should return empty when class not found")
+    void getImportDeclarationMap_withNonExistentClass_shouldReturnEmpty() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      // Wrong class name
+      Optional<Map<String, TSNode>> wrongClass =
+          importService.getImportDeclarationMap(file, "ArrayList", "java.util");
+      assertFalse(wrongClass.isPresent());
+      // Wrong package
+      Optional<Map<String, TSNode>> wrongPackage =
+          importService.getImportDeclarationMap(file, "List", "java.io");
+      assertFalse(wrongPackage.isPresent());
+      // Both wrong
+      Optional<Map<String, TSNode>> bothWrong =
+          importService.getImportDeclarationMap(file, "File", "java.io");
+      assertFalse(bothWrong.isPresent());
+    }
+
+    @Test
+    @DisplayName("should handle case sensitivity correctly")
+    void getImportDeclarationMap_withCaseSensitivity_shouldMatchExactly() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      // Correct case
+      Optional<Map<String, TSNode>> correctCase =
+          importService.getImportDeclarationMap(file, "List", "java.util");
+      assertTrue(correctCase.isPresent());
+      // Wrong case for class name
+      Optional<Map<String, TSNode>> wrongClassCase =
+          importService.getImportDeclarationMap(file, "list", "java.util");
+      assertFalse(wrongClassCase.isPresent());
+      // Wrong case for package name
+      Optional<Map<String, TSNode>> wrongPackageCase =
+          importService.getImportDeclarationMap(file, "List", "java.Util");
+      assertFalse(wrongPackageCase.isPresent());
+    }
+
+    @Test
+    @DisplayName("should work with files without package declaration")
+    void getImportDeclarationMap_withNoPackageDeclaration_shouldFindImports() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT_NO_PACKAGE);
+      // Should find the import
+      Optional<Map<String, TSNode>> result =
+          importService.getImportDeclarationMap(file, "List", "java.util");
+      assertTrue(result.isPresent());
+      Map<String, TSNode> importMap = result.get();
+      assertTrue(importMap.containsKey("class"));
+      assertEquals("List", file.getTextFromNode(importMap.get("class")));
+      assertEquals("java.util", file.getTextFromNode(importMap.get("package")));
+    }
+
+    @Test
+    @DisplayName("should work with wildcard imports without package declaration")
+    void getImportDeclarationMap_withWildcardNoPackage_shouldFindWildcard() {
+      TSFile file =
+          new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_WILDCARD_IMPORT_NO_PACKAGE);
+      // Should find via wildcard
+      Optional<Map<String, TSNode>> result =
+          importService.getImportDeclarationMap(file, "ArrayList", "java.util");
+      assertTrue(result.isPresent());
+      Map<String, TSNode> importMap = result.get();
+      assertTrue(importMap.containsKey("isWildCard"));
+      assertEquals("java.util", file.getTextFromNode(importMap.get("package")));
+    }
+
+    @Test
+    @DisplayName("should handle mixed imports correctly")
+    void getImportDeclarationMap_withMixedImports_shouldFindBothTypes() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MIXED_IMPORTS);
+      // Find specific import
+      Optional<Map<String, TSNode>> specificResult =
+          importService.getImportDeclarationMap(file, "List", "java.util");
+      assertTrue(specificResult.isPresent());
+      assertTrue(specificResult.get().containsKey("class"));
+      // Find via wildcard import
+      Optional<Map<String, TSNode>> wildcardResult =
+          importService.getImportDeclarationMap(file, "File", "java.io");
+      assertTrue(wildcardResult.isPresent());
+      assertTrue(wildcardResult.get().containsKey("isWildCard"));
+    }
+
+    @Test
+    @DisplayName("should handle complex nested packages")
+    void getImportDeclarationMap_withNestedPackages_shouldFindCorrectImports() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_NESTED_PACKAGE_IMPORTS);
+      // Test finding SpringApplication
+      Optional<Map<String, TSNode>> springApp =
+          importService.getImportDeclarationMap(
+              file, "SpringApplication", "org.springframework.boot");
+      assertTrue(springApp.isPresent());
+      assertEquals("SpringApplication", file.getTextFromNode(springApp.get().get("class")));
+      // Test finding SpringBootApplication
+      Optional<Map<String, TSNode>> springBootApp =
+          importService.getImportDeclarationMap(
+              file, "SpringBootApplication", "org.springframework.boot.autoconfigure");
+      assertTrue(springBootApp.isPresent());
+      assertEquals("SpringBootApplication", file.getTextFromNode(springBootApp.get().get("class")));
+      // Test finding User
+      Optional<Map<String, TSNode>> user =
+          importService.getImportDeclarationMap(file, "User", "com.example.project.model");
+      assertTrue(user.isPresent());
+      assertEquals("User", file.getTextFromNode(user.get().get("class")));
+    }
+
+    @Test
+    @DisplayName("should return empty for partial package matches")
+    void getImportDeclarationMap_withPartialPackageMatch_shouldReturnEmpty() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_NESTED_PACKAGE_IMPORTS);
+      // Partial package match should not work
+      Optional<Map<String, TSNode>> partialMatch =
+          importService.getImportDeclarationMap(file, "SpringApplication", "org.springframework");
+      assertFalse(partialMatch.isPresent());
+      // Too specific package should not work
+      Optional<Map<String, TSNode>> tooSpecific =
+          importService.getImportDeclarationMap(
+              file, "SpringApplication", "org.springframework.boot.extra");
+      assertFalse(tooSpecific.isPresent());
     }
   }
 }
