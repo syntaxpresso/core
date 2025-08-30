@@ -1,7 +1,10 @@
 package io.github.syntaxpresso.core.service.java.language;
 
 import io.github.syntaxpresso.core.common.TSFile;
+import io.github.syntaxpresso.core.service.java.language.extra.ImportInsertionPoint;
+import io.github.syntaxpresso.core.service.java.language.extra.ImportInsertionPoint.ImprtInsertionPosition;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.Getter;
 import org.treesitter.TSNode;
@@ -12,131 +15,291 @@ public class ImportDeclarationService {
       new PackageDeclarationService();
 
   /**
-   * Gets the scoped identifier from an import declaration node.
+   * Checks if a wildcard import already exists for the given package.
    *
-   * @param importDeclarationNode The import declaration node.
-   * @return An optional containing the scoped identifier node, or empty if not found.
+   * <p>This helper method searches through all import declarations to determine if there's already
+   * a wildcard import (e.g., {@code import java.util.*;}) for the specified package. This is used
+   * to avoid adding redundant wildcard imports.
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("Test.java", "import java.util.*;");
+   * ImportDeclarationService service = new ImportDeclarationService();
+   *
+   * boolean hasWildcard = service.hasWildcardImport(javaFile, "java.util"); // true
+   * boolean hasIO = service.hasWildcardImport(javaFile, "java.io"); // false
+   * }</pre>
+   *
+   * @param file The file to check for wildcard imports
+   * @param packageName The package name to search for (e.g., "java.util")
+   * @return true if a wildcard import exists for the package, false otherwise
    */
-  public Optional<TSNode> getImportScopedIdentifier(TSNode importDeclarationNode) {
-    if (importDeclarationNode == null
-        || !"import_declaration".equals(importDeclarationNode.getType())) {
-      return Optional.empty();
-    }
-    for (int i = 0; i < importDeclarationNode.getChildCount(); i++) {
-      TSNode child = importDeclarationNode.getChild(i);
-      if ("scoped_identifier".equals(child.getType())) {
-        return Optional.of(child);
-      }
-    }
-    return Optional.empty();
+  private boolean hasWildcardImport(TSFile file, String packageName) {
+    return this.getAllImportDeclarations(file).stream()
+        .anyMatch(
+            map ->
+                map.containsKey("isWildCard")
+                    && file.getTextFromNode(map.get("package")).equals(packageName));
   }
 
   /**
-   * Finds all import declarations in a file.
+   * Determines the optimal insertion point for new import statements in a Java file.
    *
-   * @param file The file to search in.
-   * @return A list of all import declaration nodes.
+   * <p>This method analyzes the current file structure to determine where a new import statement
+   * should be inserted according to Java conventions:
+   *
+   * <ul>
+   *   <li>After the package declaration (if present) and before any existing imports
+   *   <li>At the beginning of the file if no package declaration exists
+   *   <li>After the last existing import statement
+   * </ul>
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("Test.java",
+   *     "package com.example;\n\nimport java.util.List;\n\nclass Test {}");
+   * ImportDeclarationService service = new ImportDeclarationService();
+   *
+   * ImportInsertionPoint point = service.getImportInsertionPoint(javaFile);
+   * // point.getPosition() == AFTER_LAST_IMPORT
+   * // point.getInsertByte() == byte position after "import java.util.List;"
+   * }</pre>
+   *
+   * @param file The file to analyze for insertion point
+   * @return An ImportInsertionPoint containing the byte position and context information
    */
-  public List<TSNode> findAllImportDeclarations(TSFile file) {
-    return file.query("(import_declaration) @import");
+  private ImportInsertionPoint getImportInsertionPoint(TSFile file) {
+    ImportInsertionPoint insertPoint = new ImportInsertionPoint();
+    List<Map<String, TSNode>> existingImports = this.getAllImportDeclarations(file);
+    Optional<TSNode> packageNode = this.packageDeclarationService.getPackageDeclarationNode(file);
+    if (existingImports.isEmpty() && packageNode.isPresent()) {
+      TSNode packageDeclaration = packageNode.get();
+      insertPoint.setInsertByte(packageDeclaration.getEndByte());
+      insertPoint.setPosition(ImprtInsertionPosition.AFTER_PACKAGE_DECLARATION);
+      return insertPoint;
+    } else if (existingImports.isEmpty()) {
+      insertPoint.setInsertByte(0);
+      insertPoint.setPosition(ImprtInsertionPosition.BEGINNING);
+      return insertPoint;
+    }
+    Map<String, TSNode> lastImportMap = existingImports.get(existingImports.size() - 1);
+    TSNode lastImportNode = lastImportMap.get("importDeclaration");
+    insertPoint.setInsertByte(lastImportNode.getEndByte());
+    insertPoint.setPosition(ImprtInsertionPosition.AFTER_LAST_IMPORT);
+    return insertPoint;
   }
 
   /**
-   * Checks if a class is imported in a file.
+   * Retrieves all import declarations from a Java source file using Tree-sitter query patterns.
+   * This method captures both regular class imports and wildcard imports by parsing the syntax
+   * tree.
    *
-   * @param file The file to check.
-   * @param className The name of the class.
-   * @param packageName The name of the package.
-   * @return True if the class is imported, false otherwise.
+   * <p>The method uses a Tree-sitter query to find import declaration nodes and their components:
+   *
+   * <ul>
+   *   <li>For regular imports: captures the package scope and class name separately
+   *   <li>For wildcard imports: captures the package and the wildcard asterisk
+   * </ul>
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("MyClass.java", sourceCode);
+   * ImportDeclarationService service = new ImportDeclarationService();
+   * List<Map<String, TSNode>> importNodes = service.getAllImportDeclarations(javaFile);
+   *
+   * for (Map<String, TSNode> map : importNodes) {
+   *   boolean isWildCardImport = map.containsKey("isWildCard");
+   *   if (isWildCardImport) {
+   *     TSNode scopeNode = map.get("package");
+   *     String scopeText = javaFile.getTextFromNode(scopeNode);
+   *     System.out.printf("Wildcard Import -> Package: %s%n", scopeText);
+   *   } else {
+   *     TSNode scopeNode = map.get("package");
+   *     TSNode nameNode = map.get("class");
+   *     String scopeText = javaFile.getTextFromNode(scopeNode);
+   *     String nameText = javaFile.getTextFromNode(nameNode);
+   *     System.out.printf("Single Import   -> Package: %s, Class: %s%n", scopeText, nameText);
+   *   }
+   * }
+   * }</pre>
+   *
+   * @param file The TSFile containing the Java source code to analyze
+   * @return A list of capture maps, where each map contains TSNode captures for import components.
+   *     Keys include "package", "class" (for regular imports), and "isWildCard" (for wildcard
+   *     imports). Returns empty list if no import declarations are found.
    */
-  public Optional<TSNode> getImportDeclarationNode(
+  public List<Map<String, TSNode>> getAllImportDeclarations(TSFile file) {
+    String importDeclarationQueryString =
+        "(import_declaration"
+            + "  ["
+            + "    (scoped_identifier"
+            + "      scope: (_) @package"
+            + "      name: (identifier) @class"
+            + "    )"
+            + "    ("
+            + "      (scoped_identifier) @package"
+            + "      (asterisk) @isWildCard"
+            + "    )"
+            + "  ]"
+            + ") @importDeclaration";
+    return file.queryForCaptures(importDeclarationQueryString);
+  }
+
+  /**
+   * Finds an import declaration map for a specific class and package combination.
+   *
+   * <p>This method searches through all import declarations to find either a specific class import
+   * or a wildcard import that would cover the requested class. It returns the map containing the
+   * Tree-sitter nodes for the matching import.
+   *
+   * <p>The method will match:
+   *
+   * <ul>
+   *   <li>Exact class imports: {@code import java.util.List;} matches className="List",
+   *       packageName="java.util"
+   *   <li>Wildcard imports: {@code import java.util.*;} matches any className with
+   *       packageName="java.util"
+   * </ul>
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("Test.java",
+   *     "import java.util.List;\nimport java.io.*;");
+   * ImportDeclarationService service = new ImportDeclarationService();
+   *
+   * // Find specific import
+   * Optional<Map<String, TSNode>> listImport =
+   *     service.getImportDeclarationMap(javaFile, "List", "java.util");
+   * if (listImport.isPresent()) {
+   *   // Found import java.util.List
+   * }
+   *
+   * // Find via wildcard
+   * Optional<Map<String, TSNode>> fileImport =
+   *     service.getImportDeclarationMap(javaFile, "File", "java.io");
+   * if (fileImport.isPresent()) {
+   *   // Found via import java.io.*
+   * }
+   * }</pre>
+   *
+   * @param file The file to search for imports
+   * @param className The name of the class to find
+   * @param packageName The name of the package containing the class
+   * @return An optional containing the import declaration map if found, empty otherwise
+   */
+  public Optional<Map<String, TSNode>> getImportDeclarationMap(
       TSFile file, String className, String packageName) {
-    List<TSNode> allImportDeclarationNodes = this.findAllImportDeclarations(file);
-    for (TSNode importDeclarationNode : allImportDeclarationNodes) {
-      Optional<TSNode> scopedIdentifier =
-          file.findChildNodeByType(importDeclarationNode, "scoped_identifier");
-      if (scopedIdentifier.isEmpty()) {
-        continue;
-      }
-      String scopeName = file.getTextFromNode(scopedIdentifier.get());
-      String importPackage = packageName + "." + className;
-      if (scopeName.equals(importPackage) || scopeName.equals(packageName)) {
-        return Optional.of(importDeclarationNode);
-      }
-    }
-    return Optional.empty();
-  }
-
-  /**
-   * Checks if an import already exists in the file.
-   *
-   * @param file The file to check.
-   * @param importStatement The full import statement to check for.
-   * @return True if the import exists, false otherwise.
-   */
-  private boolean importExists(TSFile file, String importStatement) {
-    List<TSNode> allImportDeclarationNodes = findAllImportDeclarations(file);
-    for (TSNode importDeclarationNode : allImportDeclarationNodes) {
-      String importText = file.getTextFromNode(importDeclarationNode);
-      if (importStatement.endsWith(".*")) {
-        // For wildcard imports, check if the import text contains the wildcard
-        if (importText.contains(importStatement)) {
-          return true;
+    List<Map<String, TSNode>> importDeclarationMaps = this.getAllImportDeclarations(file);
+    for (Map<String, TSNode> map : importDeclarationMaps) {
+      // Check if it's a wildcard import first
+      if (map.containsKey("isWildCard")) {
+        TSNode packageNode = map.get("package");
+        String packageText = file.getTextFromNode(packageNode);
+        if (packageText.equals(packageName)) {
+          // Found a matching wildcard import
+          return Optional.of(map);
         }
-      } else {
-        // For regular imports, check scoped identifier
-        Optional<TSNode> scopedIdentifier =
-            file.findChildNodeByType(importDeclarationNode, "scoped_identifier");
-        if (scopedIdentifier.isPresent()) {
-          String scopeName = file.getTextFromNode(scopedIdentifier.get());
-          if (scopeName.equals(importStatement)) {
-            return true;
+      }
+      // If it's NOT a wildcard, it must be a single-class import
+      else {
+        TSNode packageNode = map.get("package");
+        TSNode classNode = map.get("class");
+        // This check prevents a NullPointerException if the query somehow fails
+        if (packageNode != null && classNode != null) {
+          String packageText = file.getTextFromNode(packageNode);
+          String classText = file.getTextFromNode(classNode);
+          if (packageText.equals(packageName) && classText.equals(className)) {
+            // Found an exact match for the class
+            return Optional.of(map);
           }
         }
       }
     }
-    return false;
+    return Optional.empty();
   }
 
   /**
-   * Adds an import statement to a Java file.
+   * Adds an import statement to a Java file using separate package and class names.
    *
-   * @param file The file to add the import to.
-   * @param packageName The package name.
-   * @param className The class name.
+   * <p>This method adds a new import statement for the specified class if it doesn't already exist.
+   * It checks for both direct imports and wildcard imports that would cover the class. The import
+   * is inserted at the appropriate location according to Java conventions.
+   *
+   * <p>Behavior:
+   *
+   * <ul>
+   *   <li>Does nothing if the class is already imported (directly or via wildcard)
+   *   <li>Inserts the import with proper formatting and positioning
+   *   <li>Handles files with/without package declarations and existing imports
+   * </ul>
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("Test.java", "package com.example;\n\nclass Test {}");
+   * ImportDeclarationService service = new ImportDeclarationService();
+   *
+   * service.addImport(javaFile, "java.util", "List");
+   * // Result: "package com.example;\n\nimport java.util.List;\n\nclass Test {}"
+   *
+   * service.addImport(javaFile, "java.util", "List"); // No-op, already exists
+   * }</pre>
+   *
+   * @param file The file to add the import to
+   * @param packageName The package name (e.g., "java.util")
+   * @param className The class name (e.g., "List")
    */
   public void addImport(TSFile file, String packageName, String className) {
-    String fullImport = packageName + "." + className;
-    String wildcardImport = packageName + ".*";
-    if (importExists(file, fullImport) || importExists(file, wildcardImport)) {
+    Optional<Map<String, TSNode>> existingImport =
+        this.getImportDeclarationMap(file, className, packageName);
+    if (existingImport.isPresent()) {
       return;
     }
-    List<TSNode> existingImports = findAllImportDeclarations(file);
-    Optional<TSNode> packageNode = this.packageDeclarationService.getPackageDeclarationNode(file);
-    if (existingImports.isEmpty() && packageNode.isPresent()) {
-      // Package exists but no imports - insert after package declaration
-      TSNode packageDeclaration = packageNode.get();
-      int packageEnd = packageDeclaration.getEndByte();
-      String importStatement = "\nimport " + fullImport + ";";
-      file.updateSourceCode(packageEnd, packageEnd, importStatement);
-    } else if (existingImports.isEmpty()) {
+    ImportInsertionPoint insertionPoint = this.getImportInsertionPoint(file);
+    String fullImportStatement = packageName + "." + className;
+    String importStatement = null;
+    if (insertionPoint.getPosition().equals(ImprtInsertionPosition.AFTER_PACKAGE_DECLARATION)) {
+      importStatement = "\n\nimport " + fullImportStatement + ";";
+      file.updateSourceCode(
+          insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), importStatement);
+    } else if (insertionPoint.getPosition().equals(ImprtInsertionPosition.BEGINNING)) {
       // No package, no imports - insert at start
-      String importStatement = "import " + fullImport + ";\n";
-      file.updateSourceCode(0, 0, importStatement);
+      importStatement = "import " + fullImportStatement + ";\n";
+      file.updateSourceCode(
+          insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), importStatement);
     } else {
       // After existing imports
-      TSNode lastImport = existingImports.get(existingImports.size() - 1);
-      int insertionPoint = lastImport.getEndByte();
-      String importStatement = "\nimport " + fullImport + ";";
-      file.updateSourceCode(insertionPoint, insertionPoint, importStatement);
+      importStatement = "\nimport " + fullImportStatement + ";";
+      file.updateSourceCode(
+          insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), importStatement);
     }
   }
 
   /**
-   * Adds an import statement using a full package name.
+   * Adds an import statement using a fully qualified class name.
    *
-   * @param file The file to add the import to.
-   * @param fullPackageName The full package name (e.g., "java.util.List").
+   * <p>This is a convenience overload that parses the fully qualified class name and delegates to
+   * the main {@link #addImport(TSFile, String, String)} method. The full package name is split at
+   * the last dot to separate the package from the class name.
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("Test.java", "package com.example;\n\nclass Test {}");
+   * ImportDeclarationService service = new ImportDeclarationService();
+   *
+   * service.addImport(javaFile, "java.util.List");
+   * // Equivalent to: service.addImport(javaFile, "java.util", "List");
+   * // Result: "package com.example;\n\nimport java.util.List;\n\nclass Test {}"
+   * }</pre>
+   *
+   * @param file The file to add the import to
+   * @param fullPackageName The fully qualified class name (e.g., "java.util.List")
+   * @throws IllegalArgumentException if fullPackageName doesn't contain a dot separator
    */
   public void addImport(TSFile file, String fullPackageName) {
     int lastDotIndex = fullPackageName.lastIndexOf('.');
@@ -151,43 +314,93 @@ public class ImportDeclarationService {
   /**
    * Adds a wildcard import statement to a Java file.
    *
-   * @param file The file to add the import to.
-   * @param packageName The package name to import with wildcard.
+   * <p>This method adds a wildcard import (e.g., {@code import java.util.*;}) for the specified
+   * package if one doesn't already exist. Wildcard imports allow access to all public classes in a
+   * package without explicitly importing each class.
+   *
+   * <p>Behavior:
+   *
+   * <ul>
+   *   <li>Does nothing if a wildcard import for the package already exists
+   *   <li>Inserts the wildcard import with proper formatting and positioning
+   *   <li>Follows the same insertion rules as regular imports
+   * </ul>
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("Test.java",
+   *     "package com.example;\n\nimport java.util.List;\n\nclass Test {}");
+   * ImportDeclarationService service = new ImportDeclarationService();
+   *
+   * service.addImportWildcard(javaFile, "java.io");
+   * // Result: "package com.example;\n\nimport java.util.List;\nimport java.io.*;\n\nclass Test {}"
+   *
+   * service.addImportWildcard(javaFile, "java.io"); // No-op, already exists
+   * }</pre>
+   *
+   * @param file The file to add the wildcard import to
+   * @param packageName The package name to import with wildcard (e.g., "java.util")
    */
   public void addImportWildcard(TSFile file, String packageName) {
-    String wildcardImport = packageName + ".*";
-    if (importExists(file, wildcardImport)) {
+    if (hasWildcardImport(file, packageName)) {
       return;
     }
-    List<TSNode> existingImports = findAllImportDeclarations(file);
-    Optional<TSNode> packageNode = this.packageDeclarationService.getPackageDeclarationNode(file);
-    if (existingImports.isEmpty() && packageNode.isPresent()) {
-      // Package exists but no imports - insert after package declaration
-      TSNode packageDeclaration = packageNode.get();
-      int packageEnd = packageDeclaration.getEndByte();
-      String importStatement = "\nimport " + wildcardImport + ";";
-      file.updateSourceCode(packageEnd, packageEnd, importStatement);
-    } else if (existingImports.isEmpty()) {
-      // No package, no imports - insert at start
-      String importStatement = "import " + wildcardImport + ";\n";
-      file.updateSourceCode(0, 0, importStatement);
+    ImportInsertionPoint insertionPoint = this.getImportInsertionPoint(file);
+    String wildcardImportStatement = packageName + ".*";
+    String importStatement = null;
+    if (insertionPoint.getPosition().equals(ImprtInsertionPosition.AFTER_PACKAGE_DECLARATION)) {
+      importStatement = "\n\nimport " + wildcardImportStatement + ";";
+    } else if (insertionPoint.getPosition().equals(ImprtInsertionPosition.BEGINNING)) {
+      importStatement = "import " + wildcardImportStatement + ";\n";
     } else {
-      // After existing imports
-      TSNode lastImport = existingImports.get(existingImports.size() - 1);
-      int insertionPoint = lastImport.getEndByte();
-      String importStatement = "\nimport " + wildcardImport + ";";
-      file.updateSourceCode(insertionPoint, insertionPoint, importStatement);
+      importStatement = "\nimport " + wildcardImportStatement + ";";
     }
+    file.updateSourceCode(
+        insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), importStatement);
   }
 
   /**
-   * Updates an existing import declaration to use a new class name. If a wildcard import exists for
-   * the same package, no update is performed.
+   * Updates an existing import declaration to use a new fully qualified class name.
    *
-   * @param file The file to update the import in.
-   * @param oldFullImport The current full import (e.g., "org.example.Test").
-   * @param newFullImport The new full import (e.g., "org.example.NewName").
-   * @return True if the import was updated, false if no update was needed or possible.
+   * <p>This method finds and updates a specific import statement in the file. It's useful for
+   * refactoring operations like class renaming or moving classes between packages. The method will
+   * not update imports if a wildcard import already covers the old class, as the wildcard would
+   * continue to work.
+   *
+   * <p>Behavior:
+   *
+   * <ul>
+   *   <li>Returns false if a wildcard import exists for the old package (no update needed)
+   *   <li>Searches for the exact old import and replaces it with the new import
+   *   <li>Returns true if the import was successfully updated
+   *   <li>Returns false if the old import was not found
+   * </ul>
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("Test.java",
+   *     "package com.example;\n\nimport org.example.OldClass;\n\nclass Test {}");
+   * ImportDeclarationService service = new ImportDeclarationService();
+   *
+   * boolean updated = service.updateImport(javaFile,
+   *     "org.example.OldClass", "org.example.NewClass");
+   * // updated == true
+   * // Result: "package com.example;\n\nimport org.example.NewClass;\n\nclass Test {}"
+   *
+   * // With wildcard import
+   * TSFile wildcardFile = new TSFile("Test.java", "import org.example.*;");
+   * boolean notUpdated = service.updateImport(wildcardFile,
+   *     "org.example.OldClass", "org.example.NewClass");
+   * // notUpdated == false (wildcard covers both old and new classes)
+   * }</pre>
+   *
+   * @param file The file to update the import in
+   * @param oldFullImport The current fully qualified import (e.g., "org.example.OldClass")
+   * @param newFullImport The new fully qualified import (e.g., "org.example.NewClass")
+   * @return true if the import was updated, false if no update was needed or possible
+   * @throws IllegalArgumentException if either import name doesn't contain a dot separator
    */
   public boolean updateImport(TSFile file, String oldFullImport, String newFullImport) {
     // Parse old import
@@ -196,28 +409,40 @@ public class ImportDeclarationService {
       throw new IllegalArgumentException("Invalid old import: " + oldFullImport);
     }
     String oldPackage = oldFullImport.substring(0, oldLastDotIndex);
+    String oldClassName = oldFullImport.substring(oldLastDotIndex + 1);
     // Parse new import
     int newLastDotIndex = newFullImport.lastIndexOf('.');
     if (newLastDotIndex == -1) {
       throw new IllegalArgumentException("Invalid new import: " + newFullImport);
     }
     // Check if wildcard import exists for old package
-    String wildcardImport = oldPackage + ".*";
-    if (importExists(file, wildcardImport)) {
+    if (hasWildcardImport(file, oldPackage)) {
       // Wildcard import exists, no need to update
       return false;
     }
-    // Find the specific import to update
-    List<TSNode> allImportDeclarationNodes = this.findAllImportDeclarations(file);
-    for (TSNode importDeclarationNode : allImportDeclarationNodes) {
-      Optional<TSNode> scopedIdentifier =
-          file.findChildNodeByType(importDeclarationNode, "scoped_identifier");
-      if (scopedIdentifier.isPresent()) {
-        String importText = file.getTextFromNode(scopedIdentifier.get());
-        if (importText.equals(oldFullImport)) {
-          // Found the import to update
-          file.updateSourceCode(scopedIdentifier.get(), newFullImport);
-          return true;
+    // Find the specific import to update using the maps directly
+    List<Map<String, TSNode>> allImportDeclarations = this.getAllImportDeclarations(file);
+    for (Map<String, TSNode> importMap : allImportDeclarations) {
+      // Skip wildcard imports, only process regular class imports
+      if (!importMap.containsKey("isWildCard")) {
+        TSNode packageNode = importMap.get("package");
+        TSNode classNode = importMap.get("class");
+
+        if (packageNode != null && classNode != null) {
+          String packageText = file.getTextFromNode(packageNode);
+          String classText = file.getTextFromNode(classNode);
+
+          // Check if this matches the old import we want to update
+          if (packageText.equals(oldPackage) && classText.equals(oldClassName)) {
+            // Found the import to update - get the scoped identifier and update it
+            TSNode importDeclarationNode = importMap.get("importDeclaration");
+            Optional<TSNode> scopedIdentifier =
+                file.findChildNodeByType(importDeclarationNode, "scoped_identifier");
+            if (scopedIdentifier.isPresent()) {
+              file.updateSourceCode(scopedIdentifier.get(), newFullImport);
+              return true;
+            }
+          }
         }
       }
     }
