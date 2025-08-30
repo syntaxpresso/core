@@ -21,7 +21,6 @@ public class JPAEntityAnnotationService {
    * @return Optional containing the Entity annotation node if found, empty otherwise.
    */
   public Optional<TSNode> getJPAEntityAnnotationNode(TSFile file) {
-    boolean isJPAEntityImported = false;
     List<Map<String, TSNode>> importNodes =
         this.javaLanguageService.getImportDeclarationService().getAllImportDeclarations(file);
     for (Map<String, TSNode> map : importNodes) {
