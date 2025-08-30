@@ -17,7 +17,9 @@ import io.github.syntaxpresso.core.service.java.JavaLanguageService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -46,8 +48,12 @@ class JPAServiceTest {
 
   @BeforeEach
   void setUp() {
-    lenient().when(javaLanguageService.getClassDeclarationService()).thenReturn(classDeclarationService);
-    lenient().when(javaLanguageService.getImportDeclarationService()).thenReturn(importDeclarationService);
+    lenient()
+        .when(javaLanguageService.getClassDeclarationService())
+        .thenReturn(classDeclarationService);
+    lenient()
+        .when(javaLanguageService.getImportDeclarationService())
+        .thenReturn(importDeclarationService);
     JPAEntityService jpaEntityService = new JPAEntityService(javaLanguageService);
     jpaService = new JPAService(importDeclarationService, jpaEntityService);
     lenient()
@@ -61,13 +67,22 @@ class JPAServiceTest {
     @Test
     @DisplayName("should return true when class has @Entity annotation")
     void isJPAEntity_withEntityAnnotation_shouldReturnTrue() {
-      TSNode importNode = mock(TSNode.class);
-      lenient().when(classDeclarationService.getAllClassAnnotations(tsFile)).thenReturn(List.of(annotationNode));
+      TSNode packageNode = mock(TSNode.class);
+      TSNode classNode = mock(TSNode.class);
+      TSNode importDeclarationNode = mock(TSNode.class);
+      Map<String, TSNode> importMap = new HashMap<>();
+      importMap.put("package", packageNode);
+      importMap.put("class", classNode);
+      importMap.put("importDeclaration", importDeclarationNode);
+      lenient()
+          .when(classDeclarationService.getAllClassAnnotations(tsFile))
+          .thenReturn(List.of(annotationNode));
       lenient().when(tsFile.getTextFromNode(annotationNode)).thenReturn("Entity");
       lenient()
-          .when(importDeclarationService.findAllImportDeclarations(tsFile))
-          .thenReturn(List.of(importNode));
-      lenient().when(tsFile.getTextFromNode(importNode)).thenReturn("jakarta.persistence.Entity");
+          .when(importDeclarationService.getAllImportDeclarations(tsFile))
+          .thenReturn(List.of(importMap));
+      lenient().when(tsFile.getTextFromNode(packageNode)).thenReturn("jakarta.persistence");
+      lenient().when(tsFile.getTextFromNode(classNode)).thenReturn("Entity");
       boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
       assertTrue(result);
     }
@@ -75,7 +90,9 @@ class JPAServiceTest {
     @Test
     @DisplayName("should return false when class has no @Entity annotation")
     void isJPAEntity_withoutEntityAnnotation_shouldReturnFalse() {
-      lenient().when(classDeclarationService.getAllClassAnnotations(tsFile)).thenReturn(List.of(annotationNode));
+      lenient()
+          .when(classDeclarationService.getAllClassAnnotations(tsFile))
+          .thenReturn(List.of(annotationNode));
       lenient().when(tsFile.getTextFromNode(annotationNode)).thenReturn("Component");
       boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
       assertFalse(result);
@@ -94,14 +111,23 @@ class JPAServiceTest {
     void isJPAEntity_withMultipleAnnotationsIncludingEntity_shouldReturnTrue() {
       TSNode componentAnnotation = mock(TSNode.class);
       TSNode entityAnnotation = mock(TSNode.class);
-      TSNode importNode = mock(TSNode.class);
-      lenient().when(classDeclarationService.getAllClassAnnotations(tsFile)).thenReturn(List.of(componentAnnotation, entityAnnotation));
+      TSNode packageNode = mock(TSNode.class);
+      TSNode classNode = mock(TSNode.class);
+      TSNode importDeclarationNode = mock(TSNode.class);
+      Map<String, TSNode> importMap = new HashMap<>();
+      importMap.put("package", packageNode);
+      importMap.put("class", classNode);
+      importMap.put("importDeclaration", importDeclarationNode);
+      lenient()
+          .when(classDeclarationService.getAllClassAnnotations(tsFile))
+          .thenReturn(List.of(componentAnnotation, entityAnnotation));
       lenient().when(tsFile.getTextFromNode(componentAnnotation)).thenReturn("Component");
       lenient().when(tsFile.getTextFromNode(entityAnnotation)).thenReturn("Entity");
       lenient()
-          .when(importDeclarationService.findAllImportDeclarations(tsFile))
-          .thenReturn(List.of(importNode));
-      lenient().when(tsFile.getTextFromNode(importNode)).thenReturn("jakarta.persistence.Entity");
+          .when(importDeclarationService.getAllImportDeclarations(tsFile))
+          .thenReturn(List.of(importMap));
+      lenient().when(tsFile.getTextFromNode(packageNode)).thenReturn("jakarta.persistence");
+      lenient().when(tsFile.getTextFromNode(classNode)).thenReturn("Entity");
       boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
       assertTrue(result);
     }

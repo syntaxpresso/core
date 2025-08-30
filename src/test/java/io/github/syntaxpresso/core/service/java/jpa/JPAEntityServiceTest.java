@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.treesitter.TSNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -241,7 +242,11 @@ class JPAEntityServiceTest {
       Files.writeString(javaFile, javaCode);
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      Optional<String> result = jpaEntityService.getJPAEntityName(tsFile);
+      // First find the Entity annotation node
+      Optional<TSNode> entityAnnotationNode = jpaEntityService.getJPAEntityAnnotationNode(tsFile);
+      assertTrue(entityAnnotationNode.isPresent(), "Entity annotation should be found");
+      
+      Optional<String> result = jpaEntityService.getJPAEntityName(tsFile, entityAnnotationNode.get());
 
       assertTrue(result.isPresent());
       assertEquals("Customer", result.get());

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,7 +38,8 @@ class ProgramServiceTest {
             fieldDeclarationService,
             classDeclarationService);
     MethodDeclarationService methodDeclarationService =
-        new MethodDeclarationService(formalParameterService, localVariableDeclarationService, typeResolutionService);
+        new MethodDeclarationService(
+            formalParameterService, localVariableDeclarationService, typeResolutionService);
     programService =
         new ProgramService(
             variableNamingService,
@@ -84,8 +86,8 @@ class ProgramServiceTest {
   @Test
   @DisplayName("should get all imports from program")
   void getAllImports_shouldReturnAllImports() {
-    List<TSNode> imports =
-        programService.getImportDeclarationService().findAllImportDeclarations(testFile);
+    List<Map<String, TSNode>> imports =
+        programService.getImportDeclarationService().getAllImportDeclarations(testFile);
     assertEquals(2, imports.size());
   }
 
