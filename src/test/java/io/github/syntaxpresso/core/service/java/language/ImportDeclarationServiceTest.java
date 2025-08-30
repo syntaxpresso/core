@@ -731,4 +731,300 @@ class ImportDeclarationServiceTest {
       assertEquals(originalCode, file.getSourceCode());
     }
   }
+
+  @Nested
+  @DisplayName("updateImportClassName(TSFile, String, String, String)")
+  class UpdateImportClassNameTests {
+
+    @Test
+    @DisplayName("should update class name in existing import")
+    void updateImportClassName_withExistingImport_shouldUpdateClassName() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      boolean result = importService.updateImportClassName(file, "java.util", "List", "ArrayList");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.ArrayList;"));
+      assertFalse(updatedCode.contains("import java.util.List;"));
+    }
+
+    @Test
+    @DisplayName("should return false when wildcard import exists")
+    void updateImportClassName_withWildcardImport_shouldReturnFalse() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_WILDCARD_IMPORT);
+      boolean result = importService.updateImportClassName(file, "java.util", "List", "ArrayList");
+      assertFalse(result);
+      String originalCode = file.getSourceCode();
+      assertTrue(originalCode.contains("import java.util.*;"));
+    }
+
+    @Test
+    @DisplayName("should return false when import not found")
+    void updateImportClassName_withNonExistentImport_shouldReturnFalse() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      boolean result = importService.updateImportClassName(file, "java.io", "File", "BufferedReader");
+      assertFalse(result);
+      String originalCode = file.getSourceCode();
+      assertTrue(originalCode.contains("import java.util.List;"));
+    }
+
+    @Test
+    @DisplayName("should handle multiple imports correctly")
+    void updateImportClassName_withMultipleImports_shouldUpdateOnlyTargetImport() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MULTIPLE_IMPORTS);
+      boolean result = importService.updateImportClassName(file, "java.util", "Map", "HashMap");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.List;"));
+      assertTrue(updatedCode.contains("import java.util.HashMap;"));
+      assertTrue(updatedCode.contains("import java.io.IOException;"));
+      assertFalse(updatedCode.contains("import java.util.Map;"));
+    }
+
+    @Test
+    @DisplayName("should throw exception for null package name")
+    void updateImportClassName_withNullPackageName_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.updateImportClassName(file, null, "List", "ArrayList");
+      });
+    }
+
+    @Test
+    @DisplayName("should throw exception for empty package name")
+    void updateImportClassName_withEmptyPackageName_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.updateImportClassName(file, "", "List", "ArrayList");
+      });
+    }
+
+    @Test
+    @DisplayName("should throw exception for null old class name")
+    void updateImportClassName_withNullOldClassName_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.updateImportClassName(file, "java.util", null, "ArrayList");
+      });
+    }
+
+    @Test
+    @DisplayName("should throw exception for null new class name")
+    void updateImportClassName_withNullNewClassName_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.updateImportClassName(file, "java.util", "List", null);
+      });
+    }
+
+    @Test
+    @DisplayName("should work with files without package declaration")
+    void updateImportClassName_withNoPackageDeclaration_shouldWork() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT_NO_PACKAGE);
+      boolean result = importService.updateImportClassName(file, "java.util", "List", "ArrayList");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.ArrayList;"));
+      assertFalse(updatedCode.contains("import java.util.List;"));
+    }
+  }
+
+  @Nested
+  @DisplayName("updateImportPackageName(TSFile, String, String, String)")
+  class UpdateImportPackageNameTests {
+
+    @Test
+    @DisplayName("should update package name in existing import")
+    void updateImportPackageName_withExistingImport_shouldUpdatePackageName() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      boolean result = importService.updateImportPackageName(file, "java.util", "java.util.concurrent", "List");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.concurrent.List;"));
+      assertFalse(updatedCode.contains("import java.util.List;"));
+    }
+
+    @Test
+    @DisplayName("should return false when wildcard import exists")
+    void updateImportPackageName_withWildcardImport_shouldReturnFalse() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_WILDCARD_IMPORT);
+      boolean result = importService.updateImportPackageName(file, "java.util", "java.util.concurrent", "List");
+      assertFalse(result);
+      String originalCode = file.getSourceCode();
+      assertTrue(originalCode.contains("import java.util.*;"));
+    }
+
+    @Test
+    @DisplayName("should return false when import not found")
+    void updateImportPackageName_withNonExistentImport_shouldReturnFalse() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      boolean result = importService.updateImportPackageName(file, "java.io", "java.nio", "File");
+      assertFalse(result);
+      String originalCode = file.getSourceCode();
+      assertTrue(originalCode.contains("import java.util.List;"));
+    }
+
+    @Test
+    @DisplayName("should handle multiple imports correctly")
+    void updateImportPackageName_withMultipleImports_shouldUpdateOnlyTargetImport() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MULTIPLE_IMPORTS);
+      boolean result = importService.updateImportPackageName(file, "java.io", "java.nio.file", "IOException");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.List;"));
+      assertTrue(updatedCode.contains("import java.util.Map;"));
+      assertTrue(updatedCode.contains("import java.nio.file.IOException;"));
+      assertFalse(updatedCode.contains("import java.io.IOException;"));
+    }
+
+    @Test
+    @DisplayName("should throw exception for null old package name")
+    void updateImportPackageName_withNullOldPackageName_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.updateImportPackageName(file, null, "java.util.concurrent", "List");
+      });
+    }
+
+    @Test
+    @DisplayName("should throw exception for empty new package name")
+    void updateImportPackageName_withEmptyNewPackageName_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.updateImportPackageName(file, "java.util", "", "List");
+      });
+    }
+
+    @Test
+    @DisplayName("should throw exception for null class name")
+    void updateImportPackageName_withNullClassName_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.updateImportPackageName(file, "java.util", "java.util.concurrent", null);
+      });
+    }
+
+    @Test
+    @DisplayName("should work with files without package declaration")
+    void updateImportPackageName_withNoPackageDeclaration_shouldWork() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT_NO_PACKAGE);
+      boolean result = importService.updateImportPackageName(file, "java.util", "java.util.concurrent", "List");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.concurrent.List;"));
+      assertFalse(updatedCode.contains("import java.util.List;"));
+    }
+
+    @Test
+    @DisplayName("should handle complex package changes")
+    void updateImportPackageName_withComplexPackageChange_shouldWork() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_NESTED_PACKAGE_IMPORTS);
+      boolean result = importService.updateImportPackageName(file, "org.springframework.boot", "org.springframework.boot.web", "SpringApplication");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import org.springframework.boot.web.SpringApplication;"));
+      assertTrue(updatedCode.contains("import org.springframework.boot.autoconfigure.SpringBootApplication;"));
+      assertTrue(updatedCode.contains("import com.example.project.model.User;"));
+      assertFalse(updatedCode.contains("import org.springframework.boot.SpringApplication;"));
+    }
+  }
+
+  @Nested
+  @DisplayName("updateImport(TSFile, String, String) - Full Import Update")
+  class UpdateImportFullTests {
+
+    @Test
+    @DisplayName("should update full import statement")
+    void updateImport_withExistingImport_shouldUpdateFullImport() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      boolean result = importService.updateImport(file, "java.util.List", "java.util.concurrent.ConcurrentLinkedQueue");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.concurrent.ConcurrentLinkedQueue;"));
+      assertFalse(updatedCode.contains("import java.util.List;"));
+    }
+
+    @Test
+    @DisplayName("should return false when wildcard import exists")
+    void updateImport_withWildcardImport_shouldReturnFalse() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_WILDCARD_IMPORT);
+      boolean result = importService.updateImport(file, "java.util.List", "java.io.File");
+      assertFalse(result);
+      String originalCode = file.getSourceCode();
+      assertTrue(originalCode.contains("import java.util.*;"));
+    }
+
+    @Test
+    @DisplayName("should return false when import not found")
+    void updateImport_withNonExistentImport_shouldReturnFalse() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      boolean result = importService.updateImport(file, "java.io.File", "java.nio.file.Path");
+      assertFalse(result);
+      String originalCode = file.getSourceCode();
+      assertTrue(originalCode.contains("import java.util.List;"));
+    }
+
+    @Test
+    @DisplayName("should handle multiple imports correctly")
+    void updateImport_withMultipleImports_shouldUpdateOnlyTargetImport() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MULTIPLE_IMPORTS);
+      boolean result = importService.updateImport(file, "java.io.IOException", "java.nio.file.FileSystemException");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.List;"));
+      assertTrue(updatedCode.contains("import java.util.Map;"));
+      assertTrue(updatedCode.contains("import java.nio.file.FileSystemException;"));
+      assertFalse(updatedCode.contains("import java.io.IOException;"));
+    }
+
+    @Test
+    @DisplayName("should throw exception for invalid old import")
+    void updateImport_withInvalidOldImport_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.updateImport(file, "InvalidImport", "java.util.ArrayList");
+      });
+    }
+
+    @Test
+    @DisplayName("should throw exception for invalid new import")
+    void updateImport_withInvalidNewImport_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.updateImport(file, "java.util.List", "InvalidImport");
+      });
+    }
+
+    @Test
+    @DisplayName("should work with files without package declaration")
+    void updateImport_withNoPackageDeclaration_shouldWork() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT_NO_PACKAGE);
+      boolean result = importService.updateImport(file, "java.util.List", "java.util.concurrent.CopyOnWriteArrayList");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.concurrent.CopyOnWriteArrayList;"));
+      assertFalse(updatedCode.contains("import java.util.List;"));
+    }
+
+    @Test
+    @DisplayName("should handle same package different class correctly")
+    void updateImport_withSamePackageDifferentClass_shouldWork() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      boolean result = importService.updateImport(file, "java.util.List", "java.util.Set");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.util.Set;"));
+      assertFalse(updatedCode.contains("import java.util.List;"));
+    }
+
+    @Test
+    @DisplayName("should handle different package same class correctly")
+    void updateImport_withDifferentPackageSameClass_shouldWork() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      boolean result = importService.updateImport(file, "java.util.List", "java.awt.List");
+      assertTrue(result);
+      String updatedCode = file.getSourceCode();
+      assertTrue(updatedCode.contains("import java.awt.List;"));
+      assertFalse(updatedCode.contains("import java.util.List;"));
+    }
+  }
 }

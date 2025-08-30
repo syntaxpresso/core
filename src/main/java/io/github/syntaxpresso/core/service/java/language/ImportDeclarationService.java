@@ -375,12 +375,160 @@ public class ImportDeclarationService {
   }
 
   /**
+   * Updates an existing import declaration to use a new class name within the same package.
+   *
+   * <p>This method is specifically for class renaming scenarios where the package remains
+   * unchanged. It updates only the class identifier part of the import statement, making it ideal
+   * for refactoring operations like class renaming within the same package.
+   *
+   * <p>Behavior:
+   *
+   * <ul>
+   *   <li>Returns false if a wildcard import exists for the package (no update needed)
+   *   <li>Searches for the exact old class import and updates only the class name
+   *   <li>Returns true if the import was successfully updated
+   *   <li>Returns false if the old import was not found
+   *   <li>Validates that all parameters are non-null and non-empty
+   * </ul>
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("Test.java",
+   *     "package com.example;\n\nimport org.springframework.UserService;\n\nclass Test {}");
+   * ImportDeclarationService service = new ImportDeclarationService();
+   *
+   * boolean updated = service.updateImportClassName(javaFile,
+   *     "org.springframework", "UserService", "CustomerService");
+   * // updated == true
+   * // Result: "package com.example;\n\nimport org.springframework.CustomerService;\n\nclass Test {}"
+   *
+   * // With wildcard import
+   * TSFile wildcardFile = new TSFile("Test.java", "import org.springframework.*;");
+   * boolean notUpdated = service.updateImportClassName(wildcardFile,
+   *     "org.springframework", "UserService", "CustomerService");
+   * // notUpdated == false (wildcard covers both old and new class names)
+   * }</pre>
+   *
+   * @param file The file to update the import in
+   * @param packageName The package name of the import (e.g., "org.springframework")
+   * @param oldClassName The current class name (e.g., "UserService")
+   * @param newClassName The new class name (e.g., "CustomerService")
+   * @return true if the import was updated, false if no update was needed or possible
+   * @throws IllegalArgumentException if any parameter is null or empty
+   */
+  public boolean updateImportClassName(
+      TSFile file, String packageName, String oldClassName, String newClassName) {
+    if (packageName == null || packageName.trim().isEmpty()) {
+      throw new IllegalArgumentException("Package name cannot be null or empty");
+    }
+    if (oldClassName == null || oldClassName.trim().isEmpty()) {
+      throw new IllegalArgumentException("Old class name cannot be null or empty");
+    }
+    if (newClassName == null || newClassName.trim().isEmpty()) {
+      throw new IllegalArgumentException("New class name cannot be null or empty");
+    }
+    if (hasWildcardImport(file, packageName)) {
+      return false;
+    }
+    Optional<Map<String, TSNode>> existingImport =
+        this.getImportDeclarationMap(file, oldClassName, packageName);
+    if (existingImport.isEmpty()) {
+      return false;
+    }
+    Map<String, TSNode> importMap = existingImport.get();
+    if (importMap.containsKey("isWildCard")) {
+      return false;
+    }
+    TSNode classNode = importMap.get("class");
+    if (classNode != null) {
+      file.updateSourceCode(classNode, newClassName);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Updates an existing import declaration to use a new package name for the same class.
+   *
+   * <p>This method is specifically for package refactoring scenarios where a class moves to a
+   * different package but keeps the same name. It updates only the package part of the import
+   * statement, making it ideal for package restructuring operations.
+   *
+   * <p>Behavior:
+   *
+   * <ul>
+   *   <li>Returns false if a wildcard import exists for the old package (no update needed)
+   *   <li>Searches for the exact class import in the old package and updates the package name
+   *   <li>Returns true if the import was successfully updated
+   *   <li>Returns false if the old import was not found
+   *   <li>Validates that all parameters are non-null and non-empty
+   * </ul>
+   *
+   * <p>Example usage:
+   *
+   * <pre>{@code
+   * TSFile javaFile = new TSFile("Test.java",
+   *     "package com.example;\n\nimport com.example.service.UserService;\n\nclass Test {}");
+   * ImportDeclarationService service = new ImportDeclarationService();
+   *
+   * boolean updated = service.updateImportPackageName(javaFile,
+   *     "com.example.service", "com.example.domain", "UserService");
+   * // updated == true
+   * // Result: "package com.example;\n\nimport com.example.domain.UserService;\n\nclass Test {}"
+   *
+   * // With wildcard import
+   * TSFile wildcardFile = new TSFile("Test.java", "import com.example.service.*;");
+   * boolean notUpdated = service.updateImportPackageName(wildcardFile,
+   *     "com.example.service", "com.example.domain", "UserService");
+   * // notUpdated == false (wildcard covers the class in old package)
+   * }</pre>
+   *
+   * @param file The file to update the import in
+   * @param oldPackageName The current package name (e.g., "com.example.service")
+   * @param newPackageName The new package name (e.g., "com.example.domain")
+   * @param className The class name that remains unchanged (e.g., "UserService")
+   * @return true if the import was updated, false if no update was needed or possible
+   * @throws IllegalArgumentException if any parameter is null or empty
+   */
+  public boolean updateImportPackageName(
+      TSFile file, String oldPackageName, String newPackageName, String className) {
+    if (oldPackageName == null || oldPackageName.trim().isEmpty()) {
+      throw new IllegalArgumentException("Old package name cannot be null or empty");
+    }
+    if (newPackageName == null || newPackageName.trim().isEmpty()) {
+      throw new IllegalArgumentException("New package name cannot be null or empty");
+    }
+    if (className == null || className.trim().isEmpty()) {
+      throw new IllegalArgumentException("Class name cannot be null or empty");
+    }
+    if (hasWildcardImport(file, oldPackageName)) {
+      return false;
+    }
+    Optional<Map<String, TSNode>> existingImport =
+        this.getImportDeclarationMap(file, className, oldPackageName);
+    if (existingImport.isEmpty()) {
+      return false;
+    }
+    Map<String, TSNode> importMap = existingImport.get();
+    if (importMap.containsKey("isWildCard")) {
+      return false;
+    }
+    TSNode packageNode = importMap.get("package");
+    if (packageNode != null) {
+      file.updateSourceCode(packageNode, newPackageName);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Updates an existing import declaration to use a new fully qualified class name.
    *
-   * <p>This method finds and updates a specific import statement in the file. It's useful for
-   * refactoring operations like class renaming or moving classes between packages. The method will
-   * not update imports if a wildcard import already covers the old class, as the wildcard would
-   * continue to work.
+   * <p>This method handles cases where both package and class name change. It's equivalent to
+   * removing the old import and adding a new one, but done as an atomic update operation. This is
+   * useful for comprehensive refactoring operations like moving and renaming a class
+   * simultaneously.
    *
    * <p>Behavior:
    *
@@ -399,20 +547,20 @@ public class ImportDeclarationService {
    * ImportDeclarationService service = new ImportDeclarationService();
    *
    * boolean updated = service.updateImport(javaFile,
-   *     "org.example.OldClass", "org.example.NewClass");
+   *     "org.example.OldClass", "org.newcompany.api.NewClass");
    * // updated == true
-   * // Result: "package com.example;\n\nimport org.example.NewClass;\n\nclass Test {}"
+   * // Result: "package com.example;\n\nimport org.newcompany.api.NewClass;\n\nclass Test {}"
    *
    * // With wildcard import
    * TSFile wildcardFile = new TSFile("Test.java", "import org.example.*;");
    * boolean notUpdated = service.updateImport(wildcardFile,
-   *     "org.example.OldClass", "org.example.NewClass");
-   * // notUpdated == false (wildcard covers both old and new classes)
+   *     "org.example.OldClass", "org.newcompany.api.NewClass");
+   * // notUpdated == false (wildcard covers the old class)
    * }</pre>
    *
    * @param file The file to update the import in
    * @param oldFullImport The current fully qualified import (e.g., "org.example.OldClass")
-   * @param newFullImport The new fully qualified import (e.g., "org.example.NewClass")
+   * @param newFullImport The new fully qualified import (e.g., "org.newcompany.api.NewClass")
    * @return true if the import was updated, false if no update was needed or possible
    * @throws IllegalArgumentException if either import name doesn't contain a dot separator
    */
@@ -441,11 +589,9 @@ public class ImportDeclarationService {
       if (!importMap.containsKey("isWildCard")) {
         TSNode packageNode = importMap.get("package");
         TSNode classNode = importMap.get("class");
-
         if (packageNode != null && classNode != null) {
           String packageText = file.getTextFromNode(packageNode);
           String classText = file.getTextFromNode(classNode);
-
           // Check if this matches the old import we want to update
           if (packageText.equals(oldPackage) && classText.equals(oldClassName)) {
             // Found the import to update - get the scoped identifier and update it
