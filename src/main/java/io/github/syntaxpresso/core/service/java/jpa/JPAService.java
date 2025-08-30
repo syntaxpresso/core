@@ -16,7 +16,7 @@ import org.treesitter.TSNode;
 @RequiredArgsConstructor
 public class JPAService {
   private final ImportDeclarationService importDeclarationService;
-  private final JPAEntityService jpaEntityService;
+  private final JPAEntityAnnotationService jpaEntityAnnotationService;
 
   /**
    * A container class to hold a {@link TSNode} representing a field and its associated {@link

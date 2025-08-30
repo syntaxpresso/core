@@ -54,8 +54,9 @@ class JPAServiceTest {
     lenient()
         .when(javaLanguageService.getImportDeclarationService())
         .thenReturn(importDeclarationService);
-    JPAEntityService jpaEntityService = new JPAEntityService(javaLanguageService);
-    jpaService = new JPAService(importDeclarationService, jpaEntityService);
+    JPAEntityAnnotationService jpaEntityAnnotationService =
+        new JPAEntityAnnotationService(javaLanguageService);
+    jpaService = new JPAService(importDeclarationService, jpaEntityAnnotationService);
     lenient()
         .when(importDeclarationService.getPackageDeclarationService())
         .thenReturn(packageDeclarationService);
@@ -83,7 +84,7 @@ class JPAServiceTest {
           .thenReturn(List.of(importMap));
       lenient().when(tsFile.getTextFromNode(packageNode)).thenReturn("jakarta.persistence");
       lenient().when(tsFile.getTextFromNode(classNode)).thenReturn("Entity");
-      boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
+      boolean result = jpaService.getJpaEntityAnnotationService().isJPAEntity(tsFile);
       assertTrue(result);
     }
 
@@ -94,7 +95,7 @@ class JPAServiceTest {
           .when(classDeclarationService.getAllClassAnnotations(tsFile))
           .thenReturn(List.of(annotationNode));
       lenient().when(tsFile.getTextFromNode(annotationNode)).thenReturn("Component");
-      boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
+      boolean result = jpaService.getJpaEntityAnnotationService().isJPAEntity(tsFile);
       assertFalse(result);
     }
 
@@ -102,7 +103,7 @@ class JPAServiceTest {
     @DisplayName("should return false when class has no annotations")
     void isJPAEntity_withNoAnnotations_shouldReturnFalse() {
       lenient().when(classDeclarationService.getAllClassAnnotations(tsFile)).thenReturn(List.of());
-      boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
+      boolean result = jpaService.getJpaEntityAnnotationService().isJPAEntity(tsFile);
       assertFalse(result);
     }
 
@@ -128,7 +129,7 @@ class JPAServiceTest {
           .thenReturn(List.of(importMap));
       lenient().when(tsFile.getTextFromNode(packageNode)).thenReturn("jakarta.persistence");
       lenient().when(tsFile.getTextFromNode(classNode)).thenReturn("Entity");
-      boolean result = jpaService.getJpaEntityService().isJPAEntity(tsFile);
+      boolean result = jpaService.getJpaEntityAnnotationService().isJPAEntity(tsFile);
       assertTrue(result);
     }
   }

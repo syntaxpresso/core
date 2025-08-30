@@ -12,22 +12,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
-import org.treesitter.TSNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.treesitter.TSNode;
 
 @DisplayName("JPAEntityService Tests")
-class JPAEntityServiceTest {
+class JPAEntityAnnotationServiceTest {
   @TempDir Path tempDir;
-  private JPAEntityService jpaEntityService;
+  private JPAEntityAnnotationService jpaEntityAnnotationService;
   private JavaLanguageService javaLanguageService;
 
   @BeforeEach
   void setUp() {
     this.javaLanguageService = new JavaLanguageService();
-    this.jpaEntityService = new JPAEntityService(javaLanguageService);
+    this.jpaEntityAnnotationService = new JPAEntityAnnotationService(javaLanguageService);
   }
 
   @Nested
@@ -53,7 +53,7 @@ class JPAEntityServiceTest {
       Files.writeString(javaFile, javaCode);
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      boolean result = jpaEntityService.isJPAEntity(tsFile);
+      boolean result = jpaEntityAnnotationService.isJPAEntity(tsFile);
 
       assertTrue(result);
     }
@@ -75,7 +75,7 @@ class JPAEntityServiceTest {
       Files.writeString(javaFile, javaCode);
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      boolean result = jpaEntityService.isJPAEntity(tsFile);
+      boolean result = jpaEntityAnnotationService.isJPAEntity(tsFile);
 
       assertTrue(result);
     }
@@ -99,7 +99,7 @@ class JPAEntityServiceTest {
       Files.writeString(javaFile, javaCode);
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      boolean result = jpaEntityService.isJPAEntity(tsFile);
+      boolean result = jpaEntityAnnotationService.isJPAEntity(tsFile);
 
       assertTrue(result);
     }
@@ -119,7 +119,7 @@ class JPAEntityServiceTest {
       Files.writeString(javaFile, javaCode);
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      boolean result = jpaEntityService.isJPAEntity(tsFile);
+      boolean result = jpaEntityAnnotationService.isJPAEntity(tsFile);
 
       assertFalse(result);
     }
@@ -142,7 +142,7 @@ class JPAEntityServiceTest {
       Files.writeString(javaFile, javaCode);
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      boolean result = jpaEntityService.isJPAEntity(tsFile);
+      boolean result = jpaEntityAnnotationService.isJPAEntity(tsFile);
 
       assertFalse(result);
     }
@@ -166,7 +166,7 @@ class JPAEntityServiceTest {
       Files.writeString(javaFile, javaCode);
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      boolean result = jpaEntityService.isJPAEntity(tsFile);
+      boolean result = jpaEntityAnnotationService.isJPAEntity(tsFile);
 
       assertTrue(result);
     }
@@ -189,7 +189,7 @@ class JPAEntityServiceTest {
       Files.writeString(javaFile, javaCode);
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      boolean result = jpaEntityService.isJPAEntity(tsFile);
+      boolean result = jpaEntityAnnotationService.isJPAEntity(tsFile);
 
       assertTrue(result);
     }
@@ -213,7 +213,7 @@ class JPAEntityServiceTest {
       Files.writeString(javaFile, javaCode);
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      boolean result = jpaEntityService.isJPAEntity(tsFile);
+      boolean result = jpaEntityAnnotationService.isJPAEntity(tsFile);
 
       assertTrue(result);
     }
@@ -243,10 +243,12 @@ class JPAEntityServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
 
       // First find the Entity annotation node
-      Optional<TSNode> entityAnnotationNode = jpaEntityService.getJPAEntityAnnotationNode(tsFile);
+      Optional<TSNode> entityAnnotationNode =
+          jpaEntityAnnotationService.getJPAEntityAnnotationNode(tsFile);
       assertTrue(entityAnnotationNode.isPresent(), "Entity annotation should be found");
-      
-      Optional<String> result = jpaEntityService.getJPAEntityName(tsFile, entityAnnotationNode.get());
+
+      Optional<String> result =
+          jpaEntityAnnotationService.getJPAEntityName(tsFile, entityAnnotationNode.get());
 
       assertTrue(result.isPresent());
       assertEquals("Customer", result.get());
@@ -269,7 +271,7 @@ class JPAEntityServiceTest {
     //   Files.writeString(javaFile, javaCode);
     //   TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
     //
-    //   Optional<String> result = jpaEntityService.getJPAEntityName(tsFile);
+    //   Optional<String> result = jpaEntityAnnotationService.getJPAEntityName(tsFile);
     //
     //   assertTrue(result.isPresent());
     //   assertEquals("Invoice", result.get());
@@ -290,7 +292,7 @@ class JPAEntityServiceTest {
     //   Files.writeString(javaFile, javaCode);
     //   TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
     //
-    //   Optional<String> result = jpaEntityService.getJPAEntityName(tsFile);
+    //   Optional<String> result = jpaEntityAnnotationService.getJPAEntityName(tsFile);
     //
     //   assertFalse(result.isPresent());
     // }
@@ -314,7 +316,7 @@ class JPAEntityServiceTest {
     //   Files.writeString(javaFile, javaCode);
     //   TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
     //
-    //   Optional<String> result = jpaEntityService.getJPAEntityName(tsFile);
+    //   Optional<String> result = jpaEntityAnnotationService.getJPAEntityName(tsFile);
     //
     //   assertTrue(result.isPresent());
     //   assertEquals("Account", result.get());
@@ -339,7 +341,7 @@ class JPAEntityServiceTest {
     //   Files.writeString(javaFile, javaCode);
     //   TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
     //
-    //   Optional<String> result = jpaEntityService.getJPAEntityName(tsFile);
+    //   Optional<String> result = jpaEntityAnnotationService.getJPAEntityName(tsFile);
     //
     //   assertTrue(result.isPresent());
     //   assertEquals("user_table", result.get());
@@ -363,7 +365,7 @@ class JPAEntityServiceTest {
     //   Files.writeString(javaFile, javaCode);
     //   TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
     //
-    //   Optional<String> result = jpaEntityService.getJPAEntityName(tsFile);
+    //   Optional<String> result = jpaEntityAnnotationService.getJPAEntityName(tsFile);
     //
     //   assertTrue(result.isPresent());
     //   assertEquals("product_table", result.get());
@@ -389,7 +391,7 @@ class JPAEntityServiceTest {
     //   Files.writeString(javaFile, javaCode);
     //   TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
     //
-    //   Optional<String> result = jpaEntityService.getJPAEntityName(tsFile);
+    //   Optional<String> result = jpaEntityAnnotationService.getJPAEntityName(tsFile);
     //
     //   assertTrue(result.isPresent());
     //   assertEquals("order_table", result.get());
