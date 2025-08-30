@@ -2,6 +2,7 @@ package io.github.syntaxpresso.core.service.java.language;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.syntaxpresso.core.common.TSFile;
@@ -511,6 +512,231 @@ class ImportDeclarationServiceTest {
           importService.getImportDeclarationMap(
               file, "SpringApplication", "org.springframework.boot.extra");
       assertFalse(tooSpecific.isPresent());
+    }
+  }
+
+  @Nested
+  @DisplayName("addImport(TSFile, String, String)")
+  class AddImportWithPackageAndClassTests {
+
+    @Test
+    @DisplayName("should add import after package declaration")
+    void addImport_withPackageDeclaration_shouldAddImportAfterPackage() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
+      importService.addImport(file, "java.util", "List");
+      String expectedCode = """
+          package com.example;
+
+          import java.util.List;
+
+          public class TestClass {
+          }
+          """;
+      assertEquals(expectedCode, file.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should add import at beginning when no package declaration")
+    void addImport_withNoPackage_shouldAddImportAtBeginning() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, BASIC_CLASS);
+      importService.addImport(file, "java.util", "List");
+      String expectedCode = """
+          import java.util.List;
+          public class TestClass {
+          }
+          """;
+      assertEquals(expectedCode, file.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should add import after existing imports")
+    void addImport_withExistingImports_shouldAddAfterLastImport() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MULTIPLE_IMPORTS);
+      importService.addImport(file, "java.util", "ArrayList");
+      String result = file.getSourceCode();
+      assertTrue(result.contains("import java.util.List;"));
+      assertTrue(result.contains("import java.util.Map;"));
+      assertTrue(result.contains("import java.io.IOException;"));
+      assertTrue(result.contains("import java.util.ArrayList;"));
+      
+      // Verify ArrayList comes after IOException (last existing import)
+      int ioIndex = result.indexOf("import java.io.IOException;");
+      int arrayListIndex = result.indexOf("import java.util.ArrayList;");
+      assertTrue(ioIndex < arrayListIndex);
+    }
+
+    @Test
+    @DisplayName("should not add duplicate import")
+    void addImport_withDuplicateImport_shouldNotAddDuplicate() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      String originalCode = file.getSourceCode();
+      importService.addImport(file, "java.util", "List");
+      assertEquals(originalCode, file.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should not add import when wildcard covers it")
+    void addImport_withWildcardCoverage_shouldNotAddImport() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_WILDCARD_IMPORT);
+      String originalCode = file.getSourceCode();
+      importService.addImport(file, "java.util", "List");
+      importService.addImport(file, "java.util", "ArrayList");
+      importService.addImport(file, "java.util", "HashMap");
+      assertEquals(originalCode, file.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should add import to file without package but with existing imports")
+    void addImport_withNoPackageButExistingImports_shouldAddAfterImports() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MULTIPLE_IMPORTS_NO_PACKAGE);
+      importService.addImport(file, "java.util", "ArrayList");
+      String result = file.getSourceCode();
+      assertTrue(result.contains("import java.util.List;"));
+      assertTrue(result.contains("import java.util.Map;"));
+      assertTrue(result.contains("import java.io.IOException;"));
+      assertTrue(result.contains("import java.util.ArrayList;"));
+    }
+
+    @Test
+    @DisplayName("should handle mixed import scenarios correctly")
+    void addImport_withMixedImports_shouldInsertCorrectly() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MIXED_IMPORTS);
+      // Try to add something covered by wildcard
+      importService.addImport(file, "java.io", "File");
+      // Try to add something not covered
+      importService.addImport(file, "java.time", "LocalDate");
+      
+      String result = file.getSourceCode();
+      // Should not add File (covered by java.io.*)
+      assertFalse(result.contains("import java.io.File;"));
+      // Should add LocalDate (not covered by any wildcard)
+      assertTrue(result.contains("import java.time.LocalDate;"));
+    }
+
+    @Test
+    @DisplayName("should preserve file structure and formatting")
+    void addImport_shouldPreserveFileStructure() {
+      String sourceCode = """
+          package com.example;
+
+          public class TestClass {
+              public void method() {
+                  System.out.println("test");
+              }
+          }
+          """;
+      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
+      importService.addImport(file, "java.util", "List");
+      
+      String result = file.getSourceCode();
+      assertTrue(result.contains("package com.example;"));
+      assertTrue(result.contains("import java.util.List;"));
+      assertTrue(result.contains("public class TestClass {"));
+      assertTrue(result.contains("public void method() {"));
+      assertTrue(result.contains("System.out.println(\"test\");"));
+    }
+  }
+
+  @Nested
+  @DisplayName("addImport(TSFile, String)")
+  class AddImportWithFullPackageNameTests {
+
+    @Test
+    @DisplayName("should add import using full package name")
+    void addImport_withFullPackageName_shouldAddImport() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
+      importService.addImport(file, "java.util.List");
+      String expectedCode = """
+          package com.example;
+
+          import java.util.List;
+
+          public class TestClass {
+          }
+          """;
+      assertEquals(expectedCode, file.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should correctly parse complex full package names")
+    void addImport_withComplexFullPackageName_shouldParseCorrectly() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
+      importService.addImport(file, "org.springframework.boot.autoconfigure.SpringBootApplication");
+      
+      String result = file.getSourceCode();
+      assertTrue(result.contains("import org.springframework.boot.autoconfigure.SpringBootApplication;"));
+    }
+
+    @Test
+    @DisplayName("should throw exception for invalid full package name")
+    void addImport_withInvalidFullPackageName_shouldThrowException() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
+      
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.addImport(file, "InvalidPackageName");
+      });
+      
+      assertThrows(IllegalArgumentException.class, () -> {
+        importService.addImport(file, "");
+      });
+    }
+
+    @Test
+    @DisplayName("should not add duplicate using full package name")
+    void addImport_withDuplicateFullPackageName_shouldNotAddDuplicate() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_SINGLE_IMPORT);
+      String originalCode = file.getSourceCode();
+      importService.addImport(file, "java.util.List");
+      assertEquals(originalCode, file.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should handle edge case with single character class name")
+    void addImport_withSingleCharacterClassName_shouldWork() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
+      importService.addImport(file, "com.example.A");
+      
+      String result = file.getSourceCode();
+      assertTrue(result.contains("import com.example.A;"));
+    }
+
+    @Test
+    @DisplayName("should delegate to main addImport method correctly")
+    void addImport_withFullPackageName_shouldDelegateCorrectly() {
+      // Test that both methods produce same result
+      TSFile file1 = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
+      TSFile file2 = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
+      
+      // Method 1: separate parameters
+      importService.addImport(file1, "java.util", "ArrayList");
+      
+      // Method 2: full package name
+      importService.addImport(file2, "java.util.ArrayList");
+      
+      assertEquals(file1.getSourceCode(), file2.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should work with files without package declaration")
+    void addImport_withFullPackageNameNoPackage_shouldWork() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, BASIC_CLASS);
+      importService.addImport(file, "java.util.List");
+      
+      String expectedCode = """
+          import java.util.List;
+          public class TestClass {
+          }
+          """;
+      assertEquals(expectedCode, file.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should respect wildcard import coverage")
+    void addImport_withFullPackageNameAndWildcard_shouldRespectWildcard() {
+      TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_WILDCARD_IMPORT);
+      String originalCode = file.getSourceCode();
+      importService.addImport(file, "java.util.ArrayList");
+      assertEquals(originalCode, file.getSourceCode());
     }
   }
 }
