@@ -3,6 +3,8 @@ package io.github.syntaxpresso.core.service.java.language;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.service.java.language.extra.ImportInsertionPoint;
 import io.github.syntaxpresso.core.service.java.language.extra.ImportInsertionPoint.ImprtInsertionPosition;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -132,20 +134,32 @@ public class ImportDeclarationService {
    *     imports). Returns empty list if no import declarations are found.
    */
   public List<Map<String, TSNode>> getAllImportDeclarations(TSFile file) {
-    String importDeclarationQueryString =
+    String regularImportsQuery =
         "(import_declaration"
-            + "  ["
-            + "    (scoped_identifier"
-            + "      scope: (_) @package"
-            + "      name: (identifier) @class"
-            + "    )"
-            + "    ("
-            + "      (scoped_identifier) @package"
-            + "      (asterisk) @isWildCard"
-            + "    )"
-            + "  ]"
+            + "  (scoped_identifier"
+            + "    scope: (_) @package"
+            + "    name: (identifier) @class"
+            + "  )"
             + ") @importDeclaration";
-    return file.queryForCaptures(importDeclarationQueryString);
+    String wildcardImportsQuery =
+        "(import_declaration"
+            + "  (scoped_identifier) @package"
+            + "  (asterisk) @isWildCard"
+            + ") @importDeclaration";
+    List<Map<String, TSNode>> regularImports = file.queryForCaptures(regularImportsQuery);
+    List<Map<String, TSNode>> wildcardImports = file.queryForCaptures(wildcardImportsQuery);
+    Map<String, Map<String, TSNode>> deduplicatedImports = new LinkedHashMap<>();
+    for (Map<String, TSNode> regularImport : regularImports) {
+      TSNode importDeclNode = regularImport.get("importDeclaration");
+      String key = importDeclNode.getStartByte() + "-" + importDeclNode.getEndByte();
+      deduplicatedImports.put(key, regularImport);
+    }
+    for (Map<String, TSNode> wildcardImport : wildcardImports) {
+      TSNode importDeclNode = wildcardImport.get("importDeclaration");
+      String key = importDeclNode.getStartByte() + "-" + importDeclNode.getEndByte();
+      deduplicatedImports.put(key, wildcardImport);
+    }
+    return new ArrayList<>(deduplicatedImports.values());
   }
 
   /**
