@@ -524,7 +524,8 @@ class ImportDeclarationServiceTest {
     void addImport_withPackageDeclaration_shouldAddImportAfterPackage() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
       importService.addImport(file, "java.util", "List");
-      String expectedCode = """
+      String expectedCode =
+          """
           package com.example;
 
           import java.util.List;
@@ -540,7 +541,8 @@ class ImportDeclarationServiceTest {
     void addImport_withNoPackage_shouldAddImportAtBeginning() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, BASIC_CLASS);
       importService.addImport(file, "java.util", "List");
-      String expectedCode = """
+      String expectedCode =
+          """
           import java.util.List;
           public class TestClass {
           }
@@ -558,7 +560,6 @@ class ImportDeclarationServiceTest {
       assertTrue(result.contains("import java.util.Map;"));
       assertTrue(result.contains("import java.io.IOException;"));
       assertTrue(result.contains("import java.util.ArrayList;"));
-      
       // Verify ArrayList comes after IOException (last existing import)
       int ioIndex = result.indexOf("import java.io.IOException;");
       int arrayListIndex = result.indexOf("import java.util.ArrayList;");
@@ -601,22 +602,18 @@ class ImportDeclarationServiceTest {
     @DisplayName("should handle mixed import scenarios correctly")
     void addImport_withMixedImports_shouldInsertCorrectly() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_MIXED_IMPORTS);
-      // Try to add something covered by wildcard
       importService.addImport(file, "java.io", "File");
-      // Try to add something not covered
       importService.addImport(file, "java.time", "LocalDate");
-      
       String result = file.getSourceCode();
-      // Should not add File (covered by java.io.*)
       assertFalse(result.contains("import java.io.File;"));
-      // Should add LocalDate (not covered by any wildcard)
       assertTrue(result.contains("import java.time.LocalDate;"));
     }
 
     @Test
     @DisplayName("should preserve file structure and formatting")
     void addImport_shouldPreserveFileStructure() {
-      String sourceCode = """
+      String sourceCode =
+          """
           package com.example;
 
           public class TestClass {
@@ -627,7 +624,6 @@ class ImportDeclarationServiceTest {
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
       importService.addImport(file, "java.util", "List");
-      
       String result = file.getSourceCode();
       assertTrue(result.contains("package com.example;"));
       assertTrue(result.contains("import java.util.List;"));
@@ -646,7 +642,8 @@ class ImportDeclarationServiceTest {
     void addImport_withFullPackageName_shouldAddImport() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
       importService.addImport(file, "java.util.List");
-      String expectedCode = """
+      String expectedCode =
+          """
           package com.example;
 
           import java.util.List;
@@ -662,23 +659,25 @@ class ImportDeclarationServiceTest {
     void addImport_withComplexFullPackageName_shouldParseCorrectly() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
       importService.addImport(file, "org.springframework.boot.autoconfigure.SpringBootApplication");
-      
       String result = file.getSourceCode();
-      assertTrue(result.contains("import org.springframework.boot.autoconfigure.SpringBootApplication;"));
+      assertTrue(
+          result.contains("import org.springframework.boot.autoconfigure.SpringBootApplication;"));
     }
 
     @Test
     @DisplayName("should throw exception for invalid full package name")
     void addImport_withInvalidFullPackageName_shouldThrowException() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
-      
-      assertThrows(IllegalArgumentException.class, () -> {
-        importService.addImport(file, "InvalidPackageName");
-      });
-      
-      assertThrows(IllegalArgumentException.class, () -> {
-        importService.addImport(file, "");
-      });
+      assertThrows(
+          IllegalArgumentException.class,
+          () -> {
+            importService.addImport(file, "InvalidPackageName");
+          });
+      assertThrows(
+          IllegalArgumentException.class,
+          () -> {
+            importService.addImport(file, "");
+          });
     }
 
     @Test
@@ -695,7 +694,6 @@ class ImportDeclarationServiceTest {
     void addImport_withSingleCharacterClassName_shouldWork() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
       importService.addImport(file, "com.example.A");
-      
       String result = file.getSourceCode();
       assertTrue(result.contains("import com.example.A;"));
     }
@@ -703,16 +701,10 @@ class ImportDeclarationServiceTest {
     @Test
     @DisplayName("should delegate to main addImport method correctly")
     void addImport_withFullPackageName_shouldDelegateCorrectly() {
-      // Test that both methods produce same result
       TSFile file1 = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
       TSFile file2 = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_PACKAGE);
-      
-      // Method 1: separate parameters
       importService.addImport(file1, "java.util", "ArrayList");
-      
-      // Method 2: full package name
       importService.addImport(file2, "java.util.ArrayList");
-      
       assertEquals(file1.getSourceCode(), file2.getSourceCode());
     }
 
@@ -721,8 +713,8 @@ class ImportDeclarationServiceTest {
     void addImport_withFullPackageNameNoPackage_shouldWork() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, BASIC_CLASS);
       importService.addImport(file, "java.util.List");
-      
-      String expectedCode = """
+      String expectedCode =
+          """
           import java.util.List;
           public class TestClass {
           }
