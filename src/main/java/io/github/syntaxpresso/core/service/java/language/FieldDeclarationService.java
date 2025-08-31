@@ -23,9 +23,9 @@ public class FieldDeclarationService {
       return Collections.emptyList();
     }
     List<TSNode> foundFields = new ArrayList<>();
-    List<TSNode> allFields = file.query(FIELD_DECLARATION_QUERY);
+    List<TSNode> allFields = file.query(FIELD_DECLARATION_QUERY).execute();
     for (TSNode field : allFields) {
-      List<TSNode> typeNodes = file.query(field, "(type_identifier) @type");
+      List<TSNode> typeNodes = file.query("(type_identifier) @type").within(field).execute();
       for (TSNode typeNode : typeNodes) {
         String typeNodeName = file.getTextFromNode(typeNode);
         if (typeName.equals(typeNodeName)) {
@@ -53,7 +53,8 @@ public class FieldDeclarationService {
       return Optional.empty();
     }
     // Query for type identifiers within this field declaration
-    List<TSNode> typeNodes = file.query(declarationNode, "(type_identifier) @type");
+    List<TSNode> typeNodes =
+        file.query("(type_identifier) @type").within(declarationNode).execute();
     for (TSNode typeNode : typeNodes) {
       String foundTypeName = file.getTextFromNode(typeNode);
       if (typeName.equals(foundTypeName)) {
@@ -76,7 +77,9 @@ public class FieldDeclarationService {
     }
     // Query for the field name identifier within the declarator
     List<TSNode> nameNodes =
-        file.query(declarationNode, "(variable_declarator name: (identifier) @name)");
+        file.query("(variable_declarator name: (identifier) @name)")
+            .within(declarationNode)
+            .execute();
     return nameNodes.isEmpty() ? Optional.empty() : Optional.of(nameNodes.get(0));
   }
 
@@ -96,7 +99,9 @@ public class FieldDeclarationService {
     }
     // Query for type identifiers in object creation expressions within this field declaration
     List<TSNode> typeNodes =
-        file.query(declarationNode, "(object_creation_expression type: (type_identifier) @type)");
+        file.query("(object_creation_expression type: (type_identifier) @type)")
+            .within(declarationNode)
+            .execute();
     for (TSNode typeNode : typeNodes) {
       String foundClassName = file.getTextFromNode(typeNode);
       if (className.equals(foundClassName)) {
@@ -126,7 +131,7 @@ public class FieldDeclarationService {
       "(method_invocation object: (identifier) @usage)"
     };
     for (String queryString : queries) {
-      List<TSNode> nodes = file.query(queryString);
+      List<TSNode> nodes = file.query(queryString).execute();
       for (TSNode node : nodes) {
         String nodeText = file.getTextFromNode(node);
         if (fieldName.equals(nodeText)) {
@@ -243,7 +248,7 @@ public class FieldDeclarationService {
     }
     List<TSNode> filteredFields = new ArrayList<>();
     for (TSNode field : fieldNodes) {
-      List<TSNode> typeNodes = file.query(field, "(type_identifier) @type");
+      List<TSNode> typeNodes = file.query("(type_identifier) @type").within(field).execute();
       for (TSNode typeNode : typeNodes) {
         String typeNodeName = file.getTextFromNode(typeNode);
         if (typeName.equals(typeNodeName)) {

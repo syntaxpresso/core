@@ -29,7 +29,7 @@ public class MethodDeclarationService {
     if (file == null || file.getTree() == null) {
       return Collections.emptyList();
     }
-    return file.query(METHOD_DECLARATION_QUERY);
+    return file.query(METHOD_DECLARATION_QUERY).execute();
   }
 
   /**
@@ -42,7 +42,8 @@ public class MethodDeclarationService {
     if (file == null || file.getTree() == null) {
       return Collections.emptyList();
     }
-    return file.query(METHOD_INVOCATION_QUERY).reversed();
+    List<TSNode> nodes = file.query(METHOD_INVOCATION_QUERY).execute();
+    return nodes.reversed();
   }
 
   /**

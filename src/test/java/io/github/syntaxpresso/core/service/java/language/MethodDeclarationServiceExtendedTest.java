@@ -253,7 +253,7 @@ class MethodDeclarationServiceExtendedTest {
     @Test
     @DisplayName("Should reject non-method nodes")
     void shouldRejectNonMethodNodes() {
-      List<TSNode> classes = testFile.query("(class_declaration) @class");
+      List<TSNode> classes = testFile.query("(class_declaration) @class").execute();
       assertFalse(classes.isEmpty());
       assertFalse(methodDeclarationService.isMainMethod(testFile, classes.get(0)));
     }

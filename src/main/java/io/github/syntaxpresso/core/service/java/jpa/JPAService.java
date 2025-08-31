@@ -102,7 +102,8 @@ public class JPAService {
    * @param idType The ID field type.
    */
   private void addExtendsClause(TSFile repositoryFile, String entityClassName, String idType) {
-    List<TSNode> interfaceNodes = repositoryFile.query("(interface_declaration) @interface");
+    List<TSNode> interfaceNodes =
+        repositoryFile.query("(interface_declaration) @interface").execute();
     if (interfaceNodes.isEmpty()) {
       return;
     }
@@ -232,7 +233,9 @@ public class JPAService {
    */
   boolean hasIdAnnotation(TSFile file, TSNode fieldNode) {
     List<TSNode> annotations =
-        file.query(fieldNode, "(marker_annotation name: (identifier) @annotation.name)");
+        file.query("(marker_annotation name: (identifier) @annotation.name)")
+            .within(fieldNode)
+            .execute();
     for (TSNode annotation : annotations) {
       String annotationText = file.getTextFromNode(annotation);
       if ("Id".equals(annotationText)) {

@@ -94,7 +94,7 @@ class TypeResolutionServiceTest {
     @DisplayName("Should resolve 'this' keyword to class name")
     void shouldResolveThisKeyword() {
       // Find a 'this' method invocation
-      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation");
+      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation").execute();
       TSNode thisInvocation = null;
       for (TSNode invocation : methodInvocations) {
         TSNode object = invocation.getChildByFieldName("object");
@@ -114,7 +114,7 @@ class TypeResolutionServiceTest {
     @DisplayName("Should resolve formal parameter type")
     void shouldResolveFormalParameterType() {
       // Find method invocation on formal parameter 'calc'
-      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation");
+      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation").execute();
       TSNode calcInvocation = null;
       for (TSNode invocation : methodInvocations) {
         TSNode object = invocation.getChildByFieldName("object");
@@ -134,7 +134,7 @@ class TypeResolutionServiceTest {
     @DisplayName("Should resolve local variable type")
     void shouldResolveLocalVariableType() {
       // Find method invocation on local variable 'localCalc'
-      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation");
+      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation").execute();
       TSNode localCalcInvocation = null;
       for (TSNode invocation : methodInvocations) {
         TSNode object = invocation.getChildByFieldName("object");
@@ -154,7 +154,7 @@ class TypeResolutionServiceTest {
     @DisplayName("Should resolve class field type")
     void shouldResolveClassFieldType() {
       // Find method invocation on field 'helper'
-      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation");
+      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation").execute();
       TSNode helperInvocation = null;
       for (TSNode invocation : methodInvocations) {
         TSNode object = invocation.getChildByFieldName("object");
@@ -174,7 +174,7 @@ class TypeResolutionServiceTest {
     @DisplayName("Should return empty string for built-in types")
     void shouldReturnEmptyForBuiltinTypes() {
       // Find method invocation on String parameter 'input'
-      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation");
+      List<TSNode> methodInvocations = testFile.query("(method_invocation) @invocation").execute();
       TSNode inputInvocation = null;
       for (TSNode invocation : methodInvocations) {
         TSNode object = invocation.getChildByFieldName("object");
@@ -194,7 +194,7 @@ class TypeResolutionServiceTest {
     @DisplayName("Should return empty string for unresolvable types")
     void shouldReturnEmptyForUnresolvableTypes() {
       // Create a mock object node that doesn't exist in scope
-      List<TSNode> identifiers = testFile.query("(identifier) @id");
+      List<TSNode> identifiers = testFile.query("(identifier) @id").execute();
       TSNode firstIdentifier = identifiers.get(0);
       // Create a fake context - this should not resolve to anything
       String resolvedType =
@@ -210,10 +210,12 @@ class TypeResolutionServiceTest {
     @DisplayName("Should resolve constructor parameter type")
     void shouldResolveConstructorParameterType() {
       // Find constructor and its parameter usage
-      List<TSNode> constructors = complexTestFile.query("(constructor_declaration) @constructor");
+      List<TSNode> constructors =
+          complexTestFile.query("(constructor_declaration) @constructor").execute();
       assertFalse(constructors.isEmpty(), "Should find constructor");
       // Look for assignments within constructor
-      List<TSNode> assignments = complexTestFile.query("(assignment_expression) @assignment");
+      List<TSNode> assignments =
+          complexTestFile.query("(assignment_expression) @assignment").execute();
       TSNode calcAssignment = null;
       for (TSNode assignment : assignments) {
         TSNode right = assignment.getChildByFieldName("right");
@@ -234,7 +236,8 @@ class TypeResolutionServiceTest {
     @DisplayName("Should handle nested scopes correctly")
     void shouldHandleNestedScopesCorrectly() {
       // Find method invocations within different scopes
-      List<TSNode> methodInvocations = complexTestFile.query("(method_invocation) @invocation");
+      List<TSNode> methodInvocations =
+          complexTestFile.query("(method_invocation) @invocation").execute();
       // Count different types of invocations
       int totalInvocations = 0;
       int resolvedInvocations = 0;
@@ -270,7 +273,8 @@ class TypeResolutionServiceTest {
     @Test
     @DisplayName("Should handle null file gracefully")
     void shouldHandleNullFileGracefully() {
-      TSNode mockNode = testFile.query("(identifier) @id").get(0);
+      List<TSNode> queryResult = testFile.query("(identifier) @id").execute();
+      TSNode mockNode = queryResult.getFirst();
       // The service should handle null file gracefully without throwing NPE
       assertDoesNotThrow(
           () -> {
@@ -284,7 +288,8 @@ class TypeResolutionServiceTest {
     @Test
     @DisplayName("Should handle null object node gracefully")
     void shouldHandleNullObjectNodeGracefully() {
-      TSNode mockContext = testFile.query("(identifier) @id").get(0);
+      List<TSNode> queryResult = testFile.query("(identifier) @id").execute();
+      TSNode mockContext = queryResult.getFirst();
       // The service should handle null object node gracefully without throwing NPE
       assertDoesNotThrow(
           () -> {
@@ -299,7 +304,8 @@ class TypeResolutionServiceTest {
     @Test
     @DisplayName("Should handle null context node gracefully")
     void shouldHandleNullContextNodeGracefully() {
-      TSNode mockObject = testFile.query("(identifier) @id").get(0);
+      List<TSNode> queryResult = testFile.query("(identifier) @id").execute();
+      TSNode mockObject = queryResult.getFirst();
       String result = typeResolutionService.resolveObjectType(testFile, mockObject, null);
       assertEquals("", result);
     }

@@ -27,7 +27,7 @@ public class ClassDeclarationService {
     if (file == null || file.getTree() == null) {
       return Collections.emptyList();
     }
-    return file.query(CLASS_DECLARATION_QUERY);
+    return file.query(CLASS_DECLARATION_QUERY).execute();
   }
 
   /**
@@ -112,7 +112,7 @@ public class ClassDeclarationService {
     if (file == null || classNode == null || !"class_declaration".equals(classNode.getType())) {
       return Collections.emptyList();
     }
-    return file.query(classNode, "(field_declaration) @field");
+    return file.query("(field_declaration) @field").within(classNode).execute();
   }
 
   /**
@@ -126,7 +126,7 @@ public class ClassDeclarationService {
     if (file == null || classNode == null || !"class_declaration".equals(classNode.getType())) {
       return Collections.emptyList();
     }
-    return file.query(classNode, "(method_declaration) @method");
+    return file.query("(method_declaration) @method").within(classNode).execute();
   }
 
   /**
@@ -307,8 +307,9 @@ public class ClassDeclarationService {
   public Optional<String> getSuperclassName(TSFile file, TSNode classDeclarationNode) {
     List<TSNode> superclassNodes =
         file.query(
-            classDeclarationNode,
-            "(class_declaration superclass: (superclass (type_identifier) @superclass.name))");
+                "(class_declaration superclass: (superclass (type_identifier) @superclass.name))")
+            .within(classDeclarationNode)
+            .execute();
     if (!superclassNodes.isEmpty()) {
       return Optional.of(file.getTextFromNode(superclassNodes.get(0)));
     }
@@ -345,8 +346,10 @@ public class ClassDeclarationService {
    * @return List of class annotation nodes.
    */
   public List<TSNode> getAllClassAnnotations(TSFile file, TSNode classDeclarationNode) {
-    List<TSNode> markerAnnotationNodes = file.query(classDeclarationNode, "(marker_annotation) @annotation");
-    List<TSNode> annotationNodes = file.query(classDeclarationNode, "(annotation) @annotation");
+    List<TSNode> markerAnnotationNodes =
+        file.query("(marker_annotation) @annotation").within(classDeclarationNode).execute();
+    List<TSNode> annotationNodes =
+        file.query("(annotation) @annotation").within(classDeclarationNode).execute();
     annotationNodes.addAll(markerAnnotationNodes);
     return annotationNodes;
   }

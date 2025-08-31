@@ -7,6 +7,7 @@ import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -381,7 +382,8 @@ class TSFileTest {
     @Test
     @DisplayName("should insert text before method declaration node")
     void insertTextBeforeNode_methodDeclaration_shouldSucceed() {
-      TSNode methodNode = tsFile.query("(method_declaration) @method").get(0);
+      List<TSNode> nodes = tsFile.query("(method_declaration) @method").execute();
+      TSNode methodNode = nodes.getFirst();
       assertNotNull(methodNode);
       tsFile.insertTextBeforeNode(methodNode, "public ");
       assertEquals("public class MyClass { public void method() {} }", tsFile.getSourceCode());
@@ -391,7 +393,8 @@ class TSFileTest {
     @Test
     @DisplayName("should insert text after method declaration node")
     void insertTextAfterNode_methodDeclaration_shouldSucceed() {
-      TSNode methodNode = tsFile.query("(method_declaration) @method").get(0);
+      List<TSNode> nodes = tsFile.query("(method_declaration) @method").execute();
+      TSNode methodNode = nodes.getFirst();
       assertNotNull(methodNode);
       tsFile.insertTextAfterNode(methodNode, " /* method end */");
       assertEquals(
@@ -402,7 +405,8 @@ class TSFileTest {
     @Test
     @DisplayName("should insert text before class body opening brace")
     void insertTextBeforeNode_classBody_shouldSucceed() {
-      TSNode classBodyNode = tsFile.query("(class_body) @body").get(0);
+      List<TSNode> nodes = tsFile.query("(method_declaration) @method").execute();
+      TSNode classBodyNode = nodes.getFirst();
       assertNotNull(classBodyNode);
       String beforeInsertion = tsFile.getSourceCode();
       tsFile.insertTextBeforeNode(classBodyNode, " implements Serializable");
@@ -416,7 +420,8 @@ class TSFileTest {
     @Test
     @DisplayName("should insert text after class body closing brace")
     void insertTextAfterNode_classBody_shouldSucceed() {
-      TSNode classBodyNode = tsFile.query("(class_body) @body").get(0);
+      List<TSNode> nodes = tsFile.query("(method_declaration) @method").execute();
+      TSNode classBodyNode = nodes.getFirst();
       assertNotNull(classBodyNode);
       tsFile.insertTextAfterNode(classBodyNode, "\n// End of class");
       assertEquals(
@@ -431,7 +436,8 @@ class TSFileTest {
       tsFile.insertTextBeforeNode(classIdentifier, "Base");
       // After the first insertion, need to get the node again since positions changed
       TSNode updatedClassIdentifier =
-          tsFile.getNodeFromPosition(1, 19, SupportedIDE.NONE); // Position shifted by "Base" (4 chars)
+          tsFile.getNodeFromPosition(
+              1, 19, SupportedIDE.NONE); // Position shifted by "Base" (4 chars)
       assertNotNull(updatedClassIdentifier);
       tsFile.insertTextAfterNode(updatedClassIdentifier, "Extended");
       assertEquals("public class BaseMyClassExtended { void method() {} }", tsFile.getSourceCode());

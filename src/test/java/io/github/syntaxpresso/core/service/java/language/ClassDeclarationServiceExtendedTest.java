@@ -26,8 +26,7 @@ class ClassDeclarationServiceExtendedTest {
   @BeforeEach
   void setUp() {
     FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
-    classDeclarationService =
-        new ClassDeclarationService(fieldDeclarationService);
+    classDeclarationService = new ClassDeclarationService(fieldDeclarationService);
     String javaCode =
         """
         package io.github.test;
@@ -126,7 +125,7 @@ class ClassDeclarationServiceExtendedTest {
     @Test
     @DisplayName("Should extract field name from field declaration")
     void shouldExtractFieldNameFromFieldDeclaration() {
-      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field");
+      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field").execute();
       assertFalse(fieldDeclarations.isEmpty(), "Should find field declarations");
       for (TSNode fieldDecl : fieldDeclarations) {
         Optional<TSNode> fieldNameNode =
@@ -142,7 +141,7 @@ class ClassDeclarationServiceExtendedTest {
     @Test
     @DisplayName("Should handle null parameters gracefully")
     void shouldHandleNullParametersGracefully() {
-      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field");
+      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field").execute();
       TSNode firstField = fieldDeclarations.get(0);
       assertFalse(classDeclarationService.getFieldNameNode(null, firstField).isPresent());
       assertFalse(classDeclarationService.getFieldNameNode(testFile, null).isPresent());
@@ -152,7 +151,7 @@ class ClassDeclarationServiceExtendedTest {
     @Test
     @DisplayName("Should handle non-field-declaration nodes gracefully")
     void shouldHandleNonFieldDeclarationNodesGracefully() {
-      List<TSNode> methodDeclarations = testFile.query("(method_declaration) @method");
+      List<TSNode> methodDeclarations = testFile.query("(method_declaration) @method").execute();
       assertFalse(methodDeclarations.isEmpty());
       Optional<TSNode> result =
           classDeclarationService.getFieldNameNode(testFile, methodDeclarations.get(0));
@@ -165,7 +164,7 @@ class ClassDeclarationServiceExtendedTest {
       // Create a malformed field declaration scenario
       String malformedCode = "public class Test { private; }";
       TSFile malformedFile = new TSFile(SupportedLanguage.JAVA, malformedCode);
-      List<TSNode> nodes = malformedFile.query("(ERROR) @error");
+      List<TSNode> nodes = malformedFile.query("(ERROR) @error").execute();
       if (!nodes.isEmpty()) {
         Optional<TSNode> result =
             classDeclarationService.getFieldNameNode(malformedFile, nodes.get(0));
@@ -180,7 +179,7 @@ class ClassDeclarationServiceExtendedTest {
     @Test
     @DisplayName("Should extract field type from field declaration")
     void shouldExtractFieldTypeFromFieldDeclaration() {
-      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field");
+      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field").execute();
       assertFalse(fieldDeclarations.isEmpty(), "Should find field declarations");
       boolean foundStringType = false;
       boolean foundIntType = false;
@@ -210,7 +209,7 @@ class ClassDeclarationServiceExtendedTest {
     @Test
     @DisplayName("Should handle null parameters gracefully")
     void shouldHandleNullParametersGracefully() {
-      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field");
+      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field").execute();
       TSNode firstField = fieldDeclarations.get(0);
       assertFalse(classDeclarationService.getFieldTypeNode(null, firstField).isPresent());
       assertFalse(classDeclarationService.getFieldTypeNode(testFile, null).isPresent());
@@ -220,7 +219,7 @@ class ClassDeclarationServiceExtendedTest {
     @Test
     @DisplayName("Should handle non-field-declaration nodes gracefully")
     void shouldHandleNonFieldDeclarationNodesGracefully() {
-      List<TSNode> methodDeclarations = testFile.query("(method_declaration) @method");
+      List<TSNode> methodDeclarations = testFile.query("(method_declaration) @method").execute();
       assertFalse(methodDeclarations.isEmpty());
       Optional<TSNode> result =
           classDeclarationService.getFieldTypeNode(testFile, methodDeclarations.get(0));
@@ -234,10 +233,10 @@ class ClassDeclarationServiceExtendedTest {
       String edgeCaseCode = "public class Test { public void method() {} }";
       TSFile edgeCaseFile = new TSFile(SupportedLanguage.JAVA, edgeCaseCode);
       // Look for field declarations (there should be none)
-      List<TSNode> fieldDeclarations = edgeCaseFile.query("(field_declaration) @field");
+      List<TSNode> fieldDeclarations = edgeCaseFile.query("(field_declaration) @field").execute();
       assertTrue(fieldDeclarations.isEmpty(), "Class should have no fields");
       // Test that method handles class declaration gracefully (wrong node type)
-      List<TSNode> classDeclarations = edgeCaseFile.query("(class_declaration) @class");
+      List<TSNode> classDeclarations = edgeCaseFile.query("(class_declaration) @class").execute();
       if (!classDeclarations.isEmpty()) {
         Optional<TSNode> result =
             classDeclarationService.getFieldTypeNode(edgeCaseFile, classDeclarations.get(0));
@@ -252,7 +251,7 @@ class ClassDeclarationServiceExtendedTest {
     @Test
     @DisplayName("Should work together to analyze complete field information")
     void shouldWorkTogetherToAnalyzeCompleteFieldInformation() {
-      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field");
+      List<TSNode> fieldDeclarations = testFile.query("(field_declaration) @field").execute();
       for (TSNode fieldDecl : fieldDeclarations) {
         Optional<TSNode> nameNode = classDeclarationService.getFieldNameNode(testFile, fieldDecl);
         Optional<TSNode> typeNode = classDeclarationService.getFieldTypeNode(testFile, fieldDecl);

@@ -146,8 +146,9 @@ public class ImportDeclarationService {
             + "  (scoped_identifier) @package"
             + "  (asterisk) @isWildCard"
             + ") @importDeclaration";
-    List<Map<String, TSNode>> regularImports = file.queryForCaptures(regularImportsQuery);
-    List<Map<String, TSNode>> wildcardImports = file.queryForCaptures(wildcardImportsQuery);
+    List<Map<String, TSNode>> regularImports = file.query(regularImportsQuery).executeForCaptures();
+    List<Map<String, TSNode>> wildcardImports =
+        file.query(wildcardImportsQuery).executeForCaptures();
     Map<String, Map<String, TSNode>> deduplicatedImports = new LinkedHashMap<>();
     for (Map<String, TSNode> regularImport : regularImports) {
       TSNode importDeclNode = regularImport.get("importDeclaration");

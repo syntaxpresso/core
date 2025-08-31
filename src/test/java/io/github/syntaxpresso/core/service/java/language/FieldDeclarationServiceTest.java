@@ -108,7 +108,7 @@ class FieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle invalid field declaration node")
     void shouldHandleInvalidFieldDeclarationNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
+      List<TSNode> classNodes = testFile.query("(class_declaration) @class").execute();
       assertFalse(classNodes.isEmpty(), "Should have class nodes for testing");
       Optional<TSNode> typeNode =
           fieldDeclarationService.getFieldTypeNode(classNodes.get(0), testFile, "String");
@@ -147,7 +147,7 @@ class FieldDeclarationServiceTest {
     @DisplayName("Should handle different field types")
     void shouldHandleDifferentFieldTypes() {
       // Try to find a field we can test the name of
-      List<TSNode> allFields = testFile.query("(field_declaration) @field");
+      List<TSNode> allFields = testFile.query("(field_declaration) @field").execute();
       assertFalse(allFields.isEmpty(), "Should have fields to test");
       boolean foundFieldName = false;
       for (TSNode field : allFields) {
@@ -166,7 +166,7 @@ class FieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle invalid declaration node")
     void shouldHandleInvalidDeclarationNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
+      List<TSNode> classNodes = testFile.query("(class_declaration) @class").execute();
       Optional<TSNode> nameNode =
           fieldDeclarationService.getFieldNameNode(classNodes.get(0), testFile);
       assertFalse(nameNode.isPresent(), "Should return empty for non-field-declaration node");
@@ -227,7 +227,7 @@ class FieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle invalid declaration node")
     void shouldHandleInvalidDeclarationNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
+      List<TSNode> classNodes = testFile.query("(class_declaration) @class").execute();
       Optional<TSNode> instanceNode =
           fieldDeclarationService.getFieldInstanceNode(classNodes.get(0), testFile, "Calculator");
       assertFalse(instanceNode.isPresent(), "Should return empty for non-field-declaration node");
@@ -298,7 +298,7 @@ class FieldDeclarationServiceTest {
     @Test
     @DisplayName("Should filter fields by type correctly")
     void shouldFilterFieldsByTypeCorrectly() {
-      List<TSNode> allFields = testFile.query("(field_declaration) @field");
+      List<TSNode> allFields = testFile.query("(field_declaration) @field").execute();
       assertFalse(allFields.isEmpty(), "Should have fields to filter");
       List<TSNode> calculatorFields =
           fieldDeclarationService.filterFieldsByType(testFile, allFields, "Calculator");
@@ -311,7 +311,7 @@ class FieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list for non-matching type")
     void shouldReturnEmptyListForNonMatchingType() {
-      List<TSNode> allFields = testFile.query("(field_declaration) @field");
+      List<TSNode> allFields = testFile.query("(field_declaration) @field").execute();
       List<TSNode> nonExistentFields =
           fieldDeclarationService.filterFieldsByType(testFile, allFields, "NonExistent");
       assertTrue(nonExistentFields.isEmpty(), "Should return empty list for non-matching type");
@@ -320,7 +320,7 @@ class FieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle null parameters gracefully")
     void shouldHandleNullParametersGracefully() {
-      List<TSNode> allFields = testFile.query("(field_declaration) @field");
+      List<TSNode> allFields = testFile.query("(field_declaration) @field").execute();
       List<TSNode> nullFileResult =
           fieldDeclarationService.filterFieldsByType(null, allFields, "String");
       assertTrue(nullFileResult.isEmpty(), "Should handle null file gracefully");
@@ -377,7 +377,7 @@ class FieldDeclarationServiceTest {
       fieldDeclarationService.findAllFieldDeclarations(complexFile, "Calculator");
       // The service might not find Calculator fields if they're in generic types
       // Test field with object creation by finding fields that contain "new Calculator"
-      List<TSNode> allFields = complexFile.query("(field_declaration) @field");
+      List<TSNode> allFields = complexFile.query("(field_declaration) @field").execute();
       for (TSNode field : allFields) {
         String fieldText = complexFile.getTextFromNode(field);
         if (fieldText.contains("new Calculator")) {

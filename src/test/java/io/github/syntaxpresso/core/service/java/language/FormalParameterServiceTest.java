@@ -99,7 +99,7 @@ class FormalParameterServiceTest {
     @Test
     @DisplayName("Should handle invalid method node")
     void shouldHandleInvalidMethodNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
+      List<TSNode> classNodes = testFile.query("(class_declaration) @class").execute();
       List<TSNode> params =
           formalParameterService.findAllFormalParameters(testFile, classNodes.get(0), "Calculator");
       assertTrue(params.isEmpty(), "Should return empty list for non-method node");
@@ -118,7 +118,7 @@ class FormalParameterServiceTest {
     }
 
     private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
+      List<TSNode> methods = testFile.query("(method_declaration) @method").execute();
       for (TSNode method : methods) {
         TSNode nameNode = method.getChildByFieldName("name");
         if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
@@ -164,7 +164,7 @@ class FormalParameterServiceTest {
     @Test
     @DisplayName("Should handle invalid parameter node")
     void shouldHandleInvalidParameterNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
+      List<TSNode> classNodes = testFile.query("(class_declaration) @class").execute();
       Optional<TSNode> typeNode =
           formalParameterService.getParameterTypeNode(classNodes.get(0), testFile, "Calculator");
       assertFalse(typeNode.isPresent(), "Should return empty for non-parameter node");
@@ -186,7 +186,7 @@ class FormalParameterServiceTest {
     }
 
     private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
+      List<TSNode> methods = testFile.query("(method_declaration) @method").execute();
       for (TSNode method : methods) {
         TSNode nameNode = method.getChildByFieldName("name");
         if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
@@ -233,7 +233,7 @@ class FormalParameterServiceTest {
     @Test
     @DisplayName("Should handle invalid parameter node")
     void shouldHandleInvalidParameterNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
+      List<TSNode> classNodes = testFile.query("(class_declaration) @class").execute();
       Optional<TSNode> nameNode =
           formalParameterService.getParameterNameNode(classNodes.get(0), testFile);
       assertFalse(nameNode.isPresent(), "Should return empty for non-parameter node");
@@ -252,7 +252,7 @@ class FormalParameterServiceTest {
     }
 
     private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
+      List<TSNode> methods = testFile.query("(method_declaration) @method").execute();
       for (TSNode method : methods) {
         TSNode nameNode = method.getChildByFieldName("name");
         if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
@@ -285,7 +285,8 @@ class FormalParameterServiceTest {
     @DisplayName("Should not identify non-parameter identifiers as declarations")
     void shouldNotIdentifyNonParameterIdentifiersAsDeclarations() {
       // Find method invocation identifiers
-      List<TSNode> identifiers = testFile.query("(method_invocation name: (identifier) @id)");
+      List<TSNode> identifiers =
+          testFile.query("(method_invocation name: (identifier) @id)").execute();
       assertFalse(identifiers.isEmpty(), "Should have method invocation identifiers to test");
       TSNode invocationId = identifiers.get(0);
       boolean isDeclaration = formalParameterService.isFormalParameterDeclaration(invocationId);
@@ -298,7 +299,7 @@ class FormalParameterServiceTest {
       assertFalse(
           formalParameterService.isFormalParameterDeclaration(null), "Should handle null node");
       // Create a mock null node scenario
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
+      List<TSNode> classNodes = testFile.query("(class_declaration) @class").execute();
       TSNode classNode = classNodes.get(0);
       assertFalse(
           formalParameterService.isFormalParameterDeclaration(classNode),
@@ -306,7 +307,7 @@ class FormalParameterServiceTest {
     }
 
     private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
+      List<TSNode> methods = testFile.query("(method_declaration) @method").execute();
       for (TSNode method : methods) {
         TSNode nameNode = method.getChildByFieldName("name");
         if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
@@ -388,7 +389,7 @@ class FormalParameterServiceTest {
     @Test
     @DisplayName("Should handle invalid method node")
     void shouldHandleInvalidMethodNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
+      List<TSNode> classNodes = testFile.query("(class_declaration) @class").execute();
       List<TSNode> usages =
           formalParameterService.findAllFormalParameterUsages(
               testFile, classNodes.get(0), "Calculator");
@@ -408,7 +409,7 @@ class FormalParameterServiceTest {
     }
 
     private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
+      List<TSNode> methods = testFile.query("(method_declaration) @method").execute();
       for (TSNode method : methods) {
         TSNode nameNode = method.getChildByFieldName("name");
         if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
@@ -463,7 +464,7 @@ class FormalParameterServiceTest {
           }
           """;
       TSFile complexFile = new TSFile(SupportedLanguage.JAVA, complexCode);
-      List<TSNode> methods = complexFile.query("(method_declaration) @method");
+      List<TSNode> methods = complexFile.query("(method_declaration) @method").execute();
       assertFalse(methods.isEmpty(), "Should have method to test");
       TSNode complexMethod = methods.get(0);
       List<TSNode> calculatorParams =
@@ -480,7 +481,7 @@ class FormalParameterServiceTest {
     }
 
     private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
+      List<TSNode> methods = testFile.query("(method_declaration) @method").execute();
       for (TSNode method : methods) {
         TSNode nameNode = method.getChildByFieldName("name");
         if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {

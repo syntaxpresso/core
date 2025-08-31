@@ -116,7 +116,7 @@ class ProgramServiceTest {
   @Test
   @DisplayName("should get all fields from program")
   void getAllFields_shouldReturnAllFields() {
-    List<TSNode> fields = testFile.query("(field_declaration) @field");
+    List<TSNode> fields = testFile.query("(field_declaration) @field").execute();
     assertEquals(2, fields.size());
   }
 
