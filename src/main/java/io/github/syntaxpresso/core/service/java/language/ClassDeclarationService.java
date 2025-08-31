@@ -1,11 +1,12 @@
 package io.github.syntaxpresso.core.service.java.language;
 
+import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -14,272 +15,214 @@ import org.treesitter.TSNode;
 @RequiredArgsConstructor
 @Getter
 public class ClassDeclarationService {
-  private static final String CLASS_DECLARATION_QUERY = "(class_declaration) @class";
-  private final FieldDeclarationService fieldDeclarationService;
 
   /**
-   * Finds all class declarations in the given TSFile.
+   * Finds all class declarations in the given {@link TSFile}.
    *
-   * @param file The TSFile containing the source code.
-   * @return A list of all class declaration nodes.
+   * <p>Usage example:
+   *
+   * <pre>
+   * List<Map<String, TSNode>> classes = service.getAllClassDeclarations(tsFile);
+   * for (Map<String, TSNode> classInfo : classes) {
+   *   TSNode className = classInfo.get("className");         // The class name identifier node
+   *   TSNode classDecl = classInfo.get("classDeclaration"); // The full class declaration node
+   * }
+   * </pre>
+   *
+   * @param file The {@link TSFile} containing the source code to search.
+   * @return A list of maps with the following capture names: - className: The class name identifier
+   *     node - classDeclaration: The full class declaration node Returns an empty list if the file
+   *     or its tree is null.
    */
-  public List<TSNode> findAllClassDeclarations(TSFile file) {
+  public List<Map<String, TSNode>> getAllClassDeclarations(TSFile file) {
     if (file == null || file.getTree() == null) {
       return Collections.emptyList();
     }
-    return file.query(CLASS_DECLARATION_QUERY).execute();
+    String queryString =
+        """
+        (class_declaration
+          name: (identifier) @className) @classDeclaration
+        """;
+    return file.query(queryString).returningAllCaptures().execute().captures();
   }
 
   /**
-   * Gets the class name node.
+   * Retrieves the class name node from a class declaration.
    *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node.
-   * @return The class name node, or empty if not found.
+   * <p>Usage example:
+   *
+   * <pre>
+   * Optional<TSNode> classNameNode = service.getClassNameNode(tsFile, classNode);
+   * if (classNameNode.isPresent()) {
+   *   String className = tsFile.getTextFromNode(classNameNode.get());
+   *   // className = "MyClass"
+   * }
+   * </pre>
+   *
+   * Query captures: - className: The identifier node containing the class name
+   *
+   * @param file The {@link TSFile} containing the source code.
+   * @param classNode The class declaration {@link TSNode}.
+   * @return An {@link Optional} containing the class name identifier node, or empty if not found,
+   *     file/tree is null, or node is not a class declaration.
    */
   public Optional<TSNode> getClassNameNode(TSFile file, TSNode classNode) {
-    if (file == null || classNode == null || !"class_declaration".equals(classNode.getType())) {
+    if (file == null
+        || file.getTree() == null
+        || classNode == null
+        || !"class_declaration".equals(classNode.getType())) {
       return Optional.empty();
     }
-    TSNode nameNode = classNode.getChildByFieldName("name");
-    if (nameNode != null) {
-      return Optional.of(nameNode);
-    }
-    return Optional.empty();
+    String queryString =
+        """
+        (class_declaration
+          name: (identifier) @className)
+        """;
+    Optional<TSNode> classNameNode = file.query(queryString).execute().firstNodeOptional();
+    return classNameNode;
   }
 
   /**
-   * Gets the class name from a class declaration node.
+   * Finds a class declaration node by its name.
    *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node.
-   * @return The class name, or empty if not found.
-   */
-  public Optional<String> getClassName(TSFile file, TSNode classNode) {
-    if (file == null || classNode == null || !"class_declaration".equals(classNode.getType())) {
-      return Optional.empty();
-    }
-    TSNode nameNode = classNode.getChildByFieldName("name");
-    if (nameNode != null) {
-      return Optional.of(file.getTextFromNode(nameNode));
-    }
-    return Optional.empty();
-  }
-
-  /**
-   * Gets the name of the main class in the file.
+   * <p>Usage example:
    *
-   * @param file The TSFile containing the source code.
-   * @return The main class name, or empty if not found.
-   */
-  public Optional<String> getClassName(TSFile file) {
-    Optional<TSNode> mainClassDeclarationNode = this.getMainClass(file);
-    if (mainClassDeclarationNode.isEmpty()) {
-      return Optional.empty();
-    }
-    return this.getClassName(file, mainClassDeclarationNode.get());
-  }
-
-  /**
-   * Finds a class declaration by name.
+   * <pre>
+   * Optional<TSNode> classNode = service.findClassByName(tsFile, "MyClass");
+   * if (classNode.isPresent()) {
+   *   String classDecl = tsFile.getTextFromNode(classNode.get());
+   *   // classDecl = "public class MyClass {...}"
+   * }
+   * </pre>
    *
-   * @param file The TSFile containing the source code.
-   * @param className The name of the class to find.
-   * @return The class declaration node, or empty if not found.
+   * Query captures: - className: The identifier node containing the matched class name
+   *
+   * @param file The {@link TSFile} containing the source code.
+   * @param className The name of the class to search for.
+   * @return An {@link Optional} containing the class declaration node, or empty if not found,
+   *     file/tree is null, or className is empty.
    */
   public Optional<TSNode> findClassByName(TSFile file, String className) {
-    if (file == null || className == null || className.trim().isEmpty()) {
+    if (file == null || file.getTree() == null || Strings.isNullOrEmpty(className)) {
       return Optional.empty();
     }
-    List<TSNode> classNodes = this.findAllClassDeclarations(file);
-    for (TSNode classNode : classNodes) {
-      Optional<String> name = this.getClassName(file, classNode);
-      if (name.isPresent() && name.get().equals(className)) {
-        return Optional.of(classNode);
-      }
-    }
-    return Optional.empty();
+    String queryString =
+        String.format(
+            """
+            (class_declaration
+              name: (identifier) @className
+            #eq? @className "%s"))
+            """,
+            className);
+    return file.query(queryString).execute().firstNodeOptional();
   }
 
   /**
-   * Gets all field declarations within a specific class.
+   * Renames a class by updating its declaration in the source code.
    *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node.
-   * @return A list of field declaration nodes within the class.
-   */
-  public List<TSNode> getClassFields(TSFile file, TSNode classNode) {
-    if (file == null || classNode == null || !"class_declaration".equals(classNode.getType())) {
-      return Collections.emptyList();
-    }
-    return file.query("(field_declaration) @field").within(classNode).execute();
-  }
-
-  /**
-   * Gets all method declarations within a specific class.
+   * <p>Usage example:
    *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node.
-   * @return A list of method declaration nodes within the class.
-   */
-  public List<TSNode> getClassMethods(TSFile file, TSNode classNode) {
-    if (file == null || classNode == null || !"class_declaration".equals(classNode.getType())) {
-      return Collections.emptyList();
-    }
-    return file.query("(method_declaration) @method").within(classNode).execute();
-  }
-
-  /**
-   * Finds all methods with a specific name within a class.
+   * <pre>
+   * // Rename class from "OldClass" to "NewClass"
+   * Optional<TSNode> renamedClass = service.renameClass(tsFile, "OldClass", "NewClass");
+   * if (renamedClass.isPresent()) {
+   *   String newClassDecl = tsFile.getTextFromNode(renamedClass.get());
+   *   // newClassDecl = "public class NewClass {...}"
+   * }
+   * </pre>
    *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node.
-   * @param methodName The method name to search for.
-   * @return A list of method declaration nodes with the specified name.
-   */
-  public List<TSNode> findMethodsByName(TSFile file, TSNode classNode, String methodName) {
-    if (file == null || classNode == null || methodName == null) {
-      return Collections.emptyList();
-    }
-    List<TSNode> classMethods = this.getClassMethods(file, classNode);
-    List<TSNode> matchingMethods = new ArrayList<>();
-    for (TSNode methodNode : classMethods) {
-      TSNode nameNode = methodNode.getChildByFieldName("name");
-      if (nameNode != null && methodName.equals(file.getTextFromNode(nameNode))) {
-        matchingMethods.add(methodNode);
-      }
-    }
-    return matchingMethods;
-  }
-
-  /**
-   * Renames a class by updating its declaration.
-   *
-   * @param file The TSFile containing the source code.
-   * @param classNode The class declaration node to rename.
+   * @param file The {@link TSFile} containing the source code.
+   * @param oldName The current name of the class to rename.
    * @param newName The new name for the class.
+   * @return An {@link Optional} containing the updated class declaration node, or empty if class
+   *     not found, file/tree is null, or names are empty.
    */
-  public void renameClass(TSFile file, TSNode classNode, String newName) {
-    if (file == null || classNode == null || newName == null || newName.trim().isEmpty()) {
-      return;
+  public Optional<TSNode> renameClass(TSFile file, String oldName, String newName) {
+    if (file == null
+        || file.getTree() == null
+        || Strings.isNullOrEmpty(oldName)
+        || Strings.isNullOrEmpty(newName)) {
+      return Optional.empty();
     }
-    if (!"class_declaration".equals(classNode.getType())) {
-      return;
+    Optional<TSNode> foundClass = this.findClassByName(file, oldName);
+    if (foundClass.isEmpty()) {
+      return Optional.empty();
     }
-    TSNode nameNode = classNode.getChildByFieldName("name");
-    if (nameNode != null) {
-      file.updateSourceCode(nameNode, newName);
+    Optional<TSNode> classNameNode = this.getClassNameNode(file, foundClass.get());
+    if (classNameNode.isEmpty()) {
+      return Optional.empty();
     }
+    file.updateSourceCode(classNameNode.get(), newName);
+    return this.findClassByName(file, newName);
   }
 
   /**
-   * Gets the main class of a file, which is the public class that has the same name as the file.
+   * Gets the main class of a file, defined as the public class whose name matches the file name.
    *
-   * @param file The TSFile to analyze.
-   * @return An Optional containing the main class declaration node, or empty if not found.
+   * <p>Usage example:
+   *
+   * <pre>
+   * // For a file named "MyClass.java"
+   * Optional<TSNode> mainClass = service.getMainClass(tsFile);
+   * if (mainClass.isPresent()) {
+   *   String className = tsFile.getTextFromNode(mainClass.get());
+   *   // className = "public class MyClass ..."
+   * }
+   * </pre>
+   *
+   * @param file The {@link TSFile} to analyze.
+   * @return An {@link Optional} containing the main class declaration node, or empty if not found,
+   *     file/tree is null, or file name is missing.
    */
   public Optional<TSNode> getMainClass(TSFile file) {
-    if (file == null) {
-      return Optional.empty();
-    }
-    try {
-      if (file.getFile() == null) {
-        return Optional.empty();
-      }
-    } catch (IllegalStateException e) {
+    if (file == null || file.getTree() == null) {
       return Optional.empty();
     }
     Optional<String> fileName = file.getFileNameWithoutExtension();
     if (fileName.isEmpty()) {
       return Optional.empty();
     }
-    List<TSNode> classNodes = findAllClassDeclarations(file);
-    for (TSNode classNode : classNodes) {
-      Optional<String> className = getClassName(file, classNode);
-      if (className.isPresent() && fileName.get().equals(className.get())) {
-        return Optional.of(classNode);
-      }
-    }
-    return Optional.empty();
+    return this.findClassByName(file, fileName.get());
   }
 
   /**
-   * Get field declaration name.
+   * Checks if a class, identified by its fully qualified name, exists as a local source file within
+   * the project.
    *
-   * @param file The TSFile to analyze.
-   * @param fieldDeclarationNode THe field declaration node.
-   * @return An Optional containing the main field name node, or empty if not found.
-   */
-  public Optional<TSNode> getFieldNameNode(TSFile file, TSNode fieldDeclarationNode) {
-    if (file == null || fieldDeclarationNode == null) {
-      return Optional.empty();
-    }
-    if (!"field_declaration".equals(fieldDeclarationNode.getType())) {
-      return Optional.empty();
-    }
-    try {
-      TSNode fieldDeclaratorNode = fieldDeclarationNode.getChildByFieldName("declarator");
-      if (fieldDeclaratorNode == null) {
-        return Optional.empty();
-      }
-      TSNode fieldNameNode = fieldDeclaratorNode.getChildByFieldName("name");
-      if (fieldNameNode == null) {
-        return Optional.empty();
-      }
-      return Optional.of(fieldNameNode);
-    } catch (Exception e) {
-      return Optional.empty();
-    }
-  }
-
-  /**
-   * Get field declaration type.
+   * <p>Usage example:
    *
-   * @param file The TSFile to analyze.
-   * @param fieldDeclarationNode THe field declaration node.
-   * @return An Optional containing the main field type node, or empty if not found.
-   */
-  public Optional<TSNode> getFieldTypeNode(TSFile file, TSNode fieldDeclarationNode) {
-    if (file == null || fieldDeclarationNode == null) {
-      return Optional.empty();
-    }
-    // Validate that this is actually a field declaration node
-    if (!"field_declaration".equals(fieldDeclarationNode.getType())) {
-      return Optional.empty();
-    }
-    TSNode fieldTypeNode = fieldDeclarationNode.getChildByFieldName("type");
-    if (fieldTypeNode == null) {
-      return Optional.empty();
-    }
-    return Optional.of(fieldTypeNode);
-  }
-
-  /**
-   * Checks if a class, identified by its fully qualified name, exists as a source file within the
-   * project. It constructs the expected file path from the project root.
+   * <pre>
+   * boolean exists = service.isLocalClass(projectRoot, "com.example.MyClass");
+   * </pre>
    *
-   * @param projectRoot The root path of the project.
+   * @param projectRoot The root {@link Path} of the project.
    * @param fullyQualifiedClassName The fully qualified name of the class to check.
    * @return {@code true} if the corresponding .java file exists in the project's main source
    *     directory, {@code false} otherwise.
    */
-  public boolean isLocalClass(Path projectRoot, String fullyQualifiedClassName) {
+  public Boolean isLocalClass(Path projectRoot, String fullyQualifiedClassName) {
     String relativePath = fullyQualifiedClassName.replace('.', '/') + ".java";
     Path sourcePath = projectRoot.resolve("src/main/java").resolve(relativePath);
     return Files.exists(sourcePath);
   }
 
   /**
-   * Resolves the fully qualified name of a superclass using the context of a given file. It checks
-   * for fully qualified names first, then scans import statements, considers implicit java.lang
-   * imports, and finally assumes the same package if no other information is found.
+   * Resolves the fully qualified name of a superclass using the context of a given file.
    *
-   * @param inheritanceService
-   * @param file The TSFile where the superclass is referenced, providing context for imports and
-   *     package.
+   * <p>The method checks for fully qualified names, implicit {@code java.lang} imports, and assumes
+   * the same package if not found elsewhere.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * Optional<String> fqName = service.getFullyQualifiedSuperclass(tsFile, "BaseClass");
+   * </pre>
+   *
+   * @param file The {@link TSFile} where the superclass is referenced, providing context for
+   *     imports and package.
    * @param superclassName The simple or partially qualified name of the superclass.
-   * @return An {@link Optional} containing the fully qualified name of the superclass, or an empty
-   *     Optional if it cannot be resolved.
+   * @return An {@link Optional} containing the fully qualified name of the superclass, or the
+   *     simple name if it cannot be resolved.
    */
   public Optional<String> getFullyQualifiedSuperclass(TSFile file, String superclassName) {
     // First check if it's already fully qualified
@@ -297,31 +240,100 @@ public class ClassDeclarationService {
   }
 
   /**
+   * Retrieves information about the direct superclass from a class declaration node.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * Optional<Map<String, TSNode>> info = service.getSuperclassInfo(tsFile, classNode);
+   * if (info.isPresent()) {
+   *   TSNode superclass = info.get().get("superclass");     // The full superclass node
+   *   TSNode superName = info.get().get("superclassName"); // The superclass name identifier
+   * }
+   * </pre>
+   *
+   * @param file The {@link TSFile} containing the class declaration.
+   * @param classDeclarationNode The {@link TSNode} representing the class declaration.
+   * @return An {@link Optional} map with the following capture names: - superclass: The full
+   *     superclass node - superclassName: The superclass name identifier node Returns empty if no
+   *     superclass is found.
+   */
+  public Optional<Map<String, TSNode>> getSuperclassInfo(TSFile file, TSNode classDeclarationNode) {
+    String queryString =
+        """
+        (class_declaration
+          superclass: (superclass
+            (type_identifier) @superclassName) @superclass)
+        """;
+    return file.query(queryString)
+        .within(classDeclarationNode)
+        .returningAllCaptures()
+        .execute()
+        .firstCaptureOptional();
+  }
+
+  /**
+   * Gets the direct superclass node from a class declaration.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * Optional<TSNode> superclassNode = service.getSuperclassNode(tsFile, classNode);
+   * if (superclassNode.isPresent()) {
+   *   String superclassText = tsFile.getTextFromNode(superclassNode.get());
+   *   // superclassText = "extends BaseClass"
+   * }
+   * </pre>
+   *
+   * @param file The {@link TSFile} containing the class declaration.
+   * @param classDeclarationNode The {@link TSNode} representing the class declaration.
+   * @return An {@link Optional} containing the superclass node (including the "extends" keyword),
+   *     or empty if the class doesn't extend another class.
+   */
+  public Optional<TSNode> getSuperclassNode(TSFile file, TSNode classDeclarationNode) {
+    Optional<Map<String, TSNode>> superclassInfo = getSuperclassInfo(file, classDeclarationNode);
+    if (superclassInfo.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(superclassInfo.get().get("superclass"));
+  }
+
+  /**
    * Finds the simple name of the direct superclass from a class declaration node.
    *
-   * @param file The TSFile containing the class declaration.
-   * @param classDeclarationNode The tree-sitter node representing the class declaration.
-   * @return An {@link Optional} containing the superclass name as a String, or an empty Optional if
-   *     the class does not explicitly extend another class.
+   * <p>Usage example:
+   *
+   * <pre>
+   * Optional<String> superName = service.getSuperclassName(tsFile, classNode);
+   * </pre>
+   *
+   * @param file The {@link TSFile} containing the class declaration.
+   * @param classDeclarationNode The {@link TSNode} representing the class declaration.
+   * @return An {@link Optional} containing the superclass name as a String, or empty if the class
+   *     does not explicitly extend another class.
    */
   public Optional<String> getSuperclassName(TSFile file, TSNode classDeclarationNode) {
-    List<TSNode> superclassNodes =
-        file.query(
-                "(class_declaration superclass: (superclass (type_identifier) @superclass.name))")
-            .within(classDeclarationNode)
-            .execute();
-    if (!superclassNodes.isEmpty()) {
-      return Optional.of(file.getTextFromNode(superclassNodes.get(0)));
+    Optional<Map<String, TSNode>> superclassInfo = getSuperclassInfo(file, classDeclarationNode);
+    if (superclassInfo.isEmpty()) {
+      return Optional.empty();
     }
-    return Optional.empty();
+    TSNode superclassNameNode = superclassInfo.get().get("superclassName");
+    String superclassName = file.getTextFromNode(superclassNameNode);
+    return Optional.of(superclassName);
   }
 
   /**
    * Checks if a class name corresponds to a common class in the {@code java.lang} package, which is
-   * implicitly imported.
+   * implicitly imported in Java.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * boolean isLang = service.isJavaLangClass("String");
+   * </pre>
    *
    * @param className The simple name of the class.
-   * @return {@code true} if the class is a known java.lang class, {@code false} otherwise.
+   * @return {@code true} if the class is a known {@code java.lang} class, {@code false} otherwise.
    */
   public boolean isJavaLangClass(String className) {
     return List.of(
@@ -336,35 +348,5 @@ public class ClassDeclarationService {
             "Byte",
             "Short")
         .contains(className);
-  }
-
-  /**
-   * Gets a list of all class annotation nodes.
-   *
-   * @param file The file the holds the class object of the query.
-   * @param classDeclarationNode The class declaration node object of the query.
-   * @return List of class annotation nodes.
-   */
-  public List<TSNode> getAllClassAnnotations(TSFile file, TSNode classDeclarationNode) {
-    List<TSNode> markerAnnotationNodes =
-        file.query("(marker_annotation) @annotation").within(classDeclarationNode).execute();
-    List<TSNode> annotationNodes =
-        file.query("(annotation) @annotation").within(classDeclarationNode).execute();
-    annotationNodes.addAll(markerAnnotationNodes);
-    return annotationNodes;
-  }
-
-  /**
-   * Gets all annotation nodes for the main class in the file.
-   *
-   * @param file The TSFile containing the source code.
-   * @return List of annotation nodes for the main class.
-   */
-  public List<TSNode> getAllClassAnnotations(TSFile file) {
-    Optional<TSNode> mainClassNode = this.getMainClass(file);
-    if (mainClassNode.isEmpty()) {
-      return List.of();
-    }
-    return this.getAllClassAnnotations(file, mainClassNode.get());
   }
 }
