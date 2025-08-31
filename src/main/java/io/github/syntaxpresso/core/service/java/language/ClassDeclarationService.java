@@ -78,7 +78,8 @@ public class ClassDeclarationService {
         (class_declaration
           name: (identifier) @className)
         """;
-    Optional<TSNode> classNameNode = file.query(queryString).execute().firstNodeOptional();
+    Optional<TSNode> classNameNode =
+        file.query(queryString).returning("className").execute().firstNodeOptional();
     return classNameNode;
   }
 
@@ -91,16 +92,25 @@ public class ClassDeclarationService {
    * Optional<TSNode> classNode = service.findClassByName(tsFile, "MyClass");
    * if (classNode.isPresent()) {
    *   String classDecl = tsFile.getTextFromNode(classNode.get());
-   *   // classDecl = "public class MyClass {...}"
+   *   // classDecl = "public class MyClass extends BaseClass { private String name; }"
    * }
    * </pre>
    *
-   * Query captures: - className: The identifier node containing the matched class name
+   * Query captures:
+   * - className: The identifier node containing the matched class name
+   * - classDeclaration: The full class declaration node to be returned
    *
-   * @param file The {@link TSFile} containing the source code.
-   * @param className The name of the class to search for.
-   * @return An {@link Optional} containing the class declaration node, or empty if not found,
-   *     file/tree is null, or className is empty.
+   * <p>Example tree-sitter query used:
+   * <pre>
+   * (class_declaration @classDeclaration
+   *   name: (identifier) @className
+   *   (#eq? @className "MyClass"))
+   * </pre>
+   *
+   * @param file {@link TSFile} containing the source code
+   * @param className Name of the class to search for
+   * @return {@link Optional} containing the class declaration node, or empty if not found,
+   *     file/tree is null, or className is empty
    */
   public Optional<TSNode> findClassByName(TSFile file, String className) {
     if (file == null || file.getTree() == null || Strings.isNullOrEmpty(className)) {
@@ -111,10 +121,10 @@ public class ClassDeclarationService {
             """
             (class_declaration
               name: (identifier) @className
-            #eq? @className "%s"))
+            (#eq? @className "%s")) @classDeclaration
             """,
             className);
-    return file.query(queryString).execute().firstNodeOptional();
+    return file.query(queryString).returning("classDeclaration").execute().firstNodeOptional();
   }
 
   /**
