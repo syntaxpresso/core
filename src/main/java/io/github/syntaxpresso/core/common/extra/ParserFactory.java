@@ -1,6 +1,5 @@
-package io.github.syntaxpresso.core.common;
+package io.github.syntaxpresso.core.common.extra;
 
-import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import java.util.HashMap;
 import java.util.Map;
 import org.treesitter.TSLanguage;

@@ -1,9 +1,10 @@
 package io.github.syntaxpresso.core.common;
 
 import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.common.extra.ParserFactory;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.util.TSQueryBuilder;
+import io.github.syntaxpresso.core.common.extra.TSQueryBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

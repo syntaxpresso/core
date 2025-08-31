@@ -1,4 +1,4 @@
-package io.github.syntaxpresso.core.util;
+package io.github.syntaxpresso.core.common.extra;
 
 import io.github.syntaxpresso.core.common.TSFile;
 import java.util.*;
@@ -171,6 +171,69 @@ public class TSQueryBuilder {
     return results;
   }
 
+  private List<TSNode> extractSingleCapture(List<Map<String, TSNode>> matches, String captureName) {
+    Set<TSNode> resultNodes = new LinkedHashSet<>();
+    for (Map<String, TSNode> match : matches) {
+      TSNode node = match.get(captureName);
+      if (node != null) {
+        resultNodes.add(node);
+      }
+    }
+    return new ArrayList<>(resultNodes)
+        .stream()
+            .sorted(Comparator.comparingInt(TSNode::getStartByte))
+            .collect(Collectors.toList());
+  }
+
+  private List<Map<String, TSNode>> filterCaptures(
+      List<Map<String, TSNode>> matches, Set<String> captureNames) {
+    return matches.stream()
+        .map(
+            match -> {
+              Map<String, TSNode> filtered = new HashMap<>();
+              for (String name : captureNames) {
+                if (match.containsKey(name)) {
+                  filtered.put(name, match.get(name));
+                }
+              }
+              return filtered;
+            })
+        .filter(map -> !map.isEmpty())
+        .collect(Collectors.toList());
+  }
+
+  private List<TSNode> extractPrimaryNodes(
+      List<Map<String, TSNode>> matches,
+      String structuralQuery,
+      TSQueryPredicateEvaluator evaluator) {
+    String mainCapture = findMainCapture(structuralQuery);
+    Set<TSNode> resultNodes = new LinkedHashSet<>();
+    for (Map<String, TSNode> match : matches) {
+      if (mainCapture != null && match.containsKey(mainCapture)) {
+        resultNodes.add(match.get(mainCapture));
+      } else {
+        TSNode primaryNode = evaluator.findPrimaryNode(match);
+        if (primaryNode != null) {
+          resultNodes.add(primaryNode);
+        }
+      }
+    }
+    return new ArrayList<>(resultNodes)
+        .stream()
+            .sorted(Comparator.comparingInt(TSNode::getStartByte))
+            .collect(Collectors.toList());
+  }
+
+  private String findMainCapture(String query) {
+    java.util.regex.Pattern endPattern =
+        java.util.regex.Pattern.compile("[)\\]]\\s*@([a-zA-Z_][a-zA-Z0-9_]*)\\s*$");
+    java.util.regex.Matcher matcher = endPattern.matcher(query.trim());
+    if (matcher.find()) {
+      return matcher.group(1);
+    }
+    return null;
+  }
+
   /**
    * Executes a Tree-sitter query on a specific node and returns all matches with their named
    * captures as key-value pairs.
@@ -239,128 +302,36 @@ public class TSQueryBuilder {
   }
 
   /**
-   * Executes the configured query and returns the results.
+   * Executes the configured query and returns a TSQueryResult.
    *
-   * @param <T> The expected return type (List<TSNode> or List<Map<String, TSNode>>)
-   * @return For default/returning(): List<TSNode> For returningAllCaptures()/returningCaptures():
-   *     List<Map<String, TSNode>>
+   * @return TSQueryResult containing the query results
    */
-  @SuppressWarnings("unchecked")
-  public <T> T execute() {
+  public TSQueryResult execute() {
     TSQueryPredicateEvaluator evaluator = new TSQueryPredicateEvaluator(file);
     List<String> predicates = evaluator.extractPredicates(queryString);
     String structuralQuery = evaluator.removePredicates(queryString);
     List<Map<String, TSNode>> matches = this.queryForCaptures(scopeNode, structuralQuery);
+    // Apply predicate filtering if needed
     if (!predicates.isEmpty()) {
       matches =
           matches.stream()
               .filter(match -> evaluator.evaluatePredicates(match, predicates))
               .collect(Collectors.toList());
     }
+    // Return appropriate TSQueryResult based on return type
     switch (returnType) {
       case SINGLE_CAPTURE:
-        return (T) extractSingleCapture(matches, singleCapture);
+        List<TSNode> singleNodes = extractSingleCapture(matches, singleCapture);
+        return new TSQueryResult(singleNodes, singleCapture);
       case ALL_CAPTURES:
-        return (T) matches;
+        return new TSQueryResult(matches);
       case FILTERED_CAPTURES:
-        return (T) filterCaptures(matches, multipleCaptures);
+        List<Map<String, TSNode>> filtered = filterCaptures(matches, multipleCaptures);
+        return new TSQueryResult(filtered);
       case NODES:
       default:
-        return (T) extractPrimaryNodes(matches, structuralQuery, evaluator);
+        List<TSNode> primaryNodes = extractPrimaryNodes(matches, structuralQuery, evaluator);
+        return new TSQueryResult(primaryNodes, "_");
     }
-  }
-
-  /**
-   * Executes the query and ensures nodes are returned. Only valid for default queries or
-   * returning().
-   *
-   * @return List<TSNode> containing matched nodes
-   * @throws IllegalStateException if used with returningAllCaptures() or returningCaptures()
-   */
-  public List<TSNode> executeForNodes() {
-    if (returnType != ReturnType.NODES && returnType != ReturnType.SINGLE_CAPTURE) {
-      throw new IllegalStateException(
-          "executeForNodes() can only be used with default queries or returning(captureName)");
-    }
-    return execute();
-  }
-
-  /**
-   * Executes the query and ensures capture maps are returned. Only valid for returningAllCaptures()
-   * or returningCaptures().
-   *
-   * @return List<Map<String, TSNode>> containing capture name to node mappings
-   * @throws IllegalStateException if used with default queries or returning()
-   */
-  public List<Map<String, TSNode>> executeForCaptures() {
-    if (returnType != ReturnType.ALL_CAPTURES && returnType != ReturnType.FILTERED_CAPTURES) {
-      throw new IllegalStateException(
-          "executeForCaptures() can only be used with returningAllCaptures() or"
-              + " returningCaptures(...)");
-    }
-    return execute();
-  }
-
-  private List<TSNode> extractSingleCapture(List<Map<String, TSNode>> matches, String captureName) {
-    Set<TSNode> resultNodes = new LinkedHashSet<>();
-    for (Map<String, TSNode> match : matches) {
-      TSNode node = match.get(captureName);
-      if (node != null) {
-        resultNodes.add(node);
-      }
-    }
-    return new ArrayList<>(resultNodes)
-        .stream()
-            .sorted(Comparator.comparingInt(TSNode::getStartByte))
-            .collect(Collectors.toList());
-  }
-
-  private List<Map<String, TSNode>> filterCaptures(
-      List<Map<String, TSNode>> matches, Set<String> captureNames) {
-    return matches.stream()
-        .map(
-            match -> {
-              Map<String, TSNode> filtered = new HashMap<>();
-              for (String name : captureNames) {
-                if (match.containsKey(name)) {
-                  filtered.put(name, match.get(name));
-                }
-              }
-              return filtered;
-            })
-        .filter(map -> !map.isEmpty())
-        .collect(Collectors.toList());
-  }
-
-  private List<TSNode> extractPrimaryNodes(
-      List<Map<String, TSNode>> matches,
-      String structuralQuery,
-      TSQueryPredicateEvaluator evaluator) {
-    String mainCapture = findMainCapture(structuralQuery);
-    Set<TSNode> resultNodes = new LinkedHashSet<>();
-    for (Map<String, TSNode> match : matches) {
-      if (mainCapture != null && match.containsKey(mainCapture)) {
-        resultNodes.add(match.get(mainCapture));
-      } else {
-        TSNode primaryNode = evaluator.findPrimaryNode(match);
-        if (primaryNode != null) {
-          resultNodes.add(primaryNode);
-        }
-      }
-    }
-    return new ArrayList<>(resultNodes)
-        .stream()
-            .sorted(Comparator.comparingInt(TSNode::getStartByte))
-            .collect(Collectors.toList());
-  }
-
-  private String findMainCapture(String query) {
-    java.util.regex.Pattern endPattern =
-        java.util.regex.Pattern.compile("[)\\]]\\s*@([a-zA-Z_][a-zA-Z0-9_]*)\\s*$");
-    java.util.regex.Matcher matcher = endPattern.matcher(query.trim());
-    if (matcher.find()) {
-      return matcher.group(1);
-    }
-    return null;
   }
 }

@@ -1,4 +1,4 @@
-package io.github.syntaxpresso.core.util;
+package io.github.syntaxpresso.core.common.extra;
 
 import java.nio.file.Path;
 import lombok.Data;
