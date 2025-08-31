@@ -52,7 +52,7 @@ class TSFileExtendedTest {
     @Test
     @DisplayName("Should find parent method declaration from local variable")
     void shouldFindParentMethodDeclarationFromLocalVariable() {
-      List<TSNode> localVars = testFile.query("(local_variable_declaration) @var");
+      List<TSNode> localVars = testFile.query("(local_variable_declaration) @var").execute();
       assertFalse(localVars.isEmpty(), "Should find local variable declarations");
       TSNode localVar = localVars.get(0);
       Optional<TSNode> parentMethod = testFile.findParentNodeByType(localVar, "method_declaration");
@@ -65,7 +65,7 @@ class TSFileExtendedTest {
     @Test
     @DisplayName("Should find parent class declaration from method")
     void shouldFindParentClassDeclarationFromMethod() {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
+      List<TSNode> methods = testFile.query("(method_declaration) @method").execute();
       assertFalse(methods.isEmpty(), "Should find method declarations");
       TSNode method = methods.get(0);
       Optional<TSNode> parentClass = testFile.findParentNodeByType(method, "class_declaration");
@@ -78,7 +78,7 @@ class TSFileExtendedTest {
     @Test
     @DisplayName("Should handle deeply nested structures")
     void shouldHandleDeeplyNestedStructures() {
-      List<TSNode> stringLiterals = complexFile.query("(string_literal) @str");
+      List<TSNode> stringLiterals = complexFile.query("(string_literal) @str").execute();
       assertFalse(stringLiterals.isEmpty(), "Should find string literals");
       TSNode stringLiteral = stringLiterals.get(0);
       // Find parent if statement
@@ -100,7 +100,7 @@ class TSFileExtendedTest {
     @Test
     @DisplayName("Should return empty when parent type not found")
     void shouldReturnEmptyWhenParentTypeNotFound() {
-      List<TSNode> classes = testFile.query("(class_declaration) @class");
+      List<TSNode> classes = testFile.query("(class_declaration) @class").execute();
       assertFalse(classes.isEmpty());
       TSNode classNode = classes.get(0);
       Optional<TSNode> parentInterface =
@@ -111,7 +111,7 @@ class TSFileExtendedTest {
     @Test
     @DisplayName("Should handle null parameters gracefully")
     void shouldHandleNullParametersGracefully() {
-      List<TSNode> nodes = testFile.query("(identifier) @id");
+      List<TSNode> nodes = testFile.query("(identifier) @id").execute();
       TSNode firstNode = nodes.get(0);
       Optional<TSNode> result1 = testFile.findParentNodeByType(null, "class_declaration");
       assertFalse(result1.isPresent(), "Should handle null start node");
@@ -126,7 +126,7 @@ class TSFileExtendedTest {
     void shouldHandleTSExceptionGracefully() {
       // Create a scenario that might cause TSException
       // This is tricky to test directly, but we can test with edge cases
-      List<TSNode> nodes = testFile.query("(identifier) @id");
+      List<TSNode> nodes = testFile.query("(identifier) @id").execute();
       assertFalse(nodes.isEmpty());
       // Test with a very deep traversal that might hit tree boundaries
       TSNode deepNode = nodes.get(0);
@@ -141,7 +141,8 @@ class TSFileExtendedTest {
     @Test
     @DisplayName("Should find immediate parent correctly")
     void shouldFindImmediateParentCorrectly() {
-      List<TSNode> identifiers = testFile.query("(variable_declarator name: (identifier) @name)");
+      List<TSNode> identifiers =
+          testFile.query("(variable_declarator name: (identifier) @name)").execute();
       assertFalse(identifiers.isEmpty(), "Should find variable declarator names");
       TSNode identifierNode = identifiers.get(0);
       Optional<TSNode> parentDeclarator =
@@ -153,7 +154,7 @@ class TSFileExtendedTest {
     @DisplayName("Should traverse multiple levels correctly")
     void shouldTraverseMultipleLevelsCorrectly() {
       // Find local variable declarations to work with
-      List<TSNode> localVars = testFile.query("(local_variable_declaration) @var");
+      List<TSNode> localVars = testFile.query("(local_variable_declaration) @var").execute();
       if (!localVars.isEmpty()) {
         TSNode localVar = localVars.get(0);
         // Should be able to find method_declaration (parent)
@@ -164,7 +165,7 @@ class TSFileExtendedTest {
         assertTrue(classDecl.isPresent(), "Should find class_declaration ancestor");
       } else {
         // If no local variables, test with method nodes
-        List<TSNode> methods = testFile.query("(method_declaration) @method");
+        List<TSNode> methods = testFile.query("(method_declaration) @method").execute();
         assertFalse(methods.isEmpty(), "Should have methods to test with");
         TSNode method = methods.get(0);
         Optional<TSNode> classDecl = testFile.findParentNodeByType(method, "class_declaration");
@@ -182,7 +183,7 @@ class TSFileExtendedTest {
       // Modify the file
       testFile.updateSourceCode("/* modified */ " + testFile.getSourceCode());
       // Should still be able to find parent nodes
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
+      List<TSNode> methods = testFile.query("(method_declaration) @method").execute();
       if (!methods.isEmpty()) {
         Optional<TSNode> parentClass =
             testFile.findParentNodeByType(methods.get(0), "class_declaration");
@@ -195,7 +196,7 @@ class TSFileExtendedTest {
     void shouldHandleMalformedCodeGracefully() {
       String malformedCode = "public class { private void method( { } }";
       TSFile malformedFile = new TSFile(SupportedLanguage.JAVA, malformedCode);
-      List<TSNode> allNodes = malformedFile.query("(_) @node");
+      List<TSNode> allNodes = malformedFile.query("(_) @node").execute();
       if (!allNodes.isEmpty()) {
         // Should not throw exceptions even with malformed code
         assertDoesNotThrow(

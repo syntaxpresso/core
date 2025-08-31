@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -190,20 +189,20 @@ class ParseSourceCodeCommandTest {
           package com.example.test;
           import java.util.List;
           import java.util.ArrayList;
-          
+
           public class ComplexClass {
               private String name;
               private List<Integer> numbers;
-              
+
               public ComplexClass(String name) {
                   this.name = name;
                   this.numbers = new ArrayList<>();
               }
-              
+
               public void addNumber(int number) {
                   numbers.add(number);
               }
-              
+
               public List<Integer> getNumbers() {
                   return new ArrayList<>(numbers);
               }
@@ -321,10 +320,7 @@ class ParseSourceCodeCommandTest {
               .build();
 
       when(mockJavaCommandService.parseSourceCommand(
-              eq(emptySourceCode),
-              eq(filePath),
-              eq(SupportedLanguage.JAVA),
-              eq(SupportedIDE.NONE)))
+              eq(emptySourceCode), eq(filePath), eq(SupportedLanguage.JAVA), eq(SupportedIDE.NONE)))
           .thenReturn(DataTransferObject.success(mockResponse));
 
       setupCommand(emptySourceCode, filePath, SupportedLanguage.JAVA, SupportedIDE.NONE);
@@ -407,3 +403,4 @@ class ParseSourceCodeCommandTest {
     }
   }
 }
+

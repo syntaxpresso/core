@@ -15,7 +15,10 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
+import io.github.syntaxpresso.core.service.java.jpa.JPAEntityAnnotationService;
+import io.github.syntaxpresso.core.service.java.jpa.JPAService;
 import io.github.syntaxpresso.core.service.java.jpa.JPAService.FieldWithFile;
+import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +36,11 @@ import org.treesitter.TSNode;
 public class JavaCommandService {
   private final PathHelper pathHelper = new PathHelper();
   private final JavaLanguageService javaLanguageService = new JavaLanguageService();
-  private final JPAService jpaService = new JPAService(javaLanguageService);
+  private final ImportDeclarationService importDeclarationService = new ImportDeclarationService();
+  private final JPAEntityAnnotationService jpaEntityAnnotationService =
+      new JPAEntityAnnotationService(javaLanguageService);
+  private final JPAService jpaService =
+      new JPAService(importDeclarationService, jpaEntityAnnotationService);
 
   /**
    * Checks if a directory is a Java project.
@@ -375,10 +382,99 @@ public class JavaCommandService {
     }
   }
 
-  /** Creates a JPA Repository interface for an entity class. */
+  /**
+   * Creates a JPA Repository interface for an entity class.
+   *
+   * @param cwd The current working directory.
+   * @param entityFilePath The path to the entity file.
+   * @return A DataTransferObject containing the new repository file information or error.
+   */
   public DataTransferObject<CreateNewFileResponse> createJPARepository(
       Path cwd, Path entityFilePath) {
-    return this.jpaService.createJPARepository(cwd, entityFilePath);
+    if (!entityFilePath.toString().endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + entityFilePath);
+    }
+    try {
+      TSFile entityFile = new TSFile(SupportedLanguage.JAVA, entityFilePath);
+      Optional<String> className = entityFile.getFileNameWithoutExtension();
+      if (className.isEmpty()) {
+        return DataTransferObject.error("Unable to get entity class name");
+      }
+      Optional<String> packageName =
+          this.javaLanguageService.getPackageDeclarationService().getPackageName(entityFile);
+      if (packageName.isEmpty()) {
+        return DataTransferObject.error("Unable to get package name");
+      }
+      Optional<TSNode> classDeclarationNode =
+          this.javaLanguageService
+              .getClassDeclarationService()
+              .findClassByName(entityFile, className.get());
+      if (classDeclarationNode.isEmpty()) {
+        return DataTransferObject.error("No class declaration found in file");
+      }
+      if (!this.jpaEntityAnnotationService.isJPAEntity(entityFile)) {
+        return DataTransferObject.error("Class is not a JPA entity (@Entity annotation not found)");
+      }
+      Optional<io.github.syntaxpresso.core.service.java.jpa.JPAService.FieldWithFile>
+          idFieldWithFile =
+              this.jpaService.findIdFieldInHierarchy(
+                  this.javaLanguageService.getClassDeclarationService(),
+                  cwd,
+                  entityFile,
+                  classDeclarationNode.get());
+      if (idFieldWithFile.isEmpty()) {
+        return DataTransferObject.error(
+            "No @Id field found in entity hierarchy. Note: Only local project classes are currently"
+                + " supported.");
+      }
+      Optional<String> idType =
+          this.jpaService.extractFieldType(idFieldWithFile.get().file, idFieldWithFile.get().field);
+      if (idType.isEmpty()) {
+        return DataTransferObject.error("Unable to determine @Id field type");
+      }
+      String repositoryName = className.get() + "Repository";
+
+      // Use JavaLanguageService to create the file
+      String repositoryClassName = repositoryName.trim();
+      repositoryClassName = com.google.common.io.Files.getNameWithoutExtension(repositoryClassName);
+      String template =
+          JavaFileTemplate.INTERFACE.getSourceContent(packageName.get(), repositoryClassName);
+      TSFile file = new TSFile(SupportedLanguage.JAVA, template);
+
+      // Find the file path using JavaLanguageService path helper
+      final String srcDirName = "src/main/java";
+      Optional<Path> sourceDirOptional =
+          this.javaLanguageService.getPathHelper().findDirectoryRecursively(cwd, srcDirName);
+      Path sourceDir;
+      if (sourceDirOptional.isPresent()) {
+        sourceDir = sourceDirOptional.get();
+      } else {
+        sourceDir = cwd.resolve(srcDirName);
+      }
+      Path packageAsPath = Path.of(packageName.get().replace('.', '/'));
+      Path fullPackageDir = sourceDir.resolve(packageAsPath);
+      java.nio.file.Files.createDirectories(fullPackageDir);
+
+      Path targetPath = fullPackageDir.resolve(repositoryClassName + ".java");
+      if (java.nio.file.Files.exists(targetPath)) {
+        return DataTransferObject.error("File already exists: " + targetPath.toString());
+      }
+      file.saveAs(targetPath);
+      DataTransferObject<CreateNewFileResponse> createResult =
+          DataTransferObject.success(
+              CreateNewFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build());
+      if (!createResult.getSucceed()) {
+        return createResult;
+      }
+      TSFile repositoryFile =
+          new TSFile(SupportedLanguage.JAVA, Path.of(createResult.getData().getFilePath()));
+      this.jpaService.configureRepositoryFile(
+          repositoryFile, className.get(), idType.get(), packageName.get());
+      repositoryFile.save();
+      return createResult;
+    } catch (Exception e) {
+      return DataTransferObject.error("Failed to create repository: " + e.getMessage());
+    }
   }
 
   public DataTransferObject<GetJPAEntityInfoResponse> getJPAEntityInfo(
@@ -393,8 +489,7 @@ public class JavaCommandService {
     if (mainClassNode.isEmpty()) {
       return DataTransferObject.error("Unable to find main class declaration in file.");
     }
-    boolean isJPAEntity =
-        this.jpaService.getJpaOperations().getJpaEntityService().isJPAEntity(file);
+    boolean isJPAEntity = this.jpaEntityAnnotationService.isJPAEntity(file);
     if (!isJPAEntity) {
       return DataTransferObject.error("Class is not a JPA entity (@Entity annotation not found)");
     }
@@ -406,9 +501,7 @@ public class JavaCommandService {
     Optional<FieldWithFile> idFieldWithFile = Optional.empty();
     if (idFieldWithFile.isPresent()) {
       Optional<String> idTypeName =
-          this.jpaService
-              .getJpaOperations()
-              .extractFieldType(idFieldWithFile.get().file, idFieldWithFile.get().field);
+          this.jpaService.extractFieldType(idFieldWithFile.get().file, idFieldWithFile.get().field);
       if (idTypeName.isPresent()) {
         Optional<JavaBasicType> idType = JavaBasicType.getByTypeName(idTypeName.get());
         if (idType.isPresent()) {
@@ -457,9 +550,5 @@ public class JavaCommandService {
             .parseSuccess(true)
             .build();
     return DataTransferObject.success(response);
-  }
-
-  public void testCommand() {
-    this.jpaService.getJpaOperations().getJpaEntityService().testQuery();
   }
 }

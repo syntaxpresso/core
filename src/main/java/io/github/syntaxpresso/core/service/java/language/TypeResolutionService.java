@@ -90,7 +90,8 @@ public class TypeResolutionService {
   private String resolveTypeFromFormalParameters(
       TSFile file, TSNode methodOrConstructor, String objectName) {
     // Get all formal parameters using query
-    List<TSNode> formalParameters = file.query(methodOrConstructor, "(formal_parameter) @param");
+    List<TSNode> formalParameters =
+        file.query("(formal_parameter) @param").within(methodOrConstructor).execute();
     for (TSNode param : formalParameters) {
       Optional<TSNode> paramNameNode =
           this.formalParameterService.getParameterNameNode(param, file);
@@ -98,7 +99,7 @@ public class TypeResolutionService {
         String paramName = file.getTextFromNode(paramNameNode.get());
         if (objectName.equals(paramName)) {
           // Get the type of this parameter
-          List<TSNode> typeNodes = file.query(param, "(type_identifier) @type");
+          List<TSNode> typeNodes = file.query("(type_identifier) @type").within(param).execute();
           if (!typeNodes.isEmpty()) {
             return file.getTextFromNode(typeNodes.get(0));
           }
@@ -126,7 +127,7 @@ public class TypeResolutionService {
         String varName = file.getTextFromNode(varNameNode.get());
         if (objectName.equals(varName)) {
           // Get the type of this local variable
-          List<TSNode> typeNodes = file.query(localVar, "(type_identifier) @type");
+          List<TSNode> typeNodes = file.query("(type_identifier) @type").within(localVar).execute();
           if (!typeNodes.isEmpty()) {
             return file.getTextFromNode(typeNodes.get(0));
           }
@@ -146,14 +147,14 @@ public class TypeResolutionService {
    */
   private String resolveTypeFromClassFields(TSFile file, TSNode classNode, String objectName) {
     // Get all field declarations using query
-    List<TSNode> fields = file.query(classNode, "(field_declaration) @field");
+    List<TSNode> fields = file.query("(field_declaration) @field").within(classNode).execute();
     for (TSNode field : fields) {
       Optional<TSNode> fieldNameNode = this.fieldDeclarationService.getFieldNameNode(field, file);
       if (fieldNameNode.isPresent()) {
         String fieldName = file.getTextFromNode(fieldNameNode.get());
         if (objectName.equals(fieldName)) {
           // Get the type of this field
-          List<TSNode> typeNodes = file.query(field, "(type_identifier) @type");
+          List<TSNode> typeNodes = file.query("(type_identifier) @type").within(field).execute();
           if (!typeNodes.isEmpty()) {
             return file.getTextFromNode(typeNodes.get(0));
           }

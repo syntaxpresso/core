@@ -27,7 +27,7 @@ public class LocalVariableDeclarationService {
         || !"method_declaration".equals(methodDeclarationNode.getType())) {
       return Collections.emptyList();
     }
-    return file.query(methodDeclarationNode, LOCAL_VARIABLE_DECLARATION_QUERY);
+    return file.query(LOCAL_VARIABLE_DECLARATION_QUERY).within(methodDeclarationNode).execute();
   }
 
   /**
@@ -46,7 +46,8 @@ public class LocalVariableDeclarationService {
         || !"local_variable_declaration".equals(localVariableDeclarationNode.getType())) {
       return Optional.empty();
     }
-    List<TSNode> typeNodes = file.query(localVariableDeclarationNode, "(type_identifier) @type");
+    List<TSNode> typeNodes =
+        file.query("(type_identifier) @type").within(localVariableDeclarationNode).execute();
     for (TSNode typeNode : typeNodes) {
       String typeNodeName = file.getTextFromNode(typeNode);
       if (typeName.equals(typeNodeName)) {
@@ -95,7 +96,8 @@ public class LocalVariableDeclarationService {
     if (variableDeclaratorNode == null) {
       return Optional.empty();
     }
-    List<TSNode> typeNodes = file.query(variableDeclaratorNode, "(type_identifier) @type");
+    List<TSNode> typeNodes =
+        file.query("(type_identifier) @type").within(variableDeclaratorNode).execute();
     for (TSNode typeNode : typeNodes) {
       String typeNodeName = file.getTextFromNode(typeNode);
       if (typeName.equals(typeNodeName)) {
@@ -220,7 +222,7 @@ public class LocalVariableDeclarationService {
    * @param newName The new name for the variable type (PascalCase).
    */
   public void renameLocalVariablesInFile(TSFile file, String currentName, String newName) {
-    List<TSNode> methodDeclarationNodes = file.query("(method_declaration) @method");
+    List<TSNode> methodDeclarationNodes = file.query("(method_declaration) @method").execute();
     for (TSNode methodDeclarationNode : methodDeclarationNodes) {
       this.renameLocalVariables(file, methodDeclarationNode, currentName, newName);
     }

@@ -1,6 +1,7 @@
 package io.github.syntaxpresso.core.service.java.language;
 
 import io.github.syntaxpresso.core.common.TSFile;
+import java.util.List;
 import java.util.Optional;
 import org.treesitter.TSNode;
 
@@ -13,7 +14,8 @@ public class PackageDeclarationService {
    */
   public Optional<TSNode> getPackageDeclarationNode(TSFile file) {
     String packageQuery = "(package_declaration) @package";
-    return file.query(packageQuery).stream().findFirst();
+    List<TSNode> nodes = file.query(packageQuery).execute();
+    return Optional.of(nodes.getFirst());
   }
 
   /**
@@ -24,6 +26,8 @@ public class PackageDeclarationService {
    */
   public Optional<String> getPackageName(TSFile file) {
     String packageQuery = "(package_declaration (scoped_identifier) @package_name)";
-    return file.query(packageQuery).stream().findFirst().map(file::getTextFromNode);
+    List<TSNode> nodes = file.query(packageQuery).execute();
+    TSNode node = nodes.getFirst();
+    return Optional.of(file.getTextFromNode(node));
   }
 }

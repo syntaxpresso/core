@@ -3,30 +3,19 @@ package io.github.syntaxpresso.core.common;
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
+import io.github.syntaxpresso.core.util.TSQueryBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import org.treesitter.TSException;
 import org.treesitter.TSNode;
 import org.treesitter.TSParser;
 import org.treesitter.TSPoint;
-import org.treesitter.TSQuery;
-import org.treesitter.TSQueryCapture;
-import org.treesitter.TSQueryCursor;
-import org.treesitter.TSQueryMatch;
 import org.treesitter.TSTree;
 
 @Getter
@@ -444,189 +433,6 @@ public class TSFile {
   }
 
   /**
-   * Common helper method to execute Tree-sitter queries with custom match processing. This method
-   * handles the standard query execution pattern and delegates match processing to the provided
-   * consumer function.
-   *
-   * @param node The node to run the query on.
-   * @param queryString The Tree-sitter query string.
-   * @param matchProcessor Function to process each match and query pair.
-   * @param <T> The type of results to return.
-   * @return A list of results from the match processor, or empty list if query fails.
-   */
-  private <T> List<T> executeQuery(
-      TSNode node,
-      String queryString,
-      java.util.function.Function<java.util.Map.Entry<TSQueryMatch, TSQuery>, List<T>>
-          matchProcessor) {
-    List<T> results = new ArrayList<>();
-    try {
-      TSQuery query = new TSQuery(this.getParser().getLanguage(), queryString);
-      TSQueryCursor cursor = new TSQueryCursor();
-      cursor.exec(query, node);
-      TSQueryMatch match = new TSQueryMatch();
-      while (cursor.nextMatch(match)) {
-        // Create a map entry to pass both match and query to the processor
-        java.util.Map.Entry<TSQueryMatch, TSQuery> entry =
-            new java.util.AbstractMap.SimpleEntry<>(match, query);
-        results.addAll(matchProcessor.apply(entry));
-      }
-    } catch (TSException e) {
-      return new ArrayList<>();
-    }
-    return results;
-  }
-
-  /**
-   * Executes a Tree-sitter query on a specific node and returns the captured nodes. Duplicates are
-   * automatically removed while preserving insertion order.
-   *
-   * @param node The node to run the query on.
-   * @param queryString The Tree-sitter query string.
-   * @return A list of unique {@link TSNode} objects captured by the query.
-   */
-  public List<TSNode> query(TSNode node, String queryString) {
-    Set<TSNode> foundNodes = new LinkedHashSet<>();
-    List<TSNode> nodes =
-        executeQuery(
-            node,
-            queryString,
-            entry -> {
-              TSQueryMatch match = entry.getKey();
-              List<TSNode> capturedNodes = new ArrayList<>();
-              for (TSQueryCapture capture : match.getCaptures()) {
-                capturedNodes.add(capture.getNode());
-              }
-              return capturedNodes;
-            });
-    // Add all nodes to LinkedHashSet to remove duplicates while preserving order
-    foundNodes.addAll(nodes);
-    return new ArrayList<>(foundNodes)
-        .stream()
-            .sorted(Comparator.comparingInt(TSNode::getStartByte))
-            .collect(Collectors.toList());
-  }
-
-  /**
-   * Executes a Tree-sitter query on the entire syntax tree and returns the captured nodes.
-   * Duplicates are automatically removed while preserving insertion order.
-   *
-   * @param queryString The Tree-sitter query string.
-   * @return A list of unique {@link TSNode} objects captured by the query.
-   */
-  public List<TSNode> query(String queryString) {
-    return this.query(this.getTree().getRootNode(), queryString);
-  }
-
-  /**
-   * Executes a Tree-sitter query on a specific node and returns all matches with their named
-   * captures as key-value pairs.
-   *
-   * <p>This method differs from {@link #query(TSNode, String)} by preserving capture names and
-   * returning all matches rather than just unique nodes. Each match is represented as a Map where
-   * the key is the capture name (e.g., "@function", "@parameter") and the value is the
-   * corresponding {@link TSNode}.
-   *
-   * <p>Results are automatically sorted by the start byte position of the first node in each match
-   * to ensure consistent ordering across multiple executions.
-   *
-   * <p>Example usage:
-   *
-   * <pre>{@code
-   * // Find a specific class node first
-   * TSNode classNode = tsFile.query("(class_declaration) @class").get(0);
-   *
-   * // Query for method declarations within that class only
-   * String query = "(method_declaration name: (identifier) @method_name " +
-   *                "parameters: (formal_parameters) @params)";
-   * List<Map<String, TSNode>> matches = tsFile.queryForCaptures(classNode, query);
-   *
-   * for (Map<String, TSNode> match : matches) {
-   *     TSNode methodName = match.get("method_name");
-   *     TSNode params = match.get("params");
-   *     // Process the captured nodes within the specific class...
-   * }
-   * }</pre>
-   *
-   * @param node The node to run the query on. The query will only search within this node's
-   *     subtree.
-   * @param queryString The Tree-sitter query string with named captures (e.g., "@capture_name").
-   *     Must be a valid Tree-sitter query syntax.
-   * @return A list of maps, where each map represents a match and contains capture names as keys
-   *     and their corresponding {@link TSNode} objects as values. Returns an empty list if no
-   *     matches are found or if the query execution fails.
-   */
-  public List<Map<String, TSNode>> queryForCaptures(TSNode node, String queryString) {
-    List<Map<String, TSNode>> allMatches =
-        executeQuery(
-            node,
-            queryString,
-            entry -> {
-              TSQueryMatch match = entry.getKey();
-              TSQuery query = entry.getValue();
-
-              Map<String, TSNode> matchMap = new HashMap<>();
-              for (TSQueryCapture capture : match.getCaptures()) {
-                String captureName = query.getCaptureNameForId(capture.getIndex());
-                matchMap.put(captureName, capture.getNode());
-              }
-              // Return single match as list
-              return java.util.Collections.singletonList(matchMap);
-            });
-    // Sort by start byte for consistency
-    allMatches.sort(
-        (m1, m2) -> {
-          if (m1.isEmpty() || m2.isEmpty()) return 0;
-          TSNode n1 = m1.values().iterator().next();
-          TSNode n2 = m2.values().iterator().next();
-          return Integer.compare(n1.getStartByte(), n2.getStartByte());
-        });
-
-    return allMatches;
-  }
-
-  /**
-   * Executes a Tree-sitter query on the entire syntax tree and returns all matches with their named
-   * captures as key-value pairs.
-   *
-   * <p>This is a convenience method that delegates to {@link #queryForCaptures(TSNode, String)}
-   * using the root node of the syntax tree. It differs from {@link #query(String)} by preserving
-   * capture names and returning all matches rather than just unique nodes.
-   *
-   * <p>Each match is represented as a Map where the key is the capture name (e.g., "@function",
-   * "@parameter") and the value is the corresponding {@link TSNode}.
-   *
-   * <p>Results are automatically sorted by the start byte position of the first node in each match
-   * to ensure consistent ordering across multiple executions.
-   *
-   * <p>Example usage:
-   *
-   * <pre>{@code
-   * // Query for all function declarations with parameters in the file
-   * String query = "(method_declaration name: (identifier) @method_name " +
-   *                "parameters: (formal_parameters) @params)";
-   * List<Map<String, TSNode>> matches = tsFile.queryForCaptures(query);
-   *
-   * for (Map<String, TSNode> match : matches) {
-   *     TSNode methodName = match.get("method_name");
-   *     TSNode params = match.get("params");
-   *     System.out.println("Method: " + tsFile.getTextFromNode(methodName));
-   *     // Process the captured nodes...
-   * }
-   * }</pre>
-   *
-   * @param queryString The Tree-sitter query string with named captures (e.g., "@capture_name").
-   *     Must be a valid Tree-sitter query syntax.
-   * @return A list of maps, where each map represents a match and contains capture names as keys
-   *     and their corresponding {@link TSNode} objects as values. Returns an empty list if no
-   *     matches are found or if the query execution fails.
-   * @see #queryForCaptures(TSNode, String)
-   */
-  public List<Map<String, TSNode>> queryForCaptures(String queryString) {
-    return this.queryForCaptures(this.getTree().getRootNode(), queryString);
-  }
-
-  /**
    * Checks if the file has been modified since the last save.
    *
    * @return True if the file has unsaved changes.
@@ -642,5 +448,44 @@ public class TSFile {
    */
   public boolean hasUnsavedChanges() {
     return this.modified;
+  }
+
+  /**
+   * Creates a query builder for executing Tree-sitter queries with optional predicates.
+   *
+   * <p>This is the primary entry point for all queries. The builder pattern allows flexible
+   * configuration of query options including scope, predicates, and return types.
+   *
+   * <p>Examples:
+   *
+   * <pre>{@code
+   * // Simple query returning nodes
+   * List<TSNode> methods = tsFile.query("(method_declaration) @method").execute();
+   *
+   * // Query with predicates
+   * List<TSNode> getters = tsFile.query("""
+   *     (method_declaration
+   *       name: (identifier) @name
+   *       (#match? @name "^get"))
+   *     """).returning("name").execute();
+   *
+   * // Query returning all captures
+   * List<Map<String, TSNode>> matches = tsFile.query("""
+   *     (method_declaration
+   *       name: (identifier) @name
+   *       parameters: (formal_parameters) @params)
+   *     """).returningAllCaptures().execute();
+   *
+   * // Scoped query
+   * List<TSNode> innerMethods = tsFile.query("(method_declaration) @method")
+   *     .within(classNode)
+   *     .execute();
+   * }</pre>
+   *
+   * @param queryString The Tree-sitter query string, optionally with predicates
+   * @return A TSQueryBuilder for further configuration
+   */
+  public TSQueryBuilder query(String queryString) {
+    return new TSQueryBuilder(this, queryString);
   }
 }

@@ -72,9 +72,9 @@ public class FormalParameterService {
       return Collections.emptyList();
     }
     List<TSNode> foundParams = new ArrayList<>();
-    List<TSNode> allParams = file.query(node, FORMAL_PARAMETER_QUERY);
+    List<TSNode> allParams = file.query(FORMAL_PARAMETER_QUERY).within(node).execute();
     for (TSNode param : allParams) {
-      List<TSNode> typeNodes = file.query(param, "(type_identifier) @type");
+      List<TSNode> typeNodes = file.query("(type_identifier) @type").within(param).execute();
       for (TSNode typeNode : typeNodes) {
         String typeNodeName = file.getTextFromNode(typeNode);
         if (typeName.equals(typeNodeName)) {
@@ -101,7 +101,8 @@ public class FormalParameterService {
         || !"formal_parameter".equals(formalParameterNode.getType())) {
       return Optional.empty();
     }
-    List<TSNode> typeNodes = file.query(formalParameterNode, "(type_identifier) @type");
+    List<TSNode> typeNodes =
+        file.query("(type_identifier) @type").within(formalParameterNode).execute();
     for (TSNode typeNode : typeNodes) {
       String typeNodeName = file.getTextFromNode(typeNode);
       if (typeName.equals(typeNodeName)) {
@@ -221,7 +222,7 @@ public class FormalParameterService {
       // Find usages in method body
       TSNode bodyNode = methodDeclarationNode.getChildByFieldName("body");
       if (bodyNode != null && "block".equals(bodyNode.getType())) {
-        List<TSNode> identifiers = file.query(bodyNode, "(identifier) @id");
+        List<TSNode> identifiers = file.query("(identifier) @id").within(bodyNode).execute();
         for (TSNode identifier : identifiers) {
           String identifierText = file.getTextFromNode(identifier);
           if (parameterName.equals(identifierText)
@@ -290,7 +291,7 @@ public class FormalParameterService {
    * @param newName The new name for the parameter type (PascalCase).
    */
   public void renameFormalParametersInFile(TSFile file, String currentName, String newName) {
-    List<TSNode> methodDeclarationNodes = file.query("(method_declaration) @method");
+    List<TSNode> methodDeclarationNodes = file.query("(method_declaration) @method").execute();
     for (TSNode methodDeclarationNode : methodDeclarationNodes) {
       renameFormalParameters(file, methodDeclarationNode, currentName, newName);
     }
