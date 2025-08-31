@@ -3,6 +3,7 @@ package io.github.syntaxpresso.core.common;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import io.github.syntaxpresso.core.util.TSFileHistoryEntry;
 import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

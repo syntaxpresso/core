@@ -1,4 +1,4 @@
-package io.github.syntaxpresso.core.common;
+package io.github.syntaxpresso.core.util;
 
 import java.nio.file.Path;
 import lombok.Data;
@@ -13,4 +13,3 @@ public class TSFileHistoryEntry {
   private final long timestamp;
   private final String operation;
 }
-
