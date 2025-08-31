@@ -1,4 +1,4 @@
-package io.github.syntaxpresso.core.util;
+package io.github.syntaxpresso.core.common.extra;
 
 import io.github.syntaxpresso.core.common.TSFile;
 import java.util.*;
