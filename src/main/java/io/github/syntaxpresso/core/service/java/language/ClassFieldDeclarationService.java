@@ -40,6 +40,33 @@ public class ClassFieldDeclarationService {
     return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
   }
 
+  /**
+   * Finds a field declaration node within a class by its name.
+   *
+   * <p>This method searches for a field declaration that matches the specified name within the given
+   * class declaration scope. The search is case-sensitive and exact.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * ClassDeclarationService classService = new ClassDeclarationService();
+   * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
+   * Optional&lt;TSNode&gt; fieldNode = service.findClassFieldNodeByName(tsFile, "myField", classNode);
+   * if (fieldNode.isPresent()) {
+   *   String fieldText = tsFile.getTextFromNode(fieldNode.get());  // e.g., "private String myField;"
+   * }
+   * </pre>
+   *
+   * Query captures:
+   * - name: The field name identifier
+   * - fieldDeclaration: The entire field declaration node
+   *
+   * @param tsFile The {@link TSFile} containing the source code.
+   * @param fieldDeclaratorName The name of the field to find (case-sensitive).
+   * @param classDeclarationNode The class declaration {@link TSNode} to search within.
+   * @return An {@link Optional} containing the field declaration node if found, or empty if the field
+   *     is not found, the file/tree is null, or the node is not a class declaration.
+   */
   public Optional<TSNode> findClassFieldNodeByName(
       TSFile tsFile, String fieldDeclaratorName, TSNode classDeclarationNode) {
     if (tsFile == null
@@ -54,12 +81,40 @@ public class ClassFieldDeclarationService {
             ((field_declaration
               declarator: (variable_declarator
                 name: (identifier) @name))
-             (#eq? @name "%s"))
+             (#eq? @name "%s")) @fieldDeclaration
             """,
             fieldDeclaratorName);
     return tsFile.query(queryString).within(classDeclarationNode).execute().firstNodeOptional();
   }
 
+  /**
+   * Finds all field declaration nodes within a class that match a specific type.
+   *
+   * <p>This method searches for field declarations that have the specified type within the given
+   * class declaration scope. The type matching is case-sensitive and exact. This includes both
+   * primitive types and reference types.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * ClassDeclarationService classService = new ClassDeclarationService();
+   * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
+   * List&lt;TSNode&gt; stringFields = service.findClassFieldNodesByType(tsFile, "String", classNode);
+   * for (TSNode field : stringFields) {
+   *   String fieldText = tsFile.getTextFromNode(field);  // e.g., "private String name;"
+   * }
+   * </pre>
+   *
+   * Query captures:
+   * - type: The field type node
+   * - fieldDeclaration: The entire field declaration node
+   *
+   * @param tsFile The {@link TSFile} containing the source code.
+   * @param fieldDeclaratorType The type to search for (case-sensitive).
+   * @param classDeclarationNode The class declaration {@link TSNode} to search within.
+   * @return A list of field declaration nodes that have the specified type. Returns an empty list if
+   *     no matching fields are found, the file/tree is null, or the node is not a class declaration.
+   */
   public List<TSNode> findClassFieldNodesByType(
       TSFile tsFile, String fieldDeclaratorType, TSNode classDeclarationNode) {
     if (tsFile == null
@@ -73,7 +128,7 @@ public class ClassFieldDeclarationService {
             """
             ((field_declaration
               type: (_) @type)
-             (#eq? @type "%s"))
+             (#eq? @type "%s")) @fieldDeclaration
             """,
             fieldDeclaratorType);
     return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
