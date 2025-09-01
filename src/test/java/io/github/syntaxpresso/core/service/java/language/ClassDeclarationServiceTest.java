@@ -152,7 +152,6 @@ class ClassDeclarationServiceTest {
   private TSFile multipleClassesFile;
   private TSFile noSuperclassFile;
   private TSFile nestedClassesFile;
-  private TSFile genericClassesFile;
   private TSFile annotatedClassFile;
   private TSFile emptyFile;
   private TSFile noClassesFile;
@@ -166,7 +165,6 @@ class ClassDeclarationServiceTest {
     multipleClassesFile = new TSFile(SupportedLanguage.JAVA, MULTIPLE_CLASSES_CODE);
     noSuperclassFile = new TSFile(SupportedLanguage.JAVA, NO_SUPERCLASS_CODE);
     nestedClassesFile = new TSFile(SupportedLanguage.JAVA, NESTED_CLASSES_CODE);
-    genericClassesFile = new TSFile(SupportedLanguage.JAVA, GENERIC_CLASSES_CODE);
     annotatedClassFile = new TSFile(SupportedLanguage.JAVA, ANNOTATED_CLASS_CODE);
     emptyFile = new TSFile(SupportedLanguage.JAVA, EMPTY_FILE_CODE);
     noClassesFile = new TSFile(SupportedLanguage.JAVA, NO_CLASSES_CODE);
@@ -263,7 +261,8 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
-      Optional<TSNode> classNameNode = service.getClassDeclarationNameNode(singleClassFile, classDecl);
+      Optional<TSNode> classNameNode =
+          service.getClassDeclarationNameNode(singleClassFile, classDecl);
 
       assertTrue(classNameNode.isPresent());
       String className = singleClassFile.getTextFromNode(classNameNode.get());
@@ -287,9 +286,11 @@ class ClassDeclarationServiceTest {
     @Test
     @DisplayName("should return empty for null class node")
     void shouldReturnEmptyForNullClassNode() {
-      assertThrows(NullPointerException.class, () -> {
-        service.getClassDeclarationNameNode(singleClassFile, null);
-      });
+      assertThrows(
+          NullPointerException.class,
+          () -> {
+            service.getClassDeclarationNameNode(singleClassFile, null);
+          });
     }
 
     @Test
@@ -375,8 +376,6 @@ class ClassDeclarationServiceTest {
     }
   }
 
-
-
   @Nested
   @DisplayName("getClassDeclarationNodeInfo Tests")
   class GetClassDeclarationNodeInfoTests {
@@ -387,11 +386,12 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
-      List<Map<String, TSNode>> info = service.getClassDeclarationNodeInfo(singleClassFile, classDecl);
+      List<Map<String, TSNode>> info =
+          service.getClassDeclarationNodeInfo(singleClassFile, classDecl);
 
       assertFalse(info.isEmpty());
       Map<String, TSNode> classInfo = info.get(0);
-      
+
       assertTrue(classInfo.containsKey("className"));
       assertTrue(classInfo.containsKey("superclass"));
       assertTrue(classInfo.containsKey("superclassName"));
@@ -408,10 +408,11 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(annotatedClassFile);
       TSNode annotatedClassDecl = classes.get(0).get("classDeclaration");
 
-      List<Map<String, TSNode>> info = service.getClassDeclarationNodeInfo(annotatedClassFile, annotatedClassDecl);
+      List<Map<String, TSNode>> info =
+          service.getClassDeclarationNodeInfo(annotatedClassFile, annotatedClassDecl);
 
       assertFalse(info.isEmpty());
-      
+
       boolean foundAnnotation = false;
       for (Map<String, TSNode> capture : info) {
         if (capture.containsKey("classAnnotation")) {
@@ -435,7 +436,8 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classNameNode = classes.get(0).get("className");
 
-      List<Map<String, TSNode>> result = service.getClassDeclarationNodeInfo(singleClassFile, classNameNode);
+      List<Map<String, TSNode>> result =
+          service.getClassDeclarationNodeInfo(singleClassFile, classNameNode);
       assertTrue(result.isEmpty());
     }
 
@@ -445,11 +447,12 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(noSuperclassFile);
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
-      List<Map<String, TSNode>> info = service.getClassDeclarationNodeInfo(noSuperclassFile, classDecl);
+      List<Map<String, TSNode>> info =
+          service.getClassDeclarationNodeInfo(noSuperclassFile, classDecl);
 
       assertFalse(info.isEmpty());
       Map<String, TSNode> classInfo = info.get(0);
-      
+
       assertTrue(classInfo.containsKey("className"));
       String className = noSuperclassFile.getTextFromNode(classInfo.get("className"));
       assertEquals("NoSuperClass", className);
@@ -466,8 +469,8 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
-      Optional<TSNode> classNameNode = service.getClassDeclarationNodeByCaptureName(
-          singleClassFile, "className", classDecl);
+      Optional<TSNode> classNameNode =
+          service.getClassDeclarationNodeByCaptureName(singleClassFile, "className", classDecl);
 
       assertTrue(classNameNode.isPresent());
       String className = singleClassFile.getTextFromNode(classNameNode.get());
@@ -480,8 +483,9 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
-      Optional<TSNode> superclassNode = service.getClassDeclarationNodeByCaptureName(
-          singleClassFile, "superclassName", classDecl);
+      Optional<TSNode> superclassNode =
+          service.getClassDeclarationNodeByCaptureName(
+              singleClassFile, "superclassName", classDecl);
 
       assertTrue(superclassNode.isPresent());
       String superclassName = singleClassFile.getTextFromNode(superclassNode.get());
@@ -494,8 +498,9 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.getClassDeclarationNodeByCaptureName(
-          singleClassFile, "nonExistentCapture", classDecl);
+      Optional<TSNode> result =
+          service.getClassDeclarationNodeByCaptureName(
+              singleClassFile, "nonExistentCapture", classDecl);
 
       assertTrue(result.isEmpty());
     }
@@ -503,7 +508,8 @@ class ClassDeclarationServiceTest {
     @Test
     @DisplayName("should return empty for null file")
     void shouldReturnEmptyForNullFile() {
-      Optional<TSNode> result = service.getClassDeclarationNodeByCaptureName(null, "className", null);
+      Optional<TSNode> result =
+          service.getClassDeclarationNodeByCaptureName(null, "className", null);
       assertTrue(result.isEmpty());
     }
 
@@ -513,8 +519,8 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classNameNode = classes.get(0).get("className");
 
-      Optional<TSNode> result = service.getClassDeclarationNodeByCaptureName(
-          singleClassFile, "className", classNameNode);
+      Optional<TSNode> result =
+          service.getClassDeclarationNodeByCaptureName(singleClassFile, "className", classNameNode);
       assertTrue(result.isEmpty());
     }
   }
@@ -527,13 +533,14 @@ class ClassDeclarationServiceTest {
     @DisplayName("should return annotation nodes for annotated class")
     void shouldReturnAnnotationNodesForAnnotatedClass() {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(annotatedClassFile);
-      
+
       for (Map<String, TSNode> classInfo : classes) {
         String className = annotatedClassFile.getTextFromNode(classInfo.get("className"));
         TSNode classDecl = classInfo.get("classDeclaration");
-        
-        List<TSNode> annotations = service.getClassDeclarationAnnotationNodes(annotatedClassFile, classDecl);
-        
+
+        List<TSNode> annotations =
+            service.getClassDeclarationAnnotationNodes(annotatedClassFile, classDecl);
+
         if (className.equals("AnnotatedClass")) {
           assertFalse(annotations.isEmpty());
           assertTrue(annotations.size() >= 1);
@@ -553,7 +560,8 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
-      List<TSNode> annotations = service.getClassDeclarationAnnotationNodes(singleClassFile, classDecl);
+      List<TSNode> annotations =
+          service.getClassDeclarationAnnotationNodes(singleClassFile, classDecl);
 
       assertTrue(annotations.isEmpty());
     }
@@ -571,7 +579,8 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classNameNode = classes.get(0).get("className");
 
-      List<TSNode> result = service.getClassDeclarationAnnotationNodes(singleClassFile, classNameNode);
+      List<TSNode> result =
+          service.getClassDeclarationAnnotationNodes(singleClassFile, classNameNode);
       assertTrue(result.isEmpty());
     }
   }
@@ -586,7 +595,8 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
-      Optional<TSNode> superclassNameNode = service.getClassDeclarationSuperclassNameNode(singleClassFile, classDecl);
+      Optional<TSNode> superclassNameNode =
+          service.getClassDeclarationSuperclassNameNode(singleClassFile, classDecl);
 
       assertTrue(superclassNameNode.isPresent());
       String superclassName = singleClassFile.getTextFromNode(superclassNameNode.get());
@@ -599,7 +609,8 @@ class ClassDeclarationServiceTest {
       List<Map<String, TSNode>> classes = service.getAllClassDeclarations(noSuperclassFile);
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
-      Optional<TSNode> superclassNameNode = service.getClassDeclarationSuperclassNameNode(noSuperclassFile, classDecl);
+      Optional<TSNode> superclassNameNode =
+          service.getClassDeclarationSuperclassNameNode(noSuperclassFile, classDecl);
 
       assertTrue(superclassNameNode.isEmpty());
     }
@@ -621,17 +632,18 @@ class ClassDeclarationServiceTest {
       for (Map<String, TSNode> classInfo : classes) {
         TSNode classDecl = classInfo.get("classDeclaration");
         String className = multipleClassesFile.getTextFromNode(classInfo.get("className"));
-        
+
         if (className.equals("MainClass")) {
           foundMainClass = true;
-          Optional<TSNode> superclassNameNode = service.getClassDeclarationSuperclassNameNode(multipleClassesFile, classDecl);
+          Optional<TSNode> superclassNameNode =
+              service.getClassDeclarationSuperclassNameNode(multipleClassesFile, classDecl);
           assertTrue(superclassNameNode.isPresent());
           String superclassName = multipleClassesFile.getTextFromNode(superclassNameNode.get());
           assertEquals("SuperMain", superclassName);
           break;
         }
       }
-      
+
       assertTrue(foundMainClass, "MainClass should be found");
     }
   }
@@ -650,7 +662,8 @@ class ClassDeclarationServiceTest {
       Optional<TSNode> mainClass = service.getMainClass(fileWithPath);
 
       assertTrue(mainClass.isPresent());
-      Optional<TSNode> classNameNode = service.getClassDeclarationNameNode(fileWithPath, mainClass.get());
+      Optional<TSNode> classNameNode =
+          service.getClassDeclarationNameNode(fileWithPath, mainClass.get());
       assertTrue(classNameNode.isPresent());
       String className = fileWithPath.getTextFromNode(classNameNode.get());
       assertEquals("MyClass", className);
@@ -839,8 +852,6 @@ class ClassDeclarationServiceTest {
       assertEquals(Optional.of("CustomSuperclass"), result);
     }
   }
-
-
 
   @Nested
   @DisplayName("isJavaLangClass Tests")
@@ -1032,13 +1043,14 @@ class ClassDeclarationServiceTest {
           service.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
       // Test individual field access methods using the integrated query
-      List<Map<String, TSNode>> classInfo = service.getClassDeclarationNodeInfo(tsFile, classDeclarationNode);
-      
+      List<Map<String, TSNode>> classInfo =
+          service.getClassDeclarationNodeInfo(tsFile, classDeclarationNode);
+
       // Find field-related captures
       boolean foundFieldType = false;
       boolean foundFieldName = false;
       boolean foundFieldValue = false;
-      
+
       for (Map<String, TSNode> capture : classInfo) {
         if (capture.containsKey("classFieldType")) {
           foundFieldType = true;
@@ -1056,7 +1068,7 @@ class ClassDeclarationServiceTest {
           assertTrue(value.equals("\"defaultName\"") || value.equals("new ArrayList<>()"));
         }
       }
-      
+
       assertTrue(foundFieldType);
       assertTrue(foundFieldName);
       assertTrue(foundFieldValue); // At least some fields have values
@@ -1079,7 +1091,7 @@ class ClassDeclarationServiceTest {
           service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       assertEquals(2, fieldDeclarations.size());
-      
+
       // Just verify the fields exist - detailed name extraction works differently in merged service
       assertNotNull(fieldDeclarations.get(0));
       assertNotNull(fieldDeclarations.get(1));
@@ -1102,7 +1114,7 @@ class ClassDeclarationServiceTest {
           service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       assertEquals(2, fieldDeclarations.size());
-      
+
       // Just verify the fields exist - detailed type extraction works differently in merged service
       assertNotNull(fieldDeclarations.get(0));
       assertNotNull(fieldDeclarations.get(1));
@@ -1126,8 +1138,9 @@ class ClassDeclarationServiceTest {
       TSNode classDeclarationNode =
           service.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<Map<String, TSNode>> classInfo = service.getClassDeclarationNodeInfo(tsFile, classDeclarationNode);
-      
+      List<Map<String, TSNode>> classInfo =
+          service.getClassDeclarationNodeInfo(tsFile, classDeclarationNode);
+
       boolean foundFieldType = false;
       for (Map<String, TSNode> capture : classInfo) {
         if (capture.containsKey("classFieldType")) {
@@ -1168,8 +1181,9 @@ class ClassDeclarationServiceTest {
       TSNode classDeclarationNode =
           service.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<Map<String, TSNode>> classInfo = service.getClassDeclarationNodeInfo(tsFile, classDeclarationNode);
-      
+      List<Map<String, TSNode>> classInfo =
+          service.getClassDeclarationNodeInfo(tsFile, classDeclarationNode);
+
       List<String> fieldNames = new ArrayList<>();
       for (Map<String, TSNode> capture : classInfo) {
         if (capture.containsKey("classFieldName")) {
@@ -1177,7 +1191,7 @@ class ClassDeclarationServiceTest {
           fieldNames.add(name);
         }
       }
-      
+
       assertTrue(fieldNames.contains("name"));
       assertTrue(fieldNames.contains("CONSTANT"));
       assertTrue(fieldNames.contains("names"));
@@ -1212,8 +1226,9 @@ class ClassDeclarationServiceTest {
       TSNode classDeclarationNode =
           service.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<Map<String, TSNode>> classInfo = service.getClassDeclarationNodeInfo(tsFile, classDeclarationNode);
-      
+      List<Map<String, TSNode>> classInfo =
+          service.getClassDeclarationNodeInfo(tsFile, classDeclarationNode);
+
       List<String> fieldValues = new ArrayList<>();
       for (Map<String, TSNode> capture : classInfo) {
         if (capture.containsKey("classFieldValue")) {
@@ -1221,7 +1236,7 @@ class ClassDeclarationServiceTest {
           fieldValues.add(value);
         }
       }
-      
+
       assertTrue(fieldValues.contains("\"test\""));
       assertTrue(fieldValues.contains("42"));
       assertTrue(fieldValues.contains("new ArrayList<>()"));
@@ -1474,7 +1489,8 @@ class ClassDeclarationServiceTest {
 
       if (!classes.isEmpty()) {
         TSNode classDecl = classes.get(0).get("classDeclaration");
-        List<Map<String, TSNode>> info = service.getClassDeclarationNodeInfo(malformedFile, classDecl);
+        List<Map<String, TSNode>> info =
+            service.getClassDeclarationNodeInfo(malformedFile, classDecl);
         // For malformed syntax, we may get empty results or partial results - this is expected
         assertTrue(info.isEmpty() || !info.isEmpty());
       }
@@ -1557,4 +1573,3 @@ class ClassDeclarationServiceTest {
     }
   }
 }
-
