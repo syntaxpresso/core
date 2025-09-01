@@ -34,7 +34,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return all field declarations from a simple class")
     void shouldReturnAllFieldDeclarationsFromSimpleClass() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
               private int age;
@@ -42,9 +43,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       assertEquals(3, fieldDeclarations.size());
       assertEquals("field_declaration", fieldDeclarations.get(0).getType());
@@ -55,7 +58,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when class has no fields")
     void shouldReturnEmptyListWhenClassHasNoFields() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               public void method() {
                   System.out.println("No fields here");
@@ -63,9 +67,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       assertTrue(fieldDeclarations.isEmpty());
     }
@@ -73,25 +79,28 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle class with mixed members correctly")
     void shouldHandleClassWithMixedMembersCorrectly() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String field1;
-              
+
               public TestClass() {
               }
-              
+
               private int field2;
-              
+
               public void method() {
               }
-              
+
               protected boolean field3;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       assertEquals(3, fieldDeclarations.size());
     }
@@ -99,15 +108,18 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when tsFile is null")
     void shouldReturnEmptyListWhenTsFileIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(null, classDeclarationNode);
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(null, classDeclarationNode);
 
       assertTrue(fieldDeclarations.isEmpty());
     }
@@ -115,7 +127,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when classDeclarationNode is not class_declaration")
     void shouldReturnEmptyListWhenClassDeclarationNodeIsNotClassDeclaration() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
@@ -127,27 +140,29 @@ class ClassFieldDeclarationServiceTest {
 
       assertTrue(fieldDeclarations.isEmpty());
     }
-
-
   }
 
   @Nested
-  @DisplayName("getClassFieldInfo Tests")
+  @DisplayName(" getClassFieldNodeInfo Tests")
   class GetClassFieldInfoTests {
 
     @Test
     @DisplayName("Should extract field info with type and name")
     void shouldExtractFieldInfoWithTypeAndName() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<Map<String, TSNode>> fieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(0));
+      List<Map<String, TSNode>> fieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(0));
 
       assertEquals(1, fieldInfo.size());
       Map<String, TSNode> firstField = fieldInfo.get(0);
@@ -162,16 +177,20 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should extract field info with type, name and value")
     void shouldExtractFieldInfoWithTypeNameAndValue() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name = "defaultName";
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<Map<String, TSNode>> fieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(0));
+      List<Map<String, TSNode>> fieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(0));
 
       assertEquals(1, fieldInfo.size());
       Map<String, TSNode> firstField = fieldInfo.get(0);
@@ -186,16 +205,20 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle multiple field declarators")
     void shouldHandleMultipleFieldDeclarators() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int x, y;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<Map<String, TSNode>> fieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(0));
+      List<Map<String, TSNode>> fieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(0));
 
       assertEquals(2, fieldInfo.size());
       assertEquals("x", tsFile.getTextFromNode(fieldInfo.get(0).get("name")));
@@ -207,7 +230,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle complex field types")
     void shouldHandleComplexFieldTypes() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<String> names;
               private Map<String, Integer> scoreMap;
@@ -215,12 +239,17 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<Map<String, TSNode>> firstFieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(0));
-      List<Map<String, TSNode>> secondFieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(1));
-      List<Map<String, TSNode>> thirdFieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(2));
+      List<Map<String, TSNode>> firstFieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(0));
+      List<Map<String, TSNode>> secondFieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(1));
+      List<Map<String, TSNode>> thirdFieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(2));
 
       assertEquals("names", tsFile.getTextFromNode(firstFieldInfo.get(0).get("name")));
       assertEquals("scoreMap", tsFile.getTextFromNode(secondFieldInfo.get(0).get("name")));
@@ -233,16 +262,20 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle field with object instantiation")
     void shouldHandleFieldWithObjectInstantiation() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<String> names = new ArrayList<>();
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<Map<String, TSNode>> fieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(0));
+      List<Map<String, TSNode>> fieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(0));
 
       assertEquals(1, fieldInfo.size());
       Map<String, TSNode> firstField = fieldInfo.get(0);
@@ -253,16 +286,20 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when tsFile is null")
     void shouldReturnEmptyListWhenTsFileIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<Map<String, TSNode>> fieldInfo = service.getClassFieldInfo(null, fieldDeclarations.get(0));
+      List<Map<String, TSNode>> fieldInfo =
+          service.getClassFieldNodeInfo(null, fieldDeclarations.get(0));
 
       assertTrue(fieldInfo.isEmpty());
     }
@@ -270,7 +307,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when fieldDeclarationNode is not field_declaration")
     void shouldReturnEmptyListWhenFieldDeclarationNodeIsNotFieldDeclaration() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
@@ -278,7 +316,7 @@ class ClassFieldDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
       TSNode rootNode = tsFile.getTree().getRootNode();
 
-      List<Map<String, TSNode>> fieldInfo = service.getClassFieldInfo(tsFile, rootNode);
+      List<Map<String, TSNode>> fieldInfo = service.getClassFieldNodeInfo(tsFile, rootNode);
 
       assertTrue(fieldInfo.isEmpty());
     }
@@ -286,18 +324,23 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle static fields")
     void shouldHandleStaticFields() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private static final String CONSTANT = "value";
               public static int counter = 0;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<Map<String, TSNode>> firstFieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(0));
-      List<Map<String, TSNode>> secondFieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(1));
+      List<Map<String, TSNode>> firstFieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(0));
+      List<Map<String, TSNode>> secondFieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(1));
 
       assertEquals("CONSTANT", tsFile.getTextFromNode(firstFieldInfo.get(0).get("name")));
       assertEquals("counter", tsFile.getTextFromNode(secondFieldInfo.get(0).get("name")));
@@ -308,18 +351,23 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle array fields")
     void shouldHandleArrayFields() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String[] names;
               private int[][] matrix;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<Map<String, TSNode>> firstFieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(0));
-      List<Map<String, TSNode>> secondFieldInfo = service.getClassFieldInfo(tsFile, fieldDeclarations.get(1));
+      List<Map<String, TSNode>> firstFieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(0));
+      List<Map<String, TSNode>> secondFieldInfo =
+          service.getClassFieldNodeInfo(tsFile, fieldDeclarations.get(1));
 
       assertEquals("names", tsFile.getTextFromNode(firstFieldInfo.get(0).get("name")));
       assertEquals("matrix", tsFile.getTextFromNode(secondFieldInfo.get(0).get("name")));
@@ -335,14 +383,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return type node for simple field")
     void shouldReturnTypeNodeForSimpleField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> typeNode = service.getClassFieldTypeNode(tsFile, fieldDeclarations.get(0));
 
@@ -354,14 +405,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return type node for complex generic field")
     void shouldReturnTypeNodeForComplexGenericField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<Map<String, Integer>> complexField;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> typeNode = service.getClassFieldTypeNode(tsFile, fieldDeclarations.get(0));
 
@@ -372,14 +426,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return type node for array field")
     void shouldReturnTypeNodeForArrayField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int[][] matrix;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> typeNode = service.getClassFieldTypeNode(tsFile, fieldDeclarations.get(0));
 
@@ -390,14 +447,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return type node for primitive field")
     void shouldReturnTypeNodeForPrimitiveField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int count;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> typeNode = service.getClassFieldTypeNode(tsFile, fieldDeclarations.get(0));
 
@@ -409,14 +469,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when tsFile is null")
     void shouldReturnEmptyWhenTsFileIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> typeNode = service.getClassFieldTypeNode(null, fieldDeclarations.get(0));
 
@@ -426,7 +489,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when fieldDeclarationNode is not field_declaration")
     void shouldReturnEmptyWhenFieldDeclarationNodeIsNotFieldDeclaration() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
@@ -447,14 +511,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return name node for simple field")
     void shouldReturnNameNodeForSimpleField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> nameNode = service.getClassFieldNameNode(tsFile, fieldDeclarations.get(0));
 
@@ -466,14 +533,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return name node for field with complex type")
     void shouldReturnNameNodeForFieldWithComplexType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<Map<String, Integer>> complexData;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> nameNode = service.getClassFieldNameNode(tsFile, fieldDeclarations.get(0));
 
@@ -485,14 +555,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return name node for static field")
     void shouldReturnNameNodeForStaticField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private static final String CONSTANT = "value";
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> nameNode = service.getClassFieldNameNode(tsFile, fieldDeclarations.get(0));
 
@@ -504,14 +577,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return name node for array field")
     void shouldReturnNameNodeForArrayField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String[] names;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> nameNode = service.getClassFieldNameNode(tsFile, fieldDeclarations.get(0));
 
@@ -523,14 +599,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when tsFile is null")
     void shouldReturnEmptyWhenTsFileIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> nameNode = service.getClassFieldNameNode(null, fieldDeclarations.get(0));
 
@@ -540,7 +619,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when fieldDeclarationNode is not field_declaration")
     void shouldReturnEmptyWhenFieldDeclarationNodeIsNotFieldDeclaration() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
@@ -555,20 +635,23 @@ class ClassFieldDeclarationServiceTest {
   }
 
   @Nested
-  @DisplayName("getClassFieldValueNode Tests")  
+  @DisplayName("getClassFieldValueNode Tests")
   class GetClassFieldValueNodeTests {
 
     @Test
     @DisplayName("Should return value node for initialized field")
     void shouldReturnValueNodeForInitializedField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name = "test";
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> valueNode = service.getClassFieldValueNode(tsFile, fieldDeclarations.get(0));
 
@@ -580,14 +663,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return value node for numeric initialization")
     void shouldReturnValueNodeForNumericInitialization() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int count = 42;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> valueNode = service.getClassFieldValueNode(tsFile, fieldDeclarations.get(0));
 
@@ -599,14 +685,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return value node for object instantiation")
     void shouldReturnValueNodeForObjectInstantiation() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<String> names = new ArrayList<>();
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> valueNode = service.getClassFieldValueNode(tsFile, fieldDeclarations.get(0));
 
@@ -618,14 +707,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return value node for boolean initialization")
     void shouldReturnValueNodeForBooleanInitialization() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private boolean active = true;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> valueNode = service.getClassFieldValueNode(tsFile, fieldDeclarations.get(0));
 
@@ -637,14 +729,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return value node for null initialization")
     void shouldReturnValueNodeForNullInitialization() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name = null;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> valueNode = service.getClassFieldValueNode(tsFile, fieldDeclarations.get(0));
 
@@ -656,14 +751,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty for uninitialized field")
     void shouldReturnEmptyForUninitializedField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> valueNode = service.getClassFieldValueNode(tsFile, fieldDeclarations.get(0));
 
@@ -673,14 +771,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when tsFile is null")
     void shouldReturnEmptyWhenTsFileIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name = "test";
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> valueNode = service.getClassFieldValueNode(null, fieldDeclarations.get(0));
 
@@ -690,7 +791,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when fieldDeclarationNode is not field_declaration")
     void shouldReturnEmptyWhenFieldDeclarationNodeIsNotFieldDeclaration() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name = "test";
           }
@@ -706,14 +808,17 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return value node for complex expression")
     void shouldReturnValueNodeForComplexExpression() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int result = 10 + 5 * 2;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
       Optional<TSNode> valueNode = service.getClassFieldValueNode(tsFile, fieldDeclarations.get(0));
 
@@ -730,10 +835,11 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field access usages with this keyword")
     void shouldFindFieldAccessUsagesWithThis() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
-              
+
               public void method() {
                   System.out.println(this.name);
                   this.name = "new value";
@@ -741,10 +847,14 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(2, usages.size());
       for (TSNode usage : usages) {
@@ -756,11 +866,12 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field access usages without this keyword")
     void shouldFindFieldAccessUsagesWithoutThis() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
               private TestClass other;
-              
+
               public void method() {
                   System.out.println(other.name);
                   other.name = "value";
@@ -768,13 +879,16 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
-      
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+
       // Get the 'name' field (first field)
       TSNode nameFieldDeclaration = fieldDeclarations.get(0);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, nameFieldDeclaration, classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(tsFile, nameFieldDeclaration, classDeclarationNode);
 
       assertEquals(2, usages.size());
       for (TSNode usage : usages) {
@@ -786,29 +900,34 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find multiple usages of same field")
     void shouldFindMultipleUsagesOfSameField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int count;
-              
+
               public void method1() {
                   this.count = 10;
               }
-              
+
               public void method2() {
                   System.out.println(this.count);
                   this.count += 5;
               }
-              
+
               public int getCount() {
                   return this.count;
               }
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(4, usages.size());
       for (TSNode usage : usages) {
@@ -820,24 +939,28 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty for field with no usages")
     void shouldReturnEmptyForFieldWithNoUsages() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String unusedField;
               private String usedField;
-              
+
               public void method() {
                   System.out.println(this.usedField);
               }
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
-      
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+
       // Get the unused field (first field)
       TSNode unusedFieldDeclaration = fieldDeclarations.get(0);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, unusedFieldDeclaration, classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(tsFile, unusedFieldDeclaration, classDeclarationNode);
 
       assertTrue(usages.isEmpty());
     }
@@ -845,25 +968,30 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field usage in method call arguments")
     void shouldFindFieldUsageInMethodCallArguments() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String message;
-              
+
               public void method() {
                   System.out.println(this.message);
                   processMessage(this.message);
               }
-              
+
               private void processMessage(String msg) {
                   // method implementation
               }
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(2, usages.size());
       for (TSNode usage : usages) {
@@ -874,24 +1002,29 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field usage in return statements")
     void shouldFindFieldUsageInReturnStatements() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private boolean active;
-              
+
               public boolean isActive() {
                   return this.active;
               }
-              
+
               public void setActive(boolean value) {
                   this.active = value;
               }
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(2, usages.size());
       for (TSNode usage : usages) {
@@ -902,10 +1035,11 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field usage in expressions")
     void shouldFindFieldUsageInExpressions() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int value;
-              
+
               public void method() {
                   int result = this.value + 10;
                   boolean check = this.value > 0;
@@ -914,10 +1048,14 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(3, usages.size());
       for (TSNode usage : usages) {
@@ -928,24 +1066,29 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field usage in conditional statements")
     void shouldFindFieldUsageInConditionalStatements() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String status;
-              
+
               public void method() {
                   if (this.status != null) {
                       System.out.println(this.status);
                   }
-                  
+
                   String result = this.status == null ? "empty" : this.status;
               }
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(4, usages.size());
       for (TSNode usage : usages) {
@@ -956,10 +1099,11 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle static fields")
     void shouldHandleStaticFields() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private static String CONSTANT;
-              
+
               public void method() {
                   System.out.println(TestClass.CONSTANT);
                   TestClass.CONSTANT = "new value";
@@ -967,10 +1111,14 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(2, usages.size());
       for (TSNode usage : usages) {
@@ -981,10 +1129,11 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle array fields")
     void shouldHandleArrayFields() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int[] numbers;
-              
+
               public void method() {
                   this.numbers[0] = 5;
                   int length = this.numbers.length;
@@ -993,10 +1142,14 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(3, usages.size());
       for (TSNode usage : usages) {
@@ -1007,10 +1160,11 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle generic type fields")
     void shouldHandleGenericTypeFields() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<String> items;
-              
+
               public void method() {
                   this.items.add("item");
                   int size = this.items.size();
@@ -1019,10 +1173,14 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(3, usages.size());
       for (TSNode usage : usages) {
@@ -1033,12 +1191,13 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should only find requested field usages when multiple fields exist")
     void shouldOnlyFindRequestedFieldUsagesWhenMultipleFieldsExist() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
               private String title;
               private String description;
-              
+
               public void method() {
                   this.name = "John";
                   this.title = "Mr.";
@@ -1048,14 +1207,20 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
-      
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+
       // Get usages for 'name' field (first field)
-      List<TSNode> nameUsages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
-      
+      List<TSNode> nameUsages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
+
       // Get usages for 'title' field (second field)
-      List<TSNode> titleUsages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(1), classDeclarationNode);
+      List<TSNode> titleUsages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(1), classDeclarationNode);
 
       assertEquals(2, nameUsages.size());
       for (TSNode usage : nameUsages) {
@@ -1071,12 +1236,13 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle fields with similar names precisely")
     void shouldHandleFieldsWithSimilarNamesPrecisely() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String user;
               private String username;
               private String userInfo;
-              
+
               public void method() {
                   this.user = "John";
                   this.username = "john123";
@@ -1086,11 +1252,15 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
-      
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+
       // Get usages for 'user' field (first field)
-      List<TSNode> userUsages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> userUsages =
+          service.getAllClassFieldUsageNodes(
+              tsFile, fieldDeclarations.get(0), classDeclarationNode);
 
       assertEquals(2, userUsages.size());
       for (TSNode usage : userUsages) {
@@ -1101,16 +1271,20 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when tsFile is null")
     void shouldReturnEmptyWhenTsFileIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(null, fieldDeclarations.get(0), classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(null, fieldDeclarations.get(0), classDeclarationNode);
 
       assertTrue(usages.isEmpty());
     }
@@ -1118,17 +1292,21 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when classDeclarationNode is not class_declaration")
     void shouldReturnEmptyWhenClassDeclarationNodeIsNotClassDeclaration() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
-      List<TSNode> fieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      List<TSNode> fieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, classDeclarationNode);
       TSNode rootNode = tsFile.getTree().getRootNode();
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), rootNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(tsFile, fieldDeclarations.get(0), rootNode);
 
       assertTrue(usages.isEmpty());
     }
@@ -1136,16 +1314,19 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when fieldDeclarationNode is not field_declaration")
     void shouldReturnEmptyWhenFieldDeclarationNodeIsNotFieldDeclaration() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
       TSNode rootNode = tsFile.getTree().getRootNode();
 
-      List<TSNode> usages = service.getAllClassFieldUsageNodes(tsFile, rootNode, classDeclarationNode);
+      List<TSNode> usages =
+          service.getAllClassFieldUsageNodes(tsFile, rootNode, classDeclarationNode);
 
       assertTrue(usages.isEmpty());
     }
@@ -1153,18 +1334,19 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field usages within class scope including nested classes")
     void shouldFindFieldUsagesWithinClassScopeIncludingNestedClasses() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class OuterClass {
               private String message;
-              
+
               public void outerMethod() {
                   this.message = "outer";
                   System.out.println(this.message);
               }
-              
+
               public class InnerClass {
                   private String message;
-                  
+
                   public void innerMethod() {
                       this.message = "inner";
                       System.out.println(this.message);
@@ -1174,15 +1356,18 @@ class ClassFieldDeclarationServiceTest {
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
       List<Map<String, TSNode>> allClasses = classService.getAllClassDeclarations(tsFile);
-      
+
       // Get outer class
       TSNode outerClassNode = allClasses.get(0).get("classDeclaration");
-      List<TSNode> outerFieldDeclarations = service.getAllClassFieldDeclarationNodes(tsFile, outerClassNode);
-      
+      List<TSNode> outerFieldDeclarations =
+          service.getAllClassFieldDeclarationNodes(tsFile, outerClassNode);
+
       // Get usages within outer class scope (includes nested classes)
-      // Note: This is a current limitation - the method finds all usages of fields with the same name
+      // Note: This is a current limitation - the method finds all usages of fields with the same
+      // name
       // within the class scope, including from nested classes with similarly named fields
-      List<TSNode> outerUsages = service.getAllClassFieldUsageNodes(tsFile, outerFieldDeclarations.get(0), outerClassNode);
+      List<TSNode> outerUsages =
+          service.getAllClassFieldUsageNodes(tsFile, outerFieldDeclarations.get(0), outerClassNode);
 
       assertEquals(4, outerUsages.size()); // 2 from outer + 2 from inner class
       for (TSNode usage : outerUsages) {
@@ -1198,7 +1383,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field by exact name match")
     void shouldFindFieldByExactNameMatch() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
               private int age;
@@ -1206,9 +1392,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, "name", classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(tsFile, "name", classDeclarationNode);
 
       assertTrue(result.isPresent());
       assertEquals("field_declaration", result.get().getType());
@@ -1219,7 +1407,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field in class with multiple fields")
     void shouldFindFieldInClassWithMultipleFields() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String firstName;
               private String lastName;
@@ -1228,9 +1417,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, "count", classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(tsFile, "count", classDeclarationNode);
 
       assertTrue(result.isPresent());
       assertEquals("field_declaration", result.get().getType());
@@ -1241,16 +1432,19 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field with generic type")
     void shouldFindFieldWithGenericType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<String> names;
               private Map<String, Integer> scoreMap;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, "scoreMap", classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(tsFile, "scoreMap", classDeclarationNode);
 
       assertTrue(result.isPresent());
       String fieldText = tsFile.getTextFromNode(result.get());
@@ -1260,7 +1454,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field with initialization")
     void shouldFindFieldWithInitialization() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String defaultName = "John";
               private int count = 0;
@@ -1268,9 +1463,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, "defaultName", classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(tsFile, "defaultName", classDeclarationNode);
 
       assertTrue(result.isPresent());
       String fieldText = tsFile.getTextFromNode(result.get());
@@ -1280,7 +1477,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find static field")
     void shouldFindStaticField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private static final String CONSTANT = "value";
               private static int counter = 0;
@@ -1288,9 +1486,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, "CONSTANT", classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(tsFile, "CONSTANT", classDeclarationNode);
 
       assertTrue(result.isPresent());
       String fieldText = tsFile.getTextFromNode(result.get());
@@ -1300,7 +1500,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find array field")
     void shouldFindArrayField() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int[] numbers;
               private String[][] matrix;
@@ -1308,9 +1509,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, "matrix", classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(tsFile, "matrix", classDeclarationNode);
 
       assertTrue(result.isPresent());
       String fieldText = tsFile.getTextFromNode(result.get());
@@ -1320,17 +1523,21 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find field with multiple declarators")
     void shouldFindFieldWithMultipleDeclarators() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int x, y, z;
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> resultY = service.findClassFieldNodeByName(tsFile, "y", classDeclarationNode);
-      Optional<TSNode> resultZ = service.findClassFieldNodeByName(tsFile, "z", classDeclarationNode);
+      Optional<TSNode> resultY =
+          service.findClassFieldNodeByName(tsFile, "y", classDeclarationNode);
+      Optional<TSNode> resultZ =
+          service.findClassFieldNodeByName(tsFile, "z", classDeclarationNode);
 
       assertTrue(resultY.isPresent());
       assertTrue(resultZ.isPresent());
@@ -1341,16 +1548,19 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when field not found")
     void shouldReturnEmptyWhenFieldNotFound() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
               private int age;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, "nonExistentField", classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(tsFile, "nonExistentField", classDeclarationNode);
 
       assertTrue(result.isEmpty());
     }
@@ -1358,7 +1568,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when class has no fields")
     void shouldReturnEmptyWhenClassHasNoFields() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               public void method() {
                   System.out.println("No fields");
@@ -1366,9 +1577,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, "anyField", classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(tsFile, "anyField", classDeclarationNode);
 
       assertTrue(result.isEmpty());
     }
@@ -1376,7 +1589,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should be case sensitive")
     void shouldBeCaseSensitive() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
               private String Name;
@@ -1384,11 +1598,15 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> lowercase = service.findClassFieldNodeByName(tsFile, "name", classDeclarationNode);
-      Optional<TSNode> capitalized = service.findClassFieldNodeByName(tsFile, "Name", classDeclarationNode);
-      Optional<TSNode> uppercase = service.findClassFieldNodeByName(tsFile, "NAME", classDeclarationNode);
+      Optional<TSNode> lowercase =
+          service.findClassFieldNodeByName(tsFile, "name", classDeclarationNode);
+      Optional<TSNode> capitalized =
+          service.findClassFieldNodeByName(tsFile, "Name", classDeclarationNode);
+      Optional<TSNode> uppercase =
+          service.findClassFieldNodeByName(tsFile, "NAME", classDeclarationNode);
 
       assertTrue(lowercase.isPresent());
       assertTrue(capitalized.isPresent());
@@ -1398,15 +1616,18 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when tsFile is null")
     void shouldReturnEmptyWhenTsFileIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(null, "name", classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(null, "name", classDeclarationNode);
 
       assertTrue(result.isEmpty());
     }
@@ -1414,15 +1635,18 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when fieldDeclaratorName is null")
     void shouldReturnEmptyWhenFieldDeclaratorNameIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, null, classDeclarationNode);
+      Optional<TSNode> result =
+          service.findClassFieldNodeByName(tsFile, null, classDeclarationNode);
 
       assertTrue(result.isEmpty());
     }
@@ -1430,13 +1654,15 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when fieldDeclaratorName is empty")
     void shouldReturnEmptyWhenFieldDeclaratorNameIsEmpty() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
       Optional<TSNode> result = service.findClassFieldNodeByName(tsFile, "", classDeclarationNode);
 
@@ -1446,7 +1672,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty when classDeclarationNode is not class_declaration")
     void shouldReturnEmptyWhenClassDeclarationNodeIsNotClassDeclaration() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
@@ -1462,7 +1689,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle fields with modifiers")
     void shouldHandleFieldsWithModifiers() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               public String publicField;
               protected String protectedField;
@@ -1475,11 +1703,15 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      Optional<TSNode> publicResult = service.findClassFieldNodeByName(tsFile, "publicField", classDeclarationNode);
-      Optional<TSNode> finalResult = service.findClassFieldNodeByName(tsFile, "finalField", classDeclarationNode);
-      Optional<TSNode> volatileResult = service.findClassFieldNodeByName(tsFile, "volatileField", classDeclarationNode);
+      Optional<TSNode> publicResult =
+          service.findClassFieldNodeByName(tsFile, "publicField", classDeclarationNode);
+      Optional<TSNode> finalResult =
+          service.findClassFieldNodeByName(tsFile, "finalField", classDeclarationNode);
+      Optional<TSNode> volatileResult =
+          service.findClassFieldNodeByName(tsFile, "volatileField", classDeclarationNode);
 
       assertTrue(publicResult.isPresent());
       assertTrue(finalResult.isPresent());
@@ -1502,7 +1734,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find fields by primitive type")
     void shouldFindFieldsByPrimitiveType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int age;
               private String name;
@@ -1512,9 +1745,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> intFields = service.findClassFieldNodesByType(tsFile, "int", classDeclarationNode);
+      List<TSNode> intFields =
+          service.findClassFieldNodesByType(tsFile, "int", classDeclarationNode);
 
       assertEquals(3, intFields.size());
       for (TSNode field : intFields) {
@@ -1527,7 +1762,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find fields by reference type")
     void shouldFindFieldsByReferenceType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
               private int age;
@@ -1537,9 +1773,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> stringFields = service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
+      List<TSNode> stringFields =
+          service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
 
       assertEquals(3, stringFields.size());
       for (TSNode field : stringFields) {
@@ -1552,7 +1790,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find fields by generic type")
     void shouldFindFieldsByGenericType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<String> names;
               private Map<String, Integer> scores;
@@ -1561,9 +1800,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> listFields = service.findClassFieldNodesByType(tsFile, "List<String>", classDeclarationNode);
+      List<TSNode> listFields =
+          service.findClassFieldNodesByType(tsFile, "List<String>", classDeclarationNode);
 
       assertEquals(2, listFields.size());
       for (TSNode field : listFields) {
@@ -1576,7 +1817,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find fields by array type")
     void shouldFindFieldsByArrayType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int[] numbers;
               private String name;
@@ -1586,9 +1828,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> intArrayFields = service.findClassFieldNodesByType(tsFile, "int[]", classDeclarationNode);
+      List<TSNode> intArrayFields =
+          service.findClassFieldNodesByType(tsFile, "int[]", classDeclarationNode);
 
       assertEquals(2, intArrayFields.size());
       for (TSNode field : intArrayFields) {
@@ -1601,7 +1845,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find fields by complex generic type")
     void shouldFindFieldsByComplexGenericType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private Map<String, List<Integer>> complexMap;
               private List<String> simpleList;
@@ -1610,9 +1855,12 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> complexFields = service.findClassFieldNodesByType(tsFile, "Map<String, List<Integer>>", classDeclarationNode);
+      List<TSNode> complexFields =
+          service.findClassFieldNodesByType(
+              tsFile, "Map<String, List<Integer>>", classDeclarationNode);
 
       assertEquals(2, complexFields.size());
       for (TSNode field : complexFields) {
@@ -1625,7 +1873,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find fields by custom class type")
     void shouldFindFieldsByCustomClassType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private User user;
               private String name;
@@ -1635,9 +1884,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> userFields = service.findClassFieldNodesByType(tsFile, "User", classDeclarationNode);
+      List<TSNode> userFields =
+          service.findClassFieldNodesByType(tsFile, "User", classDeclarationNode);
 
       assertEquals(3, userFields.size());
       for (TSNode field : userFields) {
@@ -1650,7 +1901,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when no fields match type")
     void shouldReturnEmptyListWhenNoFieldsMatchType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
               private int age;
@@ -1658,9 +1910,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> doubleFields = service.findClassFieldNodesByType(tsFile, "double", classDeclarationNode);
+      List<TSNode> doubleFields =
+          service.findClassFieldNodesByType(tsFile, "double", classDeclarationNode);
 
       assertTrue(doubleFields.isEmpty());
     }
@@ -1668,7 +1922,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when class has no fields")
     void shouldReturnEmptyListWhenClassHasNoFields() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               public void method() {
                   System.out.println("No fields");
@@ -1676,9 +1931,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> stringFields = service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
+      List<TSNode> stringFields =
+          service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
 
       assertTrue(stringFields.isEmpty());
     }
@@ -1686,7 +1943,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should be case sensitive for type matching")
     void shouldBeCaseSensitiveForTypeMatching() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private string lowercase;
               private String uppercase;
@@ -1694,10 +1952,13 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> stringFields = service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
-      List<TSNode> lowercaseFields = service.findClassFieldNodesByType(tsFile, "string", classDeclarationNode);
+      List<TSNode> stringFields =
+          service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
+      List<TSNode> lowercaseFields =
+          service.findClassFieldNodesByType(tsFile, "string", classDeclarationNode);
 
       assertEquals(1, stringFields.size());
       assertEquals(1, lowercaseFields.size());
@@ -1710,7 +1971,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle fields with static modifier")
     void shouldHandleFieldsWithStaticModifier() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private static String staticField;
               private String instanceField;
@@ -1719,9 +1981,11 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> stringFields = service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
+      List<TSNode> stringFields =
+          service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
 
       assertEquals(4, stringFields.size());
     }
@@ -1729,7 +1993,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle fields with multiple declarators of same type")
     void shouldHandleFieldsWithMultipleDeclaratorsOfSameType() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private int x, y, z;
               private String name, title;
@@ -1737,10 +2002,13 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> intFields = service.findClassFieldNodesByType(tsFile, "int", classDeclarationNode);
-      List<TSNode> stringFields = service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
+      List<TSNode> intFields =
+          service.findClassFieldNodesByType(tsFile, "int", classDeclarationNode);
+      List<TSNode> stringFields =
+          service.findClassFieldNodesByType(tsFile, "String", classDeclarationNode);
 
       assertEquals(1, intFields.size()); // One field declaration with multiple declarators
       assertEquals(1, stringFields.size()); // One field declaration with multiple declarators
@@ -1753,13 +2021,15 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when tsFile is null")
     void shouldReturnEmptyListWhenTsFileIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
       List<TSNode> result = service.findClassFieldNodesByType(null, "String", classDeclarationNode);
 
@@ -1769,13 +2039,15 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when fieldDeclaratorType is null")
     void shouldReturnEmptyListWhenFieldDeclaratorTypeIsNull() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
       List<TSNode> result = service.findClassFieldNodesByType(tsFile, null, classDeclarationNode);
 
@@ -1785,13 +2057,15 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when fieldDeclaratorType is empty")
     void shouldReturnEmptyListWhenFieldDeclaratorTypeIsEmpty() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
       List<TSNode> result = service.findClassFieldNodesByType(tsFile, "", classDeclarationNode);
 
@@ -1801,7 +2075,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should return empty list when classDeclarationNode is not class_declaration")
     void shouldReturnEmptyListWhenClassDeclarationNodeIsNotClassDeclaration() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private String name;
           }
@@ -1817,7 +2092,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should find fields with wildcard generic types")
     void shouldFindFieldsWithWildcardGenericTypes() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<?> wildcardList;
               private Map<?, String> wildcardKeyMap;
@@ -1826,10 +2102,13 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> wildcardFields = service.findClassFieldNodesByType(tsFile, "List<?>", classDeclarationNode);
-      List<TSNode> boundedFields = service.findClassFieldNodesByType(tsFile, "List<? extends Number>", classDeclarationNode);
+      List<TSNode> wildcardFields =
+          service.findClassFieldNodesByType(tsFile, "List<?>", classDeclarationNode);
+      List<TSNode> boundedFields =
+          service.findClassFieldNodesByType(tsFile, "List<? extends Number>", classDeclarationNode);
 
       assertEquals(1, wildcardFields.size());
       assertEquals(1, boundedFields.size());
@@ -1842,7 +2121,8 @@ class ClassFieldDeclarationServiceTest {
     @Test
     @DisplayName("Should handle nested generic types")
     void shouldHandleNestedGenericTypes() {
-      String sourceCode = """
+      String sourceCode =
+          """
           public class TestClass {
               private List<Map<String, Integer>> nestedGeneric;
               private Map<String, List<Integer>> reverseNested;
@@ -1851,9 +2131,12 @@ class ClassFieldDeclarationServiceTest {
           }
           """;
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      TSNode classDeclarationNode = classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
+      TSNode classDeclarationNode =
+          classService.getAllClassDeclarations(tsFile).get(0).get("classDeclaration");
 
-      List<TSNode> nestedFields = service.findClassFieldNodesByType(tsFile, "List<Map<String, Integer>>", classDeclarationNode);
+      List<TSNode> nestedFields =
+          service.findClassFieldNodesByType(
+              tsFile, "List<Map<String, Integer>>", classDeclarationNode);
 
       assertEquals(2, nestedFields.size());
       for (TSNode field : nestedFields) {
@@ -1863,3 +2146,4 @@ class ClassFieldDeclarationServiceTest {
     }
   }
 }
+

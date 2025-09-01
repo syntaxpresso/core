@@ -145,7 +145,7 @@ public class ClassFieldDeclarationService {
    *
    * <pre>
    * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
-   * List&lt;Map&lt;String, TSNode&gt;&gt; fieldInfo = service.getClassFieldInfo(tsFile, fieldNodes.get(0));
+   * List&lt;Map&lt;String, TSNode&gt;&gt; fieldInfo = service.getClassFieldNodeInfo(tsFile, fieldNodes.get(0));
    * for (Map&lt;String, TSNode&gt; info : fieldInfo) {
    *   TSNode typeNode = info.get("type");        // The field type node
    *   TSNode nameNode = info.get("name");        // The field name identifier node
@@ -166,7 +166,7 @@ public class ClassFieldDeclarationService {
    *     contains "type", "name", and optionally "value" keys. Returns an empty list if the file is
    *     null, tree is null, or the node is not a field declaration.
    */
-  public List<Map<String, TSNode>> getClassFieldInfo(TSFile tsFile, TSNode fieldDeclarationNode) {
+  public List<Map<String, TSNode>> getClassFieldNodeInfo(TSFile tsFile, TSNode fieldDeclarationNode) {
     if (tsFile == null
         || tsFile.getTree() == null
         || !fieldDeclarationNode.getType().equals("field_declaration")) {
@@ -218,7 +218,7 @@ public class ClassFieldDeclarationService {
       return Optional.empty();
     }
     List<Map<String, TSNode>> fieldDeclarationInfo =
-        this.getClassFieldInfo(tsFile, fieldDeclarationNode);
+        this.getClassFieldNodeInfo(tsFile, fieldDeclarationNode);
     for (Map<String, TSNode> map : fieldDeclarationInfo) {
       TSNode typeNode = map.get("type");
       if (typeNode != null) {
@@ -233,7 +233,7 @@ public class ClassFieldDeclarationService {
    *
    * <p>This method extracts the first available field name identifier from the field declaration.
    * For fields with multiple declarators (e.g., {@code int x, y;}), this returns only the first
-   * name node. Use {@link #getClassFieldInfo(TSFile, TSNode)} to get all field names.
+   * name node. Use {@link #getClassFieldNodeInfo(TSFile, TSNode)} to get all field names.
    *
    * <p>Usage example:
    *
@@ -258,7 +258,7 @@ public class ClassFieldDeclarationService {
       return Optional.empty();
     }
     List<Map<String, TSNode>> fieldDeclarationInfo =
-        this.getClassFieldInfo(tsFile, fieldDeclarationNode);
+        this.getClassFieldNodeInfo(tsFile, fieldDeclarationNode);
     for (Map<String, TSNode> map : fieldDeclarationInfo) {
       TSNode nameNode = map.get("name");
       if (nameNode != null) {
@@ -273,7 +273,7 @@ public class ClassFieldDeclarationService {
    *
    * <p>This method extracts the first available initialization value from the field declaration.
    * For fields with multiple declarators, this returns only the first value node (if any). Use
-   * {@link #getClassFieldInfo(TSFile, TSNode)} to get all field values.
+   * {@link #getClassFieldNodeInfo(TSFile, TSNode)} to get all field values.
    *
    * <p>Usage example:
    *
@@ -301,7 +301,7 @@ public class ClassFieldDeclarationService {
       return Optional.empty();
     }
     List<Map<String, TSNode>> fieldDeclarationInfo =
-        this.getClassFieldInfo(tsFile, fieldDeclarationNode);
+        this.getClassFieldNodeInfo(tsFile, fieldDeclarationNode);
     for (Map<String, TSNode> map : fieldDeclarationInfo) {
       TSNode valueNode = map.get("value");
       if (valueNode != null) {
