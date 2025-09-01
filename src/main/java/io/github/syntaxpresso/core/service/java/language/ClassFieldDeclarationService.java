@@ -43,8 +43,8 @@ public class ClassFieldDeclarationService {
   /**
    * Finds a field declaration node within a class by its name.
    *
-   * <p>This method searches for a field declaration that matches the specified name within the given
-   * class declaration scope. The search is case-sensitive and exact.
+   * <p>This method searches for a field declaration that matches the specified name within the
+   * given class declaration scope. The search is case-sensitive and exact.
    *
    * <p>Usage example:
    *
@@ -57,15 +57,14 @@ public class ClassFieldDeclarationService {
    * }
    * </pre>
    *
-   * Query captures:
-   * - name: The field name identifier
-   * - fieldDeclaration: The entire field declaration node
+   * Query captures: - name: The field name identifier - fieldDeclaration: The entire field
+   * declaration node
    *
    * @param tsFile The {@link TSFile} containing the source code.
    * @param fieldDeclaratorName The name of the field to find (case-sensitive).
    * @param classDeclarationNode The class declaration {@link TSNode} to search within.
-   * @return An {@link Optional} containing the field declaration node if found, or empty if the field
-   *     is not found, the file/tree is null, or the node is not a class declaration.
+   * @return An {@link Optional} containing the field declaration node if found, or empty if the
+   *     field is not found, the file/tree is null, or the node is not a class declaration.
    */
   public Optional<TSNode> findClassFieldNodeByName(
       TSFile tsFile, String fieldDeclaratorName, TSNode classDeclarationNode) {
@@ -105,15 +104,15 @@ public class ClassFieldDeclarationService {
    * }
    * </pre>
    *
-   * Query captures:
-   * - type: The field type node
-   * - fieldDeclaration: The entire field declaration node
+   * Query captures: - type: The field type node - fieldDeclaration: The entire field declaration
+   * node
    *
    * @param tsFile The {@link TSFile} containing the source code.
    * @param fieldDeclaratorType The type to search for (case-sensitive).
    * @param classDeclarationNode The class declaration {@link TSNode} to search within.
-   * @return A list of field declaration nodes that have the specified type. Returns an empty list if
-   *     no matching fields are found, the file/tree is null, or the node is not a class declaration.
+   * @return A list of field declaration nodes that have the specified type. Returns an empty list
+   *     if no matching fields are found, the file/tree is null, or the node is not a class
+   *     declaration.
    */
   public List<TSNode> findClassFieldNodesByType(
       TSFile tsFile, String fieldDeclaratorType, TSNode classDeclarationNode) {
