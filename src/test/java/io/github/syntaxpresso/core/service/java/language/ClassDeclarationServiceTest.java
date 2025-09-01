@@ -99,19 +99,6 @@ class ClassDeclarationServiceTest {
       }
       """;
 
-  private static final String GENERIC_CLASSES_CODE =
-      """
-      package io.github.test;
-
-      public class GenericClass<T> extends BaseGeneric<T> {
-          private T data;
-      }
-
-      class BoundedGeneric<T extends Number> extends BaseNumber {
-          private T number;
-      }
-      """;
-
   private static final String ANNOTATED_CLASS_CODE =
       """
       package io.github.test;
