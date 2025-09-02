@@ -65,18 +65,10 @@ public class ClassDeclarationService {
                         (type_identifier) %s)
                       (type_identifier) %s
                     ])? %s
-                 body: (class_body
-                  (constructor_declaration)? %s
-                  (field_declaration
-                    (modifiers
-                      [
-                        (annotation)
-                        (marker_annotation)
-                      ]? %s
-                    ))? %s
-                  (method_declaration)? %s
-                 ) %s
-               ) %s
+                  body: (class_body
+                   (constructor_declaration)? %s
+                  ) %s
+                ) %s
             """,
             ClassCapture.CLASS_ANNOTATION.getCaptureWithAt(),
             ClassCapture.MODIFIERS.getCaptureWithAt(),
@@ -86,9 +78,6 @@ public class ClassDeclarationService {
             ClassCapture.SUPERCLASS_NAME.getCaptureWithAt(),
             ClassCapture.SUPERCLASS.getCaptureWithAt(),
             ClassCapture.CONSTRUCTOR_DECLARATION.getCaptureWithAt(),
-            ClassCapture.FIELD_ANNOTATION.getCaptureWithAt(),
-            ClassCapture.FIELD_DECLARATION.getCaptureWithAt(),
-            ClassCapture.METHOD_DECLARATION.getCaptureWithAt(),
             ClassCapture.CLASS_BODY.getCaptureWithAt(),
             ClassCapture.CLASS.getCaptureWithAt());
     return tsFile

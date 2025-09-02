@@ -14,10 +14,7 @@ public enum ClassCapture {
   SUPERCLASS("superclass"),
   SUPERCLASS_NAME("superclassName"),
   CLASS_BODY("classBody"),
-  CONSTRUCTOR_DECLARATION("constructorDeclaration"),
-  FIELD_DECLARATION("fieldDeclaration"),
-  FIELD_ANNOTATION("fieldAnnotation"),
-  METHOD_DECLARATION("methodDeclaration");
+  CONSTRUCTOR_DECLARATION("constructorDeclaration");
 
   private final String captureName;
 

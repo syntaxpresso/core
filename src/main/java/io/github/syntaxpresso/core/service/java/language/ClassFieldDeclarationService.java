@@ -2,30 +2,24 @@ package io.github.syntaxpresso.core.service.java.language;
 
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
-import io.github.syntaxpresso.core.service.java.language.extra.ClassCapture;
 import io.github.syntaxpresso.core.service.java.language.extra.ClassFieldCapture;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
-@RequiredArgsConstructor
-@Getter
 public class ClassFieldDeclarationService {
-
-  private final ClassDeclarationService classDeclarationService;
 
   /**
    * Extracts field declaration information from a field node using tree-sitter queries.
    *
-   * <p>This method analyzes a field declaration node to extract information about its type,
-   * name, and optional initialization value using tree-sitter queries.
+   * <p>This method analyzes a field declaration node to extract information about its type, name,
+   * and optional initialization value using tree-sitter queries.
    *
    * <p>Usage example:
+   *
    * <pre>
    * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
    * List&lt;Map&lt;String, TSNode&gt;&gt; fieldInfo = service.getClassFieldNodeInfo(tsFile, fieldNodes.get(0));
@@ -35,11 +29,8 @@ public class ClassFieldDeclarationService {
    * }
    * </pre>
    *
-   * Query captures:
-   * - fieldType: The type node of the field
-   * - fieldName: The name identifier of the field
-   * - fieldValue: The initialization value if present
-   * - field: The entire field declaration
+   * Query captures: - fieldType: The type node of the field - fieldName: The name identifier of the
+   * field - fieldValue: The initialization value if present - field: The entire field declaration
    *
    * @param tsFile The {@link TSFile} containing the source code
    * @param fieldDeclarationNode The field declaration {@link TSNode} to analyze
@@ -80,8 +71,7 @@ public class ClassFieldDeclarationService {
         || !fieldDeclarationNode.getType().equals("field_declaration")) {
       return Optional.empty();
     }
-    List<Map<String, TSNode>> fieldInfo =
-        this.getClassFieldNodeInfo(tsFile, fieldDeclarationNode);
+    List<Map<String, TSNode>> fieldInfo = this.getClassFieldNodeInfo(tsFile, fieldDeclarationNode);
     for (Map<String, TSNode> map : fieldInfo) {
       TSNode node = map.get(capture.getCaptureName());
       if (node != null) {
@@ -93,8 +83,7 @@ public class ClassFieldDeclarationService {
 
   protected List<TSNode> getClassFieldDeclarationNodesFromCaptureName(
       TSFile tsFile, TSNode fieldDeclarationNode, ClassFieldCapture capture) {
-    List<Map<String, TSNode>> fieldInfo =
-        this.getClassFieldNodeInfo(tsFile, fieldDeclarationNode);
+    List<Map<String, TSNode>> fieldInfo = this.getClassFieldNodeInfo(tsFile, fieldDeclarationNode);
     List<TSNode> foundNodes = new ArrayList<>();
     for (Map<String, TSNode> map : fieldInfo) {
       TSNode node = map.get(capture.getCaptureName());
@@ -108,10 +97,11 @@ public class ClassFieldDeclarationService {
   /**
    * Retrieves all field declaration nodes within a class declaration.
    *
-   * <p>This method finds all field declarations within the specified class scope,
-   * regardless of their visibility modifiers or types.
+   * <p>This method finds all field declarations within the specified class scope, regardless of
+   * their visibility modifiers or types.
    *
    * <p>Usage example:
+   *
    * <pre>
    * ClassDeclarationService classService = new ClassDeclarationService();
    * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
@@ -126,17 +116,30 @@ public class ClassFieldDeclarationService {
    * @return A list of all field declaration nodes in the class
    */
   public List<TSNode> getAllClassFieldDeclarationNodes(TSFile tsFile, TSNode classDeclarationNode) {
-    return this.classDeclarationService.getClassDeclarationNodesFromCaptureName(
-        tsFile, classDeclarationNode, ClassCapture.FIELD_DECLARATION);
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || !classDeclarationNode.getType().equals("class_declaration")) {
+      return Collections.emptyList();
+    }
+    String queryString =
+        """
+          (class_declaration
+            body: (class_body
+              (field_declaration) @fieldDeclaration
+            )
+          )
+        """;
+    return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
   }
 
   /**
    * Retrieves all field annotation nodes within a class declaration.
    *
-   * <p>This method finds all annotations attached to field declarations within the specified class scope.
-   * This includes both single annotations and annotation arrays.
+   * <p>This method finds all annotations attached to field declarations within the specified class
+   * scope. This includes both single annotations and annotation arrays.
    *
    * <p>Usage example:
+   *
    * <pre>
    * ClassDeclarationService classService = new ClassDeclarationService();
    * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
@@ -151,17 +154,37 @@ public class ClassFieldDeclarationService {
    * @return A list of all field annotation nodes in the class
    */
   public List<TSNode> getAllClassFieldAnnotationNodes(TSFile tsFile, TSNode classDeclarationNode) {
-    return this.classDeclarationService.getClassDeclarationNodesFromCaptureName(
-        tsFile, classDeclarationNode, ClassCapture.FIELD_ANNOTATION);
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || !classDeclarationNode.getType().equals("class_declaration")) {
+      return Collections.emptyList();
+    }
+    String queryString =
+        """
+        (class_declaration
+          body: (class_body
+            (field_declaration
+              (modifiers
+                [
+                  (annotation)
+                  (marker_annotation)
+                ]? @fieldAnnotation
+              )?
+            )
+          )
+        )
+        """;
+    return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
   }
 
   /**
    * Retrieves the type node of a field declaration.
    *
-   * <p>This method extracts the type node from a field declaration, which represents
-   * both primitive types and reference types.
+   * <p>This method extracts the type node from a field declaration, which represents both primitive
+   * types and reference types.
    *
    * <p>Usage example:
+   *
    * <pre>
    * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
    * Optional&lt;TSNode&gt; typeNode = service.getClassFieldTypeNode(tsFile, fieldNodes.get(0));
@@ -182,10 +205,11 @@ public class ClassFieldDeclarationService {
   /**
    * Retrieves the name node of a field declaration.
    *
-   * <p>This method extracts the identifier node that represents the field's name
-   * from a field declaration.
+   * <p>This method extracts the identifier node that represents the field's name from a field
+   * declaration.
    *
    * <p>Usage example:
+   *
    * <pre>
    * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
    * Optional&lt;TSNode&gt; nameNode = service.getClassFieldNameNode(tsFile, fieldNodes.get(0));
@@ -206,10 +230,11 @@ public class ClassFieldDeclarationService {
   /**
    * Retrieves the initialization value node of a field declaration.
    *
-   * <p>This method extracts the node representing the initialization value of a field,
-   * if one exists. The value can be any valid Java expression.
+   * <p>This method extracts the node representing the initialization value of a field, if one
+   * exists. The value can be any valid Java expression.
    *
    * <p>Usage example:
+   *
    * <pre>
    * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
    * Optional&lt;TSNode&gt; valueNode = service.getClassFieldValueNode(tsFile, fieldNodes.get(0));
@@ -377,4 +402,3 @@ public class ClassFieldDeclarationService {
     return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
   }
 }
-

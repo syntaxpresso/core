@@ -171,8 +171,8 @@ class ClassFieldDeclarationServiceTest {
 
   @BeforeEach
   void setUp() {
+    service = new ClassFieldDeclarationService();
     classDeclarationService = new ClassDeclarationService();
-    service = new ClassFieldDeclarationService(classDeclarationService);
 
     simpleClassFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_CLASS_CODE);
     initializedFieldsFile = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_INITIALIZED_FIELDS_CODE);
@@ -1019,4 +1019,3 @@ class ClassFieldDeclarationServiceTest {
     }
   }
 }
-

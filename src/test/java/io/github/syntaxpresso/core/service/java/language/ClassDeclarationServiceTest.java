@@ -481,19 +481,6 @@ class ClassDeclarationServiceTest {
     }
 
     @Test
-    @DisplayName("should return method declaration when present")
-    void shouldReturnMethodDeclarationWhenPresent() {
-      List<Map<String, TSNode>> classes = service.getAllClassDeclarations(singleClassFile);
-      TSNode classDecl = classes.get(0).get("classDeclaration");
-
-      Optional<TSNode> result =
-          service.getClassDeclarationNodeByCaptureName(
-              singleClassFile, classDecl, ClassCapture.METHOD_DECLARATION);
-
-      assertTrue(result.isPresent());
-    }
-
-    @Test
     @DisplayName("should return empty for null file")
     void shouldReturnEmptyForNullFile() {
       Optional<TSNode> result =
