@@ -8,7 +8,6 @@ import io.github.syntaxpresso.core.service.java.language.extra.ClassCapture;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -458,7 +457,8 @@ class ClassDeclarationServiceTest {
       TSNode classDecl = classes.get(0).get("classDeclaration");
 
       Optional<TSNode> classNameNode =
-          service.getClassDeclarationNodeByCaptureName(singleClassFile, classDecl, ClassCapture.CLASS_NAME);
+          service.getClassDeclarationNodeByCaptureName(
+              singleClassFile, classDecl, ClassCapture.CLASS_NAME);
 
       assertTrue(classNameNode.isPresent());
       String className = singleClassFile.getTextFromNode(classNameNode.get());
@@ -508,7 +508,8 @@ class ClassDeclarationServiceTest {
       TSNode classNameNode = classes.get(0).get("className");
 
       Optional<TSNode> result =
-          service.getClassDeclarationNodeByCaptureName(singleClassFile, classNameNode, ClassCapture.CLASS_NAME);
+          service.getClassDeclarationNodeByCaptureName(
+              singleClassFile, classNameNode, ClassCapture.CLASS_NAME);
       assertTrue(result.isEmpty());
     }
   }
@@ -895,8 +896,6 @@ class ClassDeclarationServiceTest {
       assertFalse(service.isJavaLangClass("OBJECT"));
     }
   }
-
-
 
   @Nested
   @DisplayName("Edge Cases and Error Handling")
