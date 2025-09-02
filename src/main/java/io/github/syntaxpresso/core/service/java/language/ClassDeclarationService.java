@@ -10,12 +10,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
-@RequiredArgsConstructor
-@Getter
 public class ClassDeclarationService {
 
   /**

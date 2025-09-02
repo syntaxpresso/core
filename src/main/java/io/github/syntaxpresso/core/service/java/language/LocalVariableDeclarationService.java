@@ -8,28 +8,16 @@ import java.util.Map;
 import java.util.Optional;
 import org.treesitter.TSNode;
 
-/**
- * Service class for analyzing and manipulating local variable declarations, formal parameters,
- * and field declarations in Java source code using tree-sitter queries.
- *
- * <p>This service provides methods to:
- * - Find variable declarations of different types (local, parameter, field)
- * - Extract information about variable declarations including type, name, modifiers
- * - Search for variables by type
- */
 public class LocalVariableDeclarationService {
   /**
-   * Retrieves all variable declaration nodes from a file, including local variables, formal parameters,
-   * and field declarations.
+   * Retrieves all variable declaration nodes from a file, including local variables, formal
+   * parameters, and field declarations.
    *
    * @param tsFile The TSFile containing the source code
    * @return List of TSNodes representing variable declarations. Returns empty list if file is null.
-   *
-   * <p>Query capture groups:
-   * - @node: The entire declaration node
-   *
-   * Example:
-   * <pre>
+   *     <p>Query capture groups: - @node: The entire declaration node
+   *     <p>Example:
+   *     <pre>
    * public class Example {
    *   private String field;           // field_declaration
    *   public void method(int param) { // formal_parameter
@@ -73,17 +61,13 @@ public class LocalVariableDeclarationService {
    *
    * @param tsFile The TSFile containing the source code
    * @param localVariableDeclarationNode The variable declaration node to analyze
-   * @return List of maps containing the captured nodes with their names. Returns empty list if file is null.
-   *
-   * <p>Query capture groups:
-   * - @modifiers: Optional modifiers (e.g., private, final)
-   * - @type: Variable type
-   * - @name: Variable name identifier
-   * - @value: Optional initialization value
-   * - @node: The entire declaration node
-   *
-   * Example:
-   * <pre>
+   * @return List of maps containing the captured nodes with their names. Returns empty list if file
+   *     is null.
+   *     <p>Query capture groups: - @modifiers: Optional modifiers (e.g., private, final) - @type:
+   *     Variable type - @name: Variable name identifier - @value: Optional initialization value
+   *     - @node: The entire declaration node
+   *     <p>Example:
+   *     <pre>
    * // For this declaration:
    * private final String name = "value";
    *
@@ -146,8 +130,8 @@ public class LocalVariableDeclarationService {
     if (tsFile == null
         || tsFile.getTree() == null
         || (!localVariableDeclarationNode.getType().equals("field_declaration")
-        && !localVariableDeclarationNode.getType().equals("formal_parameter")
-        && !localVariableDeclarationNode.getType().equals("local_variable_declaration"))) {
+            && !localVariableDeclarationNode.getType().equals("formal_parameter")
+            && !localVariableDeclarationNode.getType().equals("local_variable_declaration"))) {
       return Optional.empty();
     }
     List<Map<String, TSNode>> localVariableDeclarationInfo =
@@ -205,14 +189,11 @@ public class LocalVariableDeclarationService {
    *
    * @param tsFile The TSFile containing the source code
    * @param type The type to search for (e.g., "String", "int")
-   * @return List of variable declaration nodes with matching type. Returns empty list if type is null or empty.
-   *
-   * <p>Query capture groups:
-   * - @type: The type node
-   * - @node: The entire declaration node
-   *
-   * Example:
-   * <pre>
+   * @return List of variable declaration nodes with matching type. Returns empty list if type is
+   *     null or empty.
+   *     <p>Query capture groups: - @type: The type node - @node: The entire declaration node
+   *     <p>Example:
+   *     <pre>
    * // Will find all these declarations when searching for "String":
    * private String field;
    * public void method(String param) { }
