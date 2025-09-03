@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
 /**
@@ -15,7 +17,10 @@ import org.treesitter.TSNode;
  * using Tree-sitter. This service provides functionalities to find method nodes, extract their
  * components, and identify specific types of methods like the main method.
  */
+@Getter
+@RequiredArgsConstructor
 public class MethodDeclarationService {
+  private FormalParameterDeclarationService formalParameterDeclarationService;
 
   /**
    * Retrieves all method declaration nodes within a given class declaration node.

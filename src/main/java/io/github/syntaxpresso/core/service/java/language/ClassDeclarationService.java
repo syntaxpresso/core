@@ -10,9 +10,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
+@Getter
+@RequiredArgsConstructor
 public class ClassDeclarationService {
+  private FieldDeclarationService fieldDeclarationService;
+  private MethodDeclarationService methodDeclarationService;
 
   /**
    * Gets detailed information about a class declaration, including annotations, modifiers, class
