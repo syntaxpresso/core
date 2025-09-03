@@ -21,7 +21,7 @@ class PackageDeclarationServiceTest {
   private static final String SIMPLE_PACKAGE_CODE =
       """
       package com.example.test;
-      
+
       public class TestClass {
         public void method() {
           System.out.println("Hello");
@@ -32,10 +32,10 @@ class PackageDeclarationServiceTest {
   private static final String COMPLEX_PACKAGE_CODE =
       """
       package io.github.syntaxpresso.core.service.java.language;
-      
+
       import java.util.List;
       import java.util.Map;
-      
+
       public class ComplexPackageClass {
         private List<String> items;
         private Map<String, String> properties;
@@ -65,10 +65,13 @@ class PackageDeclarationServiceTest {
     void shouldFindPackageDeclarationNodeWithSimplePackage() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Should find package declaration node");
-      assertEquals("package_declaration", packageNode.get().getType(), "Node should be package_declaration type");
-      
+      assertEquals(
+          "package_declaration",
+          packageNode.get().getType(),
+          "Node should be package_declaration type");
+
       String packageText = file.getTextFromNode(packageNode.get());
       assertTrue(packageText.contains("com.example.test"), "Should contain correct package name");
     }
@@ -78,12 +81,17 @@ class PackageDeclarationServiceTest {
     void shouldFindPackageDeclarationNodeWithComplexPackage() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, COMPLEX_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Should find package declaration node");
-      assertEquals("package_declaration", packageNode.get().getType(), "Node should be package_declaration type");
-      
+      assertEquals(
+          "package_declaration",
+          packageNode.get().getType(),
+          "Node should be package_declaration type");
+
       String packageText = file.getTextFromNode(packageNode.get());
-      assertTrue(packageText.contains("io.github.syntaxpresso.core.service.java.language"), "Should contain correct package name");
+      assertTrue(
+          packageText.contains("io.github.syntaxpresso.core.service.java.language"),
+          "Should contain correct package name");
     }
 
     @Test
@@ -91,8 +99,9 @@ class PackageDeclarationServiceTest {
     void shouldReturnEmptyForFileWithoutPackageDeclaration() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, NO_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
-      assertFalse(packageNode.isPresent(), "Should return empty for file without package declaration");
+
+      assertFalse(
+          packageNode.isPresent(), "Should return empty for file without package declaration");
     }
 
     @Test
@@ -106,23 +115,24 @@ class PackageDeclarationServiceTest {
            */
           // Single line comment
           package com.example.comments;
-          
+
           public class CommentsClass {
           }
           """;
       TSFile file = new TSFile(SupportedLanguage.JAVA, codeWithComments);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Should find package declaration even with comments");
       String packageText = file.getTextFromNode(packageNode.get());
-      assertTrue(packageText.contains("com.example.comments"), "Should contain correct package name");
+      assertTrue(
+          packageText.contains("com.example.comments"), "Should contain correct package name");
     }
 
     @Test
     @DisplayName("Should return empty for null TSFile")
     void shouldReturnEmptyForNullTSFile() {
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(null);
-      
+
       assertFalse(packageNode.isPresent(), "Should return empty for null TSFile");
     }
 
@@ -131,7 +141,7 @@ class PackageDeclarationServiceTest {
     void shouldHandleEmptyFile() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, "");
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertFalse(packageNode.isPresent(), "Should return empty for empty file");
     }
   }
@@ -145,16 +155,18 @@ class PackageDeclarationServiceTest {
     void shouldReturnPackageDeclarationInfoForValidPackage() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Package node should exist");
-      
-      List<Map<String, TSNode>> info = packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
-      
+
+      List<Map<String, TSNode>> info =
+          packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
+
       assertFalse(info.isEmpty(), "Should return non-empty info");
-      
+
       // Verify that the info contains expected capture names
       Map<String, TSNode> firstCapture = info.get(0);
-      assertTrue(firstCapture.containsKey(PackageCapture.PACKAGE.getCaptureName()), 
+      assertTrue(
+          firstCapture.containsKey(PackageCapture.PACKAGE.getCaptureName()),
           "Should contain package capture");
     }
 
@@ -163,11 +175,12 @@ class PackageDeclarationServiceTest {
     void shouldReturnEmptyListForNullTSFile() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Package node should exist");
-      
-      List<Map<String, TSNode>> info = packageDeclarationService.getPackageDeclarationInfo(null, packageNode.get());
-      
+
+      List<Map<String, TSNode>> info =
+          packageDeclarationService.getPackageDeclarationInfo(null, packageNode.get());
+
       assertTrue(info.isEmpty(), "Should return empty list for null TSFile");
     }
 
@@ -176,9 +189,10 @@ class PackageDeclarationServiceTest {
     void shouldReturnEmptyListForWrongNodeType() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       TSNode rootNode = file.getTree().getRootNode();
-      
-      List<Map<String, TSNode>> info = packageDeclarationService.getPackageDeclarationInfo(file, rootNode);
-      
+
+      List<Map<String, TSNode>> info =
+          packageDeclarationService.getPackageDeclarationInfo(file, rootNode);
+
       assertTrue(info.isEmpty(), "Should return empty list for wrong node type");
     }
 
@@ -187,11 +201,12 @@ class PackageDeclarationServiceTest {
     void shouldHandleComplexPackageStructure() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, COMPLEX_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Package node should exist");
-      
-      List<Map<String, TSNode>> info = packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
-      
+
+      List<Map<String, TSNode>> info =
+          packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
+
       assertFalse(info.isEmpty(), "Should return non-empty info for complex package");
     }
   }
@@ -205,11 +220,12 @@ class PackageDeclarationServiceTest {
     void shouldFindClassNameNodeInPackageDeclaration() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Package node should exist");
-      
-      Optional<TSNode> classNameNode = packageDeclarationService.getPackageClassNameNode(file, packageNode.get());
-      
+
+      Optional<TSNode> classNameNode =
+          packageDeclarationService.getPackageClassNameNode(file, packageNode.get());
+
       if (classNameNode.isPresent()) {
         String classNameText = file.getTextFromNode(classNameNode.get());
         assertFalse(classNameText.trim().isEmpty(), "Class name should not be empty");
@@ -221,11 +237,12 @@ class PackageDeclarationServiceTest {
     void shouldReturnEmptyForNullTSFile() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Package node should exist");
-      
-      Optional<TSNode> classNameNode = packageDeclarationService.getPackageClassNameNode(null, packageNode.get());
-      
+
+      Optional<TSNode> classNameNode =
+          packageDeclarationService.getPackageClassNameNode(null, packageNode.get());
+
       assertFalse(classNameNode.isPresent(), "Should return empty for null TSFile");
     }
 
@@ -234,9 +251,10 @@ class PackageDeclarationServiceTest {
     void shouldReturnEmptyForWrongNodeType() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       TSNode rootNode = file.getTree().getRootNode();
-      
-      Optional<TSNode> classNameNode = packageDeclarationService.getPackageClassNameNode(file, rootNode);
-      
+
+      Optional<TSNode> classNameNode =
+          packageDeclarationService.getPackageClassNameNode(file, rootNode);
+
       assertFalse(classNameNode.isPresent(), "Should return empty for wrong node type");
     }
   }
@@ -250,11 +268,12 @@ class PackageDeclarationServiceTest {
     void shouldFindClassScopeNodeInPackageDeclaration() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Package node should exist");
-      
-      Optional<TSNode> classScopeNode = packageDeclarationService.getPackageClassScopeNode(file, packageNode.get());
-      
+
+      Optional<TSNode> classScopeNode =
+          packageDeclarationService.getPackageClassScopeNode(file, packageNode.get());
+
       if (classScopeNode.isPresent()) {
         String classScopeText = file.getTextFromNode(classScopeNode.get());
         assertFalse(classScopeText.trim().isEmpty(), "Class scope should not be empty");
@@ -266,11 +285,12 @@ class PackageDeclarationServiceTest {
     void shouldReturnEmptyForNullTSFile() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Package node should exist");
-      
-      Optional<TSNode> classScopeNode = packageDeclarationService.getPackageClassScopeNode(null, packageNode.get());
-      
+
+      Optional<TSNode> classScopeNode =
+          packageDeclarationService.getPackageClassScopeNode(null, packageNode.get());
+
       assertFalse(classScopeNode.isPresent(), "Should return empty for null TSFile");
     }
 
@@ -279,9 +299,10 @@ class PackageDeclarationServiceTest {
     void shouldReturnEmptyForWrongNodeType() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       TSNode rootNode = file.getTree().getRootNode();
-      
-      Optional<TSNode> classScopeNode = packageDeclarationService.getPackageClassScopeNode(file, rootNode);
-      
+
+      Optional<TSNode> classScopeNode =
+          packageDeclarationService.getPackageClassScopeNode(file, rootNode);
+
       assertFalse(classScopeNode.isPresent(), "Should return empty for wrong node type");
     }
   }
@@ -295,11 +316,12 @@ class PackageDeclarationServiceTest {
     void shouldFindPackageScopeNodeInPackageDeclaration() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Package node should exist");
-      
-      Optional<TSNode> packageScopeNode = packageDeclarationService.getPackageScopeNode(file, packageNode.get());
-      
+
+      Optional<TSNode> packageScopeNode =
+          packageDeclarationService.getPackageScopeNode(file, packageNode.get());
+
       if (packageScopeNode.isPresent()) {
         String packageScopeText = file.getTextFromNode(packageScopeNode.get());
         assertFalse(packageScopeText.trim().isEmpty(), "Package scope should not be empty");
@@ -311,11 +333,12 @@ class PackageDeclarationServiceTest {
     void shouldReturnEmptyForNullTSFile() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-      
+
       assertTrue(packageNode.isPresent(), "Package node should exist");
-      
-      Optional<TSNode> packageScopeNode = packageDeclarationService.getPackageScopeNode(null, packageNode.get());
-      
+
+      Optional<TSNode> packageScopeNode =
+          packageDeclarationService.getPackageScopeNode(null, packageNode.get());
+
       assertFalse(packageScopeNode.isPresent(), "Should return empty for null TSFile");
     }
 
@@ -324,9 +347,10 @@ class PackageDeclarationServiceTest {
     void shouldReturnEmptyForWrongNodeType() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       TSNode rootNode = file.getTree().getRootNode();
-      
-      Optional<TSNode> packageScopeNode = packageDeclarationService.getPackageScopeNode(file, rootNode);
-      
+
+      Optional<TSNode> packageScopeNode =
+          packageDeclarationService.getPackageScopeNode(file, rootNode);
+
       assertFalse(packageScopeNode.isPresent(), "Should return empty for wrong node type");
     }
   }
@@ -339,23 +363,28 @@ class PackageDeclarationServiceTest {
     @DisplayName("Should work with all methods together")
     void shouldWorkWithAllMethodsTogether() {
       TSFile file = new TSFile(SupportedLanguage.JAVA, COMPLEX_PACKAGE_CODE);
-      
+
       // Get package declaration node
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
       assertTrue(packageNode.isPresent(), "Should find package declaration node");
-      
+
       // Get package declaration info
-      List<Map<String, TSNode>> info = packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
+      List<Map<String, TSNode>> info =
+          packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
       assertFalse(info.isEmpty(), "Should return package declaration info");
-      
+
       // Try to get individual nodes
-      Optional<TSNode> classNameNode = packageDeclarationService.getPackageClassNameNode(file, packageNode.get());
-      Optional<TSNode> classScopeNode = packageDeclarationService.getPackageClassScopeNode(file, packageNode.get());
-      Optional<TSNode> packageScopeNode = packageDeclarationService.getPackageScopeNode(file, packageNode.get());
-      
+
+      packageDeclarationService.getPackageClassNameNode(file, packageNode.get());
+
+      packageDeclarationService.getPackageClassScopeNode(file, packageNode.get());
+
+      packageDeclarationService.getPackageScopeNode(file, packageNode.get());
+
       // At least the basic package node should work
       String packageText = file.getTextFromNode(packageNode.get());
-      assertTrue(packageText.contains("io.github.syntaxpresso.core.service.java.language"), 
+      assertTrue(
+          packageText.contains("io.github.syntaxpresso.core.service.java.language"),
           "Package text should contain expected package name");
     }
 
@@ -363,27 +392,30 @@ class PackageDeclarationServiceTest {
     @DisplayName("Should handle various package formats consistently")
     void shouldHandleVariousPackageFormatsConsistently() {
       String[] testCases = {
-          "package com.example;",
-          "package com.example.test;",
-          "package com.example.test.service;",
-          "package io.github.syntaxpresso.core.service.java.language;"
+        "package com.example;",
+        "package com.example.test;",
+        "package com.example.test.service;",
+        "package io.github.syntaxpresso.core.service.java.language;"
       };
-      
+
       for (String packageDeclaration : testCases) {
         String fullCode = packageDeclaration + "\n\npublic class TestClass {}";
         TSFile file = new TSFile(SupportedLanguage.JAVA, fullCode);
-        
+
         Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-        assertTrue(packageNode.isPresent(), 
-            "Should find package declaration for: " + packageDeclaration);
-        
-        List<Map<String, TSNode>> info = packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
+        assertTrue(
+            packageNode.isPresent(), "Should find package declaration for: " + packageDeclaration);
+
+        packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
         // Info might be empty depending on tree-sitter parsing, but should not throw exceptions
-        assertDoesNotThrow(() -> packageDeclarationService.getPackageClassNameNode(file, packageNode.get()),
+        assertDoesNotThrow(
+            () -> packageDeclarationService.getPackageClassNameNode(file, packageNode.get()),
             "Should handle getPackageClassNameNode without exceptions");
-        assertDoesNotThrow(() -> packageDeclarationService.getPackageClassScopeNode(file, packageNode.get()),
+        assertDoesNotThrow(
+            () -> packageDeclarationService.getPackageClassScopeNode(file, packageNode.get()),
             "Should handle getPackageClassScopeNode without exceptions");
-        assertDoesNotThrow(() -> packageDeclarationService.getPackageScopeNode(file, packageNode.get()),
+        assertDoesNotThrow(
+            () -> packageDeclarationService.getPackageScopeNode(file, packageNode.get()),
             "Should handle getPackageScopeNode without exceptions");
       }
     }
@@ -397,26 +429,29 @@ class PackageDeclarationServiceTest {
     @DisplayName("Should handle malformed package declarations gracefully")
     void shouldHandleMalformedPackageDeclarationsGracefully() {
       String[] malformedCases = {
-          "package;",
-          "package ;",
-          "package com.example",  // missing semicolon
-          "package com..example;", // double dots
-          "package 123invalid;", // invalid identifier
+        "package;",
+        "package ;",
+        "package com.example", // missing semicolon
+        "package com..example;", // double dots
+        "package 123invalid;", // invalid identifier
       };
-      
+
       for (String malformedCode : malformedCases) {
         String fullCode = malformedCode + "\n\npublic class TestClass {}";
         TSFile file = new TSFile(SupportedLanguage.JAVA, fullCode);
-        
-        assertDoesNotThrow(() -> {
-          Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-          if (packageNode.isPresent()) {
-            packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
-            packageDeclarationService.getPackageClassNameNode(file, packageNode.get());
-            packageDeclarationService.getPackageClassScopeNode(file, packageNode.get());
-            packageDeclarationService.getPackageScopeNode(file, packageNode.get());
-          }
-        }, "Should handle malformed code gracefully: " + malformedCode);
+
+        assertDoesNotThrow(
+            () -> {
+              Optional<TSNode> packageNode =
+                  packageDeclarationService.getPackageDeclarationNode(file);
+              if (packageNode.isPresent()) {
+                packageDeclarationService.getPackageDeclarationInfo(file, packageNode.get());
+                packageDeclarationService.getPackageClassNameNode(file, packageNode.get());
+                packageDeclarationService.getPackageClassScopeNode(file, packageNode.get());
+                packageDeclarationService.getPackageScopeNode(file, packageNode.get());
+              }
+            },
+            "Should handle malformed code gracefully: " + malformedCode);
       }
     }
 
@@ -424,21 +459,25 @@ class PackageDeclarationServiceTest {
     @DisplayName("Should handle files with only whitespace or comments")
     void shouldHandleFilesWithOnlyWhitespaceOrComments() {
       String[] edgeCases = {
-          "   \n\n   ",  // only whitespace
-          "// just a comment",
-          "/* block comment */",
-          "/**\n * Javadoc\n */",
+        "   \n\n   ", // only whitespace
+        "// just a comment",
+        "/* block comment */",
+        "/**\n * Javadoc\n */",
       };
-      
+
       for (String edgeCase : edgeCases) {
         TSFile file = new TSFile(SupportedLanguage.JAVA, edgeCase);
-        
-        assertDoesNotThrow(() -> {
-          Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(file);
-          assertFalse(packageNode.isPresent(), 
-              "Should not find package in edge case: " + edgeCase);
-        }, "Should handle edge case gracefully: " + edgeCase);
+
+        assertDoesNotThrow(
+            () -> {
+              Optional<TSNode> packageNode =
+                  packageDeclarationService.getPackageDeclarationNode(file);
+              assertFalse(
+                  packageNode.isPresent(), "Should not find package in edge case: " + edgeCase);
+            },
+            "Should handle edge case gracefully: " + edgeCase);
       }
     }
   }
 }
+
