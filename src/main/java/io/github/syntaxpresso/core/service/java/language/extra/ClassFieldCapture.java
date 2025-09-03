@@ -36,10 +36,10 @@ public enum ClassFieldCapture {
   }
 
   /**
-   * Find a ClassCapture by its capture name.
+   * Find a ClassFieldCapture by its capture name.
    *
    * @param captureName the name to search for (with or without @ prefix)
-   * @return the matching ClassCapture, or null if not found
+   * @return the matching ClassFieldCapture, or null if not found
    */
   public static ClassFieldCapture fromCaptureName(String captureName) {
     if (captureName == null) {
