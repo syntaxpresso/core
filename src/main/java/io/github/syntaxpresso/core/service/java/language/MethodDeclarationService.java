@@ -424,7 +424,7 @@ public class MethodDeclarationService {
   /**
    * Checks if a method declaration node represents a standard Java main method.
    *
-   * @param file The {@link TSFile} containing the source code.
+   * @param tsFile The {@link TSFile} containing the source code.
    * @param methodDeclarationNode The method declaration node to check.
    * @return {@code true} if the method is a main method (i.e., {@code public static void
    *     main(String[] args)} or with varargs), {@code false} otherwise.
@@ -436,13 +436,13 @@ public class MethodDeclarationService {
    * }
    * }</pre>
    */
-  public boolean isMainMethod(TSFile file, TSNode methodDeclarationNode) {
-    if (file == null
+  public boolean isMainMethod(TSFile tsFile, TSNode methodDeclarationNode) {
+    if (tsFile == null
         || methodDeclarationNode == null
         || !"method_declaration".equals(methodDeclarationNode.getType())) {
       return false;
     }
-    String methodText = file.getTextFromNode(methodDeclarationNode);
+    String methodText = tsFile.getTextFromNode(methodDeclarationNode);
     // Check for "public static void main(String[] args)" or "public static void main(String...
     // args)"
     return methodText.matches(
