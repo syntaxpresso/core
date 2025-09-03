@@ -2,7 +2,7 @@ package io.github.syntaxpresso.core.service.java.language;
 
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
-import io.github.syntaxpresso.core.service.java.language.extra.ClassFieldCapture;
+import io.github.syntaxpresso.core.service.java.language.extra.FieldCapture;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.treesitter.TSNode;
 
-public class ClassFieldDeclarationService {
+public class FieldDeclarationService {
 
   /**
    * Extracts field declaration information from a field node using tree-sitter queries.
@@ -21,8 +21,8 @@ public class ClassFieldDeclarationService {
    * <p>Usage example:
    *
    * <pre>
-   * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
-   * List&lt;Map&lt;String, TSNode&gt;&gt; fieldInfo = service.getClassFieldNodeInfo(tsFile, fieldNodes.get(0));
+   * List&lt;TSNode&gt; fieldNodes = service.getAllFieldDeclarationNodes(tsFile, classNode);
+   * List&lt;Map&lt;String, TSNode&gt;&gt; fieldInfo = service.getFieldDeclarationNodeInfo(tsFile, fieldNodes.get(0));
    * for (Map&lt;String, TSNode&gt; info : fieldInfo) {
    *   String fieldType = tsFile.getTextFromNode(info.get("fieldType"));  // e.g., "String"
    *   String fieldName = tsFile.getTextFromNode(info.get("fieldName"));  // e.g., "name"
@@ -36,7 +36,7 @@ public class ClassFieldDeclarationService {
    * @param fieldDeclarationNode The field declaration {@link TSNode} to analyze
    * @return A list of maps containing the captured nodes, or an empty list if invalid input
    */
-  public List<Map<String, TSNode>> getClassFieldNodeInfo(
+  public List<Map<String, TSNode>> getFieldDeclarationNodeInfo(
       TSFile tsFile, TSNode fieldDeclarationNode) {
     if (tsFile == null
         || tsFile.getTree() == null
@@ -52,10 +52,10 @@ public class ClassFieldDeclarationService {
                 name: (identifier) %s
                 (_)? %s)) %s
             """,
-            ClassFieldCapture.FIELD_TYPE.getCaptureWithAt(),
-            ClassFieldCapture.FIELD_NAME.getCaptureWithAt(),
-            ClassFieldCapture.FIELD_VALUE.getCaptureWithAt(),
-            ClassFieldCapture.FIELD.getCaptureWithAt());
+            FieldCapture.FIELD_TYPE.getCaptureWithAt(),
+            FieldCapture.FIELD_NAME.getCaptureWithAt(),
+            FieldCapture.FIELD_VALUE.getCaptureWithAt(),
+            FieldCapture.FIELD.getCaptureWithAt());
     return tsFile
         .query(queryString)
         .within(fieldDeclarationNode)
@@ -64,14 +64,15 @@ public class ClassFieldDeclarationService {
         .captures();
   }
 
-  protected Optional<TSNode> getClassFieldDeclarationNodeByCaptureName(
-      TSFile tsFile, TSNode fieldDeclarationNode, ClassFieldCapture capture) {
+  protected Optional<TSNode> getFieldDeclarationNodeByCaptureName(
+      TSFile tsFile, TSNode fieldDeclarationNode, FieldCapture capture) {
     if (tsFile == null
         || tsFile.getTree() == null
         || !fieldDeclarationNode.getType().equals("field_declaration")) {
       return Optional.empty();
     }
-    List<Map<String, TSNode>> fieldInfo = this.getClassFieldNodeInfo(tsFile, fieldDeclarationNode);
+    List<Map<String, TSNode>> fieldInfo =
+        this.getFieldDeclarationNodeInfo(tsFile, fieldDeclarationNode);
     for (Map<String, TSNode> map : fieldInfo) {
       TSNode node = map.get(capture.getCaptureName());
       if (node != null) {
@@ -81,9 +82,10 @@ public class ClassFieldDeclarationService {
     return Optional.empty();
   }
 
-  protected List<TSNode> getClassFieldDeclarationNodesFromCaptureName(
-      TSFile tsFile, TSNode fieldDeclarationNode, ClassFieldCapture capture) {
-    List<Map<String, TSNode>> fieldInfo = this.getClassFieldNodeInfo(tsFile, fieldDeclarationNode);
+  protected List<TSNode> getFieldDeclarationNodesFromCaptureName(
+      TSFile tsFile, TSNode fieldDeclarationNode, FieldCapture capture) {
+    List<Map<String, TSNode>> fieldInfo =
+        this.getFieldDeclarationNodeInfo(tsFile, fieldDeclarationNode);
     List<TSNode> foundNodes = new ArrayList<>();
     for (Map<String, TSNode> map : fieldInfo) {
       TSNode node = map.get(capture.getCaptureName());
@@ -105,7 +107,7 @@ public class ClassFieldDeclarationService {
    * <pre>
    * ClassDeclarationService classService = new ClassDeclarationService();
    * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
-   * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
+   * List&lt;TSNode&gt; fieldNodes = service.getAllFieldDeclarationNodes(tsFile, classNode);
    * for (TSNode field : fieldNodes) {
    *   String fieldText = tsFile.getTextFromNode(field);  // e.g., "private String name;"
    * }
@@ -115,7 +117,7 @@ public class ClassFieldDeclarationService {
    * @param classDeclarationNode The class declaration {@link TSNode} to search within
    * @return A list of all field declaration nodes in the class
    */
-  public List<TSNode> getAllClassFieldDeclarationNodes(TSFile tsFile, TSNode classDeclarationNode) {
+  public List<TSNode> getAllFieldDeclarationNodes(TSFile tsFile, TSNode classDeclarationNode) {
     if (tsFile == null
         || tsFile.getTree() == null
         || !classDeclarationNode.getType().equals("class_declaration")) {
@@ -143,7 +145,7 @@ public class ClassFieldDeclarationService {
    * <pre>
    * ClassDeclarationService classService = new ClassDeclarationService();
    * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
-   * List&lt;TSNode&gt; annotationNodes = service.getAllClassFieldAnnotationNodes(tsFile, classNode);
+   * List&lt;TSNode&gt; annotationNodes = service.getAllFieldDeclarationAnnotationNodes(tsFile, classNode);
    * for (TSNode annotation : annotationNodes) {
    *   String annotationText = tsFile.getTextFromNode(annotation);  // e.g., "@NotNull"
    * }
@@ -153,7 +155,8 @@ public class ClassFieldDeclarationService {
    * @param classDeclarationNode The class declaration {@link TSNode} to search within
    * @return A list of all field annotation nodes in the class
    */
-  public List<TSNode> getAllClassFieldAnnotationNodes(TSFile tsFile, TSNode classDeclarationNode) {
+  public List<TSNode> getAllFieldDeclarationAnnotationNodes(
+      TSFile tsFile, TSNode classDeclarationNode) {
     if (tsFile == null
         || tsFile.getTree() == null
         || !classDeclarationNode.getType().equals("class_declaration")) {
@@ -186,8 +189,8 @@ public class ClassFieldDeclarationService {
    * <p>Usage example:
    *
    * <pre>
-   * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
-   * Optional&lt;TSNode&gt; typeNode = service.getClassFieldTypeNode(tsFile, fieldNodes.get(0));
+   * List&lt;TSNode&gt; fieldNodes = service.getAllFieldDeclarationNodes(tsFile, classNode);
+   * Optional&lt;TSNode&gt; typeNode = service.getFieldDeclarationTypeNode(tsFile, fieldNodes.get(0));
    * if (typeNode.isPresent()) {
    *   String type = tsFile.getTextFromNode(typeNode.get());  // e.g., "String"
    * }
@@ -197,9 +200,9 @@ public class ClassFieldDeclarationService {
    * @param fieldDeclarationNode The field declaration {@link TSNode} to analyze
    * @return An {@link Optional} containing the type node if found
    */
-  public Optional<TSNode> getClassFieldTypeNode(TSFile tsFile, TSNode fieldDeclarationNode) {
-    return this.getClassFieldDeclarationNodeByCaptureName(
-        tsFile, fieldDeclarationNode, ClassFieldCapture.FIELD_TYPE);
+  public Optional<TSNode> getFieldDeclarationTypeNode(TSFile tsFile, TSNode fieldDeclarationNode) {
+    return this.getFieldDeclarationNodeByCaptureName(
+        tsFile, fieldDeclarationNode, FieldCapture.FIELD_TYPE);
   }
 
   /**
@@ -211,8 +214,8 @@ public class ClassFieldDeclarationService {
    * <p>Usage example:
    *
    * <pre>
-   * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
-   * Optional&lt;TSNode&gt; nameNode = service.getClassFieldNameNode(tsFile, fieldNodes.get(0));
+   * List&lt;TSNode&gt; fieldNodes = service.getAllFieldDeclarationNodes(tsFile, classNode);
+   * Optional&lt;TSNode&gt; nameNode = service.getFieldDeclarationNameNode(tsFile, fieldNodes.get(0));
    * if (nameNode.isPresent()) {
    *   String name = tsFile.getTextFromNode(nameNode.get());  // e.g., "firstName"
    * }
@@ -222,9 +225,9 @@ public class ClassFieldDeclarationService {
    * @param fieldDeclarationNode The field declaration {@link TSNode} to analyze
    * @return An {@link Optional} containing the name node if found
    */
-  public Optional<TSNode> getClassFieldNameNode(TSFile tsFile, TSNode fieldDeclarationNode) {
-    return this.getClassFieldDeclarationNodeByCaptureName(
-        tsFile, fieldDeclarationNode, ClassFieldCapture.FIELD_NAME);
+  public Optional<TSNode> getFieldDeclarationNameNode(TSFile tsFile, TSNode fieldDeclarationNode) {
+    return this.getFieldDeclarationNodeByCaptureName(
+        tsFile, fieldDeclarationNode, FieldCapture.FIELD_NAME);
   }
 
   /**
@@ -236,8 +239,8 @@ public class ClassFieldDeclarationService {
    * <p>Usage example:
    *
    * <pre>
-   * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
-   * Optional&lt;TSNode&gt; valueNode = service.getClassFieldValueNode(tsFile, fieldNodes.get(0));
+   * List&lt;TSNode&gt; fieldNodes = service.getAllFieldDeclarationNodes(tsFile, classNode);
+   * Optional&lt;TSNode&gt; valueNode = service.getFieldDeclarationValueNode(tsFile, fieldNodes.get(0));
    * if (valueNode.isPresent()) {
    *   String value = tsFile.getTextFromNode(valueNode.get());  // e.g., "\"John\""
    * }
@@ -247,9 +250,9 @@ public class ClassFieldDeclarationService {
    * @param fieldDeclarationNode The field declaration {@link TSNode} to analyze
    * @return An {@link Optional} containing the value node if found
    */
-  public Optional<TSNode> getClassFieldValueNode(TSFile tsFile, TSNode fieldDeclarationNode) {
-    return this.getClassFieldDeclarationNodeByCaptureName(
-        tsFile, fieldDeclarationNode, ClassFieldCapture.FIELD_VALUE);
+  public Optional<TSNode> getFieldDeclarationValueNode(TSFile tsFile, TSNode fieldDeclarationNode) {
+    return this.getFieldDeclarationNodeByCaptureName(
+        tsFile, fieldDeclarationNode, FieldCapture.FIELD_VALUE);
   }
 
   /**
@@ -268,8 +271,8 @@ public class ClassFieldDeclarationService {
    *
    * <pre>
    * // Find all usages of a specific field
-   * List&lt;TSNode&gt; fieldNodes = service.getAllClassFieldDeclarationNodes(tsFile, classNode);
-   * List&lt;TSNode&gt; usages = service.getAllClassFieldUsageNodes(tsFile, fieldNodes.get(0), classNode);
+   * List&lt;TSNode&gt; fieldNodes = service.getAllFieldDeclarationNodes(tsFile, classNode);
+   * List&lt;TSNode&gt; usages = service.getAllFieldDeclarationUsageNodes(tsFile, fieldNodes.get(0), classNode);
    * for (TSNode usage : usages) {
    *   String usageText = tsFile.getTextFromNode(usage);  // e.g., "fieldName"
    *   int line = usage.getStartPoint().getRow() + 1;     // Line number of usage
@@ -285,7 +288,7 @@ public class ClassFieldDeclarationService {
    * @return A list of identifier nodes representing field usages. Returns an empty list if no
    *     usages are found, the file/tree is null, or the nodes are not valid declarations.
    */
-  public List<TSNode> getAllClassFieldUsageNodes(
+  public List<TSNode> getAllFieldDeclarationUsageNodes(
       TSFile tsFile, TSNode fieldDeclarationNode, TSNode classDeclarationNode) {
     if (tsFile == null
         || tsFile.getTree() == null
@@ -293,7 +296,7 @@ public class ClassFieldDeclarationService {
         || !classDeclarationNode.getType().equals("class_declaration")) {
       return Collections.emptyList();
     }
-    Optional<TSNode> fieldNameNode = this.getClassFieldNameNode(tsFile, fieldDeclarationNode);
+    Optional<TSNode> fieldNameNode = this.getFieldDeclarationNameNode(tsFile, fieldDeclarationNode);
     if (fieldNameNode.isEmpty()) {
       return Collections.emptyList();
     }
@@ -320,7 +323,7 @@ public class ClassFieldDeclarationService {
    * <pre>
    * ClassDeclarationService classService = new ClassDeclarationService();
    * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
-   * Optional&lt;TSNode&gt; fieldNode = service.findClassFieldNodeByName(tsFile, "myField", classNode);
+   * Optional&lt;TSNode&gt; fieldNode = service.findFieldDeclarationNodeByName(tsFile, "myField", classNode);
    * if (fieldNode.isPresent()) {
    *   String fieldText = tsFile.getTextFromNode(fieldNode.get());  // e.g., "private String myField;"
    * }
@@ -335,7 +338,7 @@ public class ClassFieldDeclarationService {
    * @return An {@link Optional} containing the field declaration node if found, or empty if the
    *     field is not found, the file/tree is null, or the node is not a class declaration.
    */
-  public Optional<TSNode> findClassFieldNodeByName(
+  public Optional<TSNode> findFieldDeclarationNodeByName(
       TSFile tsFile, String fieldDeclaratorName, TSNode classDeclarationNode) {
     if (tsFile == null
         || tsFile.getTree() == null
@@ -367,7 +370,7 @@ public class ClassFieldDeclarationService {
    * <pre>
    * ClassDeclarationService classService = new ClassDeclarationService();
    * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
-   * List&lt;TSNode&gt; stringFields = service.findClassFieldNodesByType(tsFile, "String", classNode);
+   * List&lt;TSNode&gt; stringFields = service.findFieldDeclarationNodesByType(tsFile, "String", classNode);
    * for (TSNode field : stringFields) {
    *   String fieldText = tsFile.getTextFromNode(field);  // e.g., "private String name;"
    * }
@@ -383,7 +386,7 @@ public class ClassFieldDeclarationService {
    *     if no matching fields are found, the file/tree is null, or the node is not a class
    *     declaration.
    */
-  public List<TSNode> findClassFieldNodesByType(
+  public List<TSNode> findFieldDeclarationNodesByType(
       TSFile tsFile, String fieldDeclaratorType, TSNode classDeclarationNode) {
     if (tsFile == null
         || tsFile.getTree() == null

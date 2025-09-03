@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.language.extra.MethodParameterCapture;
+import io.github.syntaxpresso.core.service.java.language.extra.ParameterCapture;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -14,9 +14,10 @@ import org.junit.jupiter.api.Test;
 import org.treesitter.TSNode;
 
 @DisplayName("Method Parameter Service Test")
-class MethodParameterServiceTest {
+class FormalParameterDeclarationServiceTest {
 
-  private final MethodParameterService methodParameterService = new MethodParameterService();
+  private final FormalParameterDeclarationService methodParameterService =
+      new FormalParameterDeclarationService();
 
   private static final String BASIC_METHOD_SOURCE =
       """
@@ -78,7 +79,7 @@ class MethodParameterServiceTest {
 
   @Nested
   @DisplayName("Get All Method Parameter Nodes")
-  class GetAllMethodParameterNodesTests {
+  class GetAllFormalParameterDeclarationNodesTests {
 
     @Test
     @DisplayName("Should get all parameters from method with multiple parameters")
@@ -87,7 +88,7 @@ class MethodParameterServiceTest {
       TSNode methodNode = getMethodNodeByName(tsFile, "simpleMethod");
 
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       assertEquals(2, parameters.size());
       assertEquals("formal_parameter", parameters.get(0).getType());
@@ -101,7 +102,7 @@ class MethodParameterServiceTest {
       TSNode methodNode = getMethodNodeByName(tsFile, "noParameters");
 
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       assertTrue(parameters.isEmpty());
     }
@@ -113,7 +114,7 @@ class MethodParameterServiceTest {
       TSNode methodNode = getMethodNodeByName(tsFile, "genericMethod");
 
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       assertEquals(2, parameters.size());
       assertEquals("formal_parameter", parameters.get(0).getType());
@@ -127,7 +128,7 @@ class MethodParameterServiceTest {
       TSNode methodNode = getMethodNodeByName(tsFile, "annotatedMethod");
 
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       assertEquals(2, parameters.size());
       assertEquals("formal_parameter", parameters.get(0).getType());
@@ -141,7 +142,7 @@ class MethodParameterServiceTest {
       TSNode methodNode = getMethodNodeByName(tsFile, "varargsMethod");
 
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       assertTrue(parameters.size() >= 1);
       for (TSNode param : parameters) {
@@ -152,10 +153,12 @@ class MethodParameterServiceTest {
     @Test
     @DisplayName("Should handle null inputs")
     void shouldHandleNullInputs() {
-      assertTrue(methodParameterService.getAllMethodParameterNodes(null, null).isEmpty());
+      assertTrue(
+          methodParameterService.getAllFormalParameterDeclarationNodes(null, null).isEmpty());
       assertTrue(
           methodParameterService
-              .getAllMethodParameterNodes(new TSFile(SupportedLanguage.JAVA, "class A {}"), null)
+              .getAllFormalParameterDeclarationNodes(
+                  new TSFile(SupportedLanguage.JAVA, "class A {}"), null)
               .isEmpty());
     }
 
@@ -166,7 +169,7 @@ class MethodParameterServiceTest {
       TSNode classNode = tsFile.query("(class_declaration) @class").execute().nodes().get(0);
 
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, classNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, classNode);
 
       assertTrue(parameters.isEmpty());
     }
@@ -174,7 +177,7 @@ class MethodParameterServiceTest {
 
   @Nested
   @DisplayName("Get Method Parameter Node Info")
-  class GetMethodParameterNodeInfoTests {
+  class GetFormalParameterDeclarationNodeInfoTests {
 
     @Test
     @DisplayName("Should get parameter info with correct capture names")
@@ -182,10 +185,10 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, BASIC_METHOD_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "simpleMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       List<Map<String, TSNode>> paramInfo =
-          methodParameterService.getMethodParameterNodeInfo(tsFile, parameters.get(0));
+          methodParameterService.getFormalParameterDeclarationNodeInfo(tsFile, parameters.get(0));
 
       assertEquals(1, paramInfo.size());
       Map<String, TSNode> info = paramInfo.get(0);
@@ -203,10 +206,10 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_METHODS_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "genericMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       List<Map<String, TSNode>> paramInfo =
-          methodParameterService.getMethodParameterNodeInfo(tsFile, parameters.get(0));
+          methodParameterService.getFormalParameterDeclarationNodeInfo(tsFile, parameters.get(0));
 
       assertEquals(1, paramInfo.size());
       Map<String, TSNode> info = paramInfo.get(0);
@@ -223,12 +226,12 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_METHODS_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "varargsMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       assertTrue(parameters.size() >= 1);
       TSNode lastParam = parameters.get(parameters.size() - 1);
       List<Map<String, TSNode>> paramInfo =
-          methodParameterService.getMethodParameterNodeInfo(tsFile, lastParam);
+          methodParameterService.getFormalParameterDeclarationNodeInfo(tsFile, lastParam);
 
       assertEquals(1, paramInfo.size());
       Map<String, TSNode> info = paramInfo.get(0);
@@ -247,11 +250,11 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_METHODS_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "annotatedMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       assertTrue(parameters.size() >= 1);
       List<Map<String, TSNode>> paramInfo =
-          methodParameterService.getMethodParameterNodeInfo(tsFile, parameters.get(0));
+          methodParameterService.getFormalParameterDeclarationNodeInfo(tsFile, parameters.get(0));
 
       assertEquals(1, paramInfo.size());
       Map<String, TSNode> info = paramInfo.get(0);
@@ -269,7 +272,7 @@ class MethodParameterServiceTest {
       TSNode classNode = tsFile.query("(class_declaration) @class").execute().nodes().get(0);
 
       List<Map<String, TSNode>> paramInfo =
-          methodParameterService.getMethodParameterNodeInfo(tsFile, classNode);
+          methodParameterService.getFormalParameterDeclarationNodeInfo(tsFile, classNode);
 
       assertTrue(paramInfo.isEmpty());
     }
@@ -277,13 +280,14 @@ class MethodParameterServiceTest {
     @Test
     @DisplayName("Should handle null inputs")
     void shouldHandleNullInputs() {
-      assertTrue(methodParameterService.getMethodParameterNodeInfo(null, null).isEmpty());
+      assertTrue(
+          methodParameterService.getFormalParameterDeclarationNodeInfo(null, null).isEmpty());
     }
   }
 
   @Nested
   @DisplayName("Get Method Parameter Type Node")
-  class GetMethodParameterTypeNodeTests {
+  class GetFormalParameterDeclarationTypeNodeTests {
 
     @Test
     @DisplayName("Should get type node for simple type")
@@ -291,10 +295,10 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, BASIC_METHOD_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "simpleMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       Optional<TSNode> typeNode =
-          methodParameterService.getMethodParameterTypeNode(tsFile, parameters.get(0));
+          methodParameterService.getFormalParameterDeclarationTypeNode(tsFile, parameters.get(0));
 
       assertTrue(typeNode.isPresent());
       assertEquals("String", tsFile.getTextFromNode(typeNode.get()));
@@ -306,10 +310,10 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_METHODS_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "genericMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       Optional<TSNode> typeNode =
-          methodParameterService.getMethodParameterTypeNode(tsFile, parameters.get(1));
+          methodParameterService.getFormalParameterDeclarationTypeNode(tsFile, parameters.get(1));
 
       assertTrue(typeNode.isPresent());
       assertEquals("Map<String, Integer>", tsFile.getTextFromNode(typeNode.get()));
@@ -322,7 +326,7 @@ class MethodParameterServiceTest {
       TSNode classNode = tsFile.query("(class_declaration) @class").execute().nodes().get(0);
 
       Optional<TSNode> typeNode =
-          methodParameterService.getMethodParameterTypeNode(tsFile, classNode);
+          methodParameterService.getFormalParameterDeclarationTypeNode(tsFile, classNode);
 
       assertTrue(typeNode.isEmpty());
     }
@@ -330,13 +334,14 @@ class MethodParameterServiceTest {
     @Test
     @DisplayName("Should handle null inputs")
     void shouldHandleNullInputs() {
-      assertTrue(methodParameterService.getMethodParameterTypeNode(null, null).isEmpty());
+      assertTrue(
+          methodParameterService.getFormalParameterDeclarationTypeNode(null, null).isEmpty());
     }
   }
 
   @Nested
   @DisplayName("Get Method Parameter Name Node")
-  class GetMethodParameterNameNodeTests {
+  class GetFormalParameterDeclarationNameNodeTests {
 
     @Test
     @DisplayName("Should get name node for parameter")
@@ -344,10 +349,10 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, BASIC_METHOD_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "simpleMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       Optional<TSNode> nameNode =
-          methodParameterService.getMethodParameterNameNode(tsFile, parameters.get(1));
+          methodParameterService.getFormalParameterDeclarationNameNode(tsFile, parameters.get(1));
 
       assertTrue(nameNode.isPresent());
       assertEquals("param2", tsFile.getTextFromNode(nameNode.get()));
@@ -359,12 +364,12 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_METHODS_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "varargsMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       assertTrue(parameters.size() >= 1);
       TSNode firstParam = parameters.get(0);
       Optional<TSNode> nameNode =
-          methodParameterService.getMethodParameterNameNode(tsFile, firstParam);
+          methodParameterService.getFormalParameterDeclarationNameNode(tsFile, firstParam);
 
       assertTrue(nameNode.isPresent());
       String nameText = tsFile.getTextFromNode(nameNode.get());
@@ -378,7 +383,7 @@ class MethodParameterServiceTest {
       TSNode classNode = tsFile.query("(class_declaration) @class").execute().nodes().get(0);
 
       Optional<TSNode> nameNode =
-          methodParameterService.getMethodParameterNameNode(tsFile, classNode);
+          methodParameterService.getFormalParameterDeclarationNameNode(tsFile, classNode);
 
       assertTrue(nameNode.isEmpty());
     }
@@ -386,13 +391,14 @@ class MethodParameterServiceTest {
     @Test
     @DisplayName("Should handle null inputs")
     void shouldHandleNullInputs() {
-      assertTrue(methodParameterService.getMethodParameterNameNode(null, null).isEmpty());
+      assertTrue(
+          methodParameterService.getFormalParameterDeclarationNameNode(null, null).isEmpty());
     }
   }
 
   @Nested
   @DisplayName("Find All Method Parameter Node Usages")
-  class FindAllMethodParameterNodeUsagesTests {
+  class FindAllFormalParameterDeclarationNodeUsagesTests {
 
     @Test
     @DisplayName("Should find all parameter usages within method scope")
@@ -400,10 +406,10 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, BASIC_METHOD_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "simpleMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       List<TSNode> usages =
-          methodParameterService.findAllMethodParameterNodeUsages(
+          methodParameterService.findAllFormalParameterDeclarationNodeUsages(
               tsFile, parameters.get(0), methodNode);
 
       assertFalse(usages.isEmpty());
@@ -421,13 +427,13 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_METHODS_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "complexUsage");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       List<TSNode> dataUsages =
-          methodParameterService.findAllMethodParameterNodeUsages(
+          methodParameterService.findAllFormalParameterDeclarationNodeUsages(
               tsFile, parameters.get(0), methodNode);
       List<TSNode> indexUsages =
-          methodParameterService.findAllMethodParameterNodeUsages(
+          methodParameterService.findAllFormalParameterDeclarationNodeUsages(
               tsFile, parameters.get(1), methodNode);
 
       assertFalse(dataUsages.isEmpty());
@@ -462,10 +468,10 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
       TSNode methodNode = getMethodNodeByName(tsFile, "unusedParam");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       List<TSNode> usages =
-          methodParameterService.findAllMethodParameterNodeUsages(
+          methodParameterService.findAllFormalParameterDeclarationNodeUsages(
               tsFile, parameters.get(0), methodNode);
 
       assertTrue(usages.isEmpty());
@@ -494,10 +500,10 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
       TSNode methodNode = getMethodNodeByName(tsFile, "method");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       List<TSNode> usages =
-          methodParameterService.findAllMethodParameterNodeUsages(
+          methodParameterService.findAllFormalParameterDeclarationNodeUsages(
               tsFile, parameters.get(0), methodNode);
 
       assertEquals(1, usages.size());
@@ -507,7 +513,9 @@ class MethodParameterServiceTest {
     @DisplayName("Should handle null inputs")
     void shouldHandleNullInputs() {
       assertTrue(
-          methodParameterService.findAllMethodParameterNodeUsages(null, null, null).isEmpty());
+          methodParameterService
+              .findAllFormalParameterDeclarationNodeUsages(null, null, null)
+              .isEmpty());
     }
 
     @Test
@@ -517,7 +525,8 @@ class MethodParameterServiceTest {
       TSNode classNode = tsFile.query("(class_declaration) @class").execute().nodes().get(0);
 
       List<TSNode> usages =
-          methodParameterService.findAllMethodParameterNodeUsages(tsFile, classNode, classNode);
+          methodParameterService.findAllFormalParameterDeclarationNodeUsages(
+              tsFile, classNode, classNode);
 
       assertTrue(usages.isEmpty());
     }
@@ -528,10 +537,10 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_METHODS_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "ternaryUsage");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       List<TSNode> inputUsages =
-          methodParameterService.findAllMethodParameterNodeUsages(
+          methodParameterService.findAllFormalParameterDeclarationNodeUsages(
               tsFile, parameters.get(0), methodNode);
 
       assertFalse(inputUsages.isEmpty());
@@ -562,18 +571,23 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, sourceCode);
       TSNode methodNode = getMethodNodeByName(tsFile, "ternaryTest");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
-      TSNode dataParam = parameters.stream()
-          .filter(param -> {
-            Optional<TSNode> nameNode = methodParameterService.getMethodParameterNameNode(tsFile, param);
-            return nameNode.isPresent() && "data".equals(tsFile.getTextFromNode(nameNode.get()));
-          })
-          .findFirst()
-          .orElseThrow();
+      TSNode dataParam =
+          parameters.stream()
+              .filter(
+                  param -> {
+                    Optional<TSNode> nameNode =
+                        methodParameterService.getFormalParameterDeclarationNameNode(tsFile, param);
+                    return nameNode.isPresent()
+                        && "data".equals(tsFile.getTextFromNode(nameNode.get()));
+                  })
+              .findFirst()
+              .orElseThrow();
 
       List<TSNode> dataUsages =
-          methodParameterService.findAllMethodParameterNodeUsages(tsFile, dataParam, methodNode);
+          methodParameterService.findAllFormalParameterDeclarationNodeUsages(
+              tsFile, dataParam, methodNode);
 
       assertTrue(dataUsages.size() >= 4);
       assertTrue(
@@ -587,20 +601,19 @@ class MethodParameterServiceTest {
 
   @Nested
   @DisplayName("Get Method Parameter Child By Capture Name")
-  class GetMethodParameterChildByCaptureNameTests {
+  class GetFormalParameterDeclarationChildByCaptureNameTests {
 
     @Test
     @DisplayName("Should get parameter type by capture name")
-    void shouldGetParameterTypeByCaptureNa
-() {
+    void shouldGetParameterTypeByCaptureNa() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, BASIC_METHOD_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "simpleMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       Optional<TSNode> typeNode =
-          methodParameterService.getMethodParameterChildByCaptureName(
-              tsFile, parameters.get(0), MethodParameterCapture.PARAMETER_TYPE);
+          methodParameterService.getFormalParameterDeclarationChildByCaptureName(
+              tsFile, parameters.get(0), ParameterCapture.PARAMETER_TYPE);
 
       assertTrue(typeNode.isPresent());
       assertEquals("String", tsFile.getTextFromNode(typeNode.get()));
@@ -608,16 +621,15 @@ class MethodParameterServiceTest {
 
     @Test
     @DisplayName("Should get parameter name by capture name")
-    void shouldGetParameterNameByCaptureN
-() {
+    void shouldGetParameterNameByCaptureN() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, BASIC_METHOD_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "simpleMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       Optional<TSNode> nameNode =
-          methodParameterService.getMethodParameterChildByCaptureName(
-              tsFile, parameters.get(1), MethodParameterCapture.PARAMETER_NAME);
+          methodParameterService.getFormalParameterDeclarationChildByCaptureName(
+              tsFile, parameters.get(1), ParameterCapture.PARAMETER_NAME);
 
       assertTrue(nameNode.isPresent());
       assertEquals("param2", tsFile.getTextFromNode(nameNode.get()));
@@ -625,16 +637,15 @@ class MethodParameterServiceTest {
 
     @Test
     @DisplayName("Should get full parameter by capture name")
-    void shouldGetFullParameterByCaptureNa
-() {
+    void shouldGetFullParameterByCaptureNa() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_METHODS_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "genericMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       Optional<TSNode> parameterNode =
-          methodParameterService.getMethodParameterChildByCaptureName(
-              tsFile, parameters.get(0), MethodParameterCapture.PARAMETER);
+          methodParameterService.getFormalParameterDeclarationChildByCaptureName(
+              tsFile, parameters.get(0), ParameterCapture.PARAMETER);
 
       assertTrue(parameterNode.isPresent());
       assertEquals("formal_parameter", parameterNode.get().getType());
@@ -648,11 +659,11 @@ class MethodParameterServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_METHODS_SOURCE);
       TSNode methodNode = getMethodNodeByName(tsFile, "genericMethod");
       List<TSNode> parameters =
-          methodParameterService.getAllMethodParameterNodes(tsFile, methodNode);
+          methodParameterService.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
 
       Optional<TSNode> typeNode =
-          methodParameterService.getMethodParameterChildByCaptureName(
-              tsFile, parameters.get(1), MethodParameterCapture.PARAMETER_TYPE);
+          methodParameterService.getFormalParameterDeclarationChildByCaptureName(
+              tsFile, parameters.get(1), ParameterCapture.PARAMETER_TYPE);
 
       assertTrue(typeNode.isPresent());
       assertEquals("Map<String, Integer>", tsFile.getTextFromNode(typeNode.get()));
@@ -665,8 +676,8 @@ class MethodParameterServiceTest {
       TSNode classNode = tsFile.query("(class_declaration) @class").execute().nodes().get(0);
 
       Optional<TSNode> result =
-          methodParameterService.getMethodParameterChildByCaptureName(
-              tsFile, classNode, MethodParameterCapture.PARAMETER_TYPE);
+          methodParameterService.getFormalParameterDeclarationChildByCaptureName(
+              tsFile, classNode, ParameterCapture.PARAMETER_TYPE);
 
       assertTrue(result.isEmpty());
     }
@@ -676,7 +687,8 @@ class MethodParameterServiceTest {
     void shouldHandleNullInputs() {
       assertTrue(
           methodParameterService
-              .getMethodParameterChildByCaptureName(null, null, MethodParameterCapture.PARAMETER)
+              .getFormalParameterDeclarationChildByCaptureName(
+                  null, null, ParameterCapture.PARAMETER)
               .isEmpty());
     }
   }
@@ -693,4 +705,3 @@ class MethodParameterServiceTest {
         .orElseThrow(() -> new AssertionError("Method not found: " + methodName));
   }
 }
-

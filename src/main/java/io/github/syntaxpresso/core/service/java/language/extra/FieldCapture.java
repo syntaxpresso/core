@@ -4,7 +4,7 @@ package io.github.syntaxpresso.core.service.java.language.extra;
  * Enum representing all capture groups from the Tree-sitter query for Java class declarations. Each
  * enum constant corresponds to a @capture in the query.
  */
-public enum ClassFieldCapture {
+public enum FieldCapture {
   // Corresponds to the captures in the associated query
   FIELD("field"),
   FIELD_TYPE("fieldType"),
@@ -13,7 +13,7 @@ public enum ClassFieldCapture {
 
   private final String captureName;
 
-  ClassFieldCapture(String captureName) {
+  FieldCapture(String captureName) {
     this.captureName = captureName;
   }
 
@@ -36,12 +36,12 @@ public enum ClassFieldCapture {
   }
 
   /**
-   * Find a ClassFieldCapture by its capture name.
+   * Find a FieldCapture by its capture name.
    *
    * @param captureName the name to search for (with or without @ prefix)
-   * @return the matching ClassFieldCapture, or null if not found
+   * @return the matching FieldCapture, or null if not found
    */
-  public static ClassFieldCapture fromCaptureName(String captureName) {
+  public static FieldCapture fromCaptureName(String captureName) {
     if (captureName == null) {
       return null;
     }
@@ -49,7 +49,7 @@ public enum ClassFieldCapture {
     // Remove @ prefix if present
     String cleanName = captureName.startsWith("@") ? captureName.substring(1) : captureName;
 
-    for (ClassFieldCapture capture : values()) {
+    for (FieldCapture capture : values()) {
       if (capture.captureName.equals(cleanName)) {
         return capture;
       }

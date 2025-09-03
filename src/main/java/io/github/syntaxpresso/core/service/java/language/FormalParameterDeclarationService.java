@@ -1,7 +1,7 @@
 package io.github.syntaxpresso.core.service.java.language;
 
 import io.github.syntaxpresso.core.common.TSFile;
-import io.github.syntaxpresso.core.service.java.language.extra.MethodParameterCapture;
+import io.github.syntaxpresso.core.service.java.language.extra.ParameterCapture;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -9,10 +9,10 @@ import java.util.Optional;
 import org.treesitter.TSNode;
 
 /**
- * Service for analyzing and extracting method parameter information from Java source code
- * using Tree-sitter parsing.
+ * Service for analyzing and extracting method parameter information from Java source code using
+ * Tree-sitter parsing.
  */
-public class MethodParameterService {
+public class FormalParameterDeclarationService {
 
   /**
    * Retrieves all method parameter nodes from a method declaration.
@@ -20,16 +20,16 @@ public class MethodParameterService {
    * @param tsFile The parsed TypeScript file containing the Java source code
    * @param methodDeclarationNode The method declaration node to analyze
    * @return List of method parameter nodes, empty if method has no parameters or invalid input
-   *
    * @example
-   * <pre>{@code
+   *     <pre>{@code
    * TSFile tsFile = new TSFile("public void test(String name, int age) {}");
    * TSNode methodNode = // ... get method declaration node
-   * List<TSNode> parameters = service.getAllMethodParameterNodes(tsFile, methodNode);
+   * List<TSNode> parameters = service.getAllFormalParameterDeclarationNodes(tsFile, methodNode);
    * // Returns nodes for both "String name" and "int age" parameters
    * }</pre>
    */
-  public List<TSNode> getAllMethodParameterNodes(TSFile tsFile, TSNode methodDeclarationNode) {
+  public List<TSNode> getAllFormalParameterDeclarationNodes(
+      TSFile tsFile, TSNode methodDeclarationNode) {
     if (tsFile == null
         || tsFile.getTree() == null
         || methodDeclarationNode == null
@@ -45,7 +45,7 @@ public class MethodParameterService {
               )
             )
             """,
-            MethodParameterCapture.PARAMETER.getCaptureWithAt());
+            ParameterCapture.PARAMETER.getCaptureWithAt());
     return tsFile.query(queryString).within(methodDeclarationNode).execute().nodes();
   }
 
@@ -54,20 +54,20 @@ public class MethodParameterService {
    *
    * @param tsFile The parsed TypeScript file containing the Java source code
    * @param methodParameterNode The formal parameter node to analyze
-   * @return List of maps containing captured nodes with keys: "parameter_type", "parameter_name", "parameter"
-   *
+   * @return List of maps containing captured nodes with keys: "parameter_type", "parameter_name",
+   *     "parameter"
    * @example
-   * <pre>{@code
+   *     <pre>{@code
    * TSFile tsFile = new TSFile("public void test(String name) {}");
    * TSNode parameterNode = // ... get formal_parameter node for "String name"
-   * List<Map<String, TSNode>> info = service.getMethodParameterNodeInfo(tsFile, parameterNode);
+   * List<Map<String, TSNode>> info = service.getFormalParameterDeclarationNodeInfo(tsFile, parameterNode);
    * // Returns map with:
    * // "parameter_type" -> TSNode for "String"
-   * // "parameter_name" -> TSNode for "name" 
+   * // "parameter_name" -> TSNode for "name"
    * // "parameter" -> TSNode for entire "String name"
    * }</pre>
    */
-  public List<Map<String, TSNode>> getMethodParameterNodeInfo(
+  public List<Map<String, TSNode>> getFormalParameterDeclarationNodeInfo(
       TSFile tsFile, TSNode methodParameterNode) {
     if (tsFile == null
         || tsFile.getTree() == null
@@ -82,9 +82,9 @@ public class MethodParameterService {
               name: (identifier) %s
             ) %s
             """,
-            MethodParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
-            MethodParameterCapture.PARAMETER_NAME.getCaptureWithAt(),
-            MethodParameterCapture.PARAMETER.getCaptureWithAt());
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_NAME.getCaptureWithAt(),
+            ParameterCapture.PARAMETER.getCaptureWithAt());
     return tsFile
         .query(queryString)
         .within(methodParameterNode)
@@ -98,27 +98,27 @@ public class MethodParameterService {
    *
    * @param tsFile The parsed TypeScript file containing the Java source code
    * @param methodParameterNode The formal parameter node to search within
-   * @param capture The specific capture type to retrieve (PARAMETER_TYPE, PARAMETER_NAME, or PARAMETER)
+   * @param capture The specific capture type to retrieve (PARAMETER_TYPE, PARAMETER_NAME, or
+   *     PARAMETER)
    * @return Optional containing the requested node, empty if not found or invalid input
-   *
    * @example
-   * <pre>{@code
+   *     <pre>{@code
    * TSFile tsFile = new TSFile("public void test(List<String> items) {}");
    * TSNode parameterNode = // ... get formal_parameter node
-   * Optional<TSNode> typeNode = service.getMethodParameterChildByCaptureName(
-   *     tsFile, parameterNode, MethodParameterCapture.PARAMETER_TYPE);
+   * Optional<TSNode> typeNode = service.getFormalParameterDeclarationChildByCaptureName(
+   *     tsFile, parameterNode, FormalParameterDeclarationCapture.PARAMETER_TYPE);
    * // Returns TSNode for "List<String>"
    * }</pre>
    */
-  public Optional<TSNode> getMethodParameterChildByCaptureName(
-      TSFile tsFile, TSNode methodParameterNode, MethodParameterCapture capture) {
+  public Optional<TSNode> getFormalParameterDeclarationChildByCaptureName(
+      TSFile tsFile, TSNode methodParameterNode, ParameterCapture capture) {
     if (tsFile == null
         || tsFile.getTree() == null
         || !methodParameterNode.getType().equals("formal_parameter")) {
       return Optional.empty();
     }
     List<Map<String, TSNode>> nodeInfo =
-        this.getMethodParameterNodeInfo(tsFile, methodParameterNode);
+        this.getFormalParameterDeclarationNodeInfo(tsFile, methodParameterNode);
     for (Map<String, TSNode> map : nodeInfo) {
       TSNode node = map.get(capture.getCaptureName());
       if (node != null) {
@@ -134,18 +134,18 @@ public class MethodParameterService {
    * @param tsFile The parsed TypeScript file containing the Java source code
    * @param methodParameterNode The formal parameter node to analyze
    * @return Optional containing the parameter type node, empty if not found or invalid input
-   *
    * @example
-   * <pre>{@code
+   *     <pre>{@code
    * TSFile tsFile = new TSFile("public void test(Map<String, Integer> data) {}");
    * TSNode parameterNode = // ... get formal_parameter node
-   * Optional<TSNode> typeNode = service.getMethodParameterTypeNode(tsFile, parameterNode);
+   * Optional<TSNode> typeNode = service.getFormalParameterDeclarationTypeNode(tsFile, parameterNode);
    * // Returns TSNode for "Map<String, Integer>"
    * }</pre>
    */
-  public Optional<TSNode> getMethodParameterTypeNode(TSFile tsFile, TSNode methodParameterNode) {
-    return this.getMethodParameterChildByCaptureName(
-        tsFile, methodParameterNode, MethodParameterCapture.PARAMETER_TYPE);
+  public Optional<TSNode> getFormalParameterDeclarationTypeNode(
+      TSFile tsFile, TSNode methodParameterNode) {
+    return this.getFormalParameterDeclarationChildByCaptureName(
+        tsFile, methodParameterNode, ParameterCapture.PARAMETER_TYPE);
   }
 
   /**
@@ -154,32 +154,31 @@ public class MethodParameterService {
    * @param tsFile The parsed TypeScript file containing the Java source code
    * @param methodParameterNode The formal parameter node to analyze
    * @return Optional containing the parameter name node, empty if not found or invalid input
-   *
    * @example
-   * <pre>{@code
+   *     <pre>{@code
    * TSFile tsFile = new TSFile("public void test(String userName) {}");
    * TSNode parameterNode = // ... get formal_parameter node
-   * Optional<TSNode> nameNode = service.getMethodParameterNameNode(tsFile, parameterNode);
+   * Optional<TSNode> nameNode = service.getFormalParameterDeclarationNameNode(tsFile, parameterNode);
    * // Returns TSNode for "userName"
    * }</pre>
    */
-  public Optional<TSNode> getMethodParameterNameNode(TSFile tsFile, TSNode methodParameterNode) {
-    return this.getMethodParameterChildByCaptureName(
-        tsFile, methodParameterNode, MethodParameterCapture.PARAMETER_NAME);
+  public Optional<TSNode> getFormalParameterDeclarationNameNode(
+      TSFile tsFile, TSNode methodParameterNode) {
+    return this.getFormalParameterDeclarationChildByCaptureName(
+        tsFile, methodParameterNode, ParameterCapture.PARAMETER_NAME);
   }
 
   /**
-   * Finds all usages of a method parameter within the method body.
-   * Searches for the parameter in various contexts including method calls, assignments,
-   * binary expressions, ternary expressions, and argument lists.
+   * Finds all usages of a method parameter within the method body. Searches for the parameter in
+   * various contexts including method calls, assignments, binary expressions, ternary expressions,
+   * and argument lists.
    *
    * @param tsFile The parsed TypeScript file containing the Java source code
    * @param methodParameterNode The formal parameter node whose usages to find
    * @param methodDeclarationNode The method declaration node to search within
    * @return List of nodes where the parameter is used, empty if no usages found or invalid input
-   *
    * @example
-   * <pre>{@code
+   *     <pre>{@code
    * TSFile tsFile = new TSFile("""
    *     public void process(String input) {
    *         System.out.println(input);
@@ -189,11 +188,11 @@ public class MethodParameterService {
    * """);
    * TSNode parameterNode = // ... get formal_parameter node for "input"
    * TSNode methodNode = // ... get method_declaration node
-   * List<TSNode> usages = service.findAllMethodParameterNodeUsages(tsFile, parameterNode, methodNode);
+   * List<TSNode> usages = service.findAllFormalParameterDeclarationNodeUsages(tsFile, parameterNode, methodNode);
    * // Returns nodes with capture name "name" for all three usages of "input"
    * }</pre>
    */
-  public List<TSNode> findAllMethodParameterNodeUsages(
+  public List<TSNode> findAllFormalParameterDeclarationNodeUsages(
       TSFile tsFile, TSNode methodParameterNode, TSNode methodDeclarationNode) {
     if (tsFile == null
         || tsFile.getTree() == null
@@ -204,7 +203,7 @@ public class MethodParameterService {
       return Collections.emptyList();
     }
     Optional<TSNode> methodParameterNameNode =
-        this.getMethodParameterNameNode(tsFile, methodParameterNode);
+        this.getFormalParameterDeclarationNameNode(tsFile, methodParameterNode);
     if (methodParameterNameNode.isEmpty()) {
       return Collections.emptyList();
     }
