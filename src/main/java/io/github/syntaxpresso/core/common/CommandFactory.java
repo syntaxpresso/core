@@ -1,6 +1,7 @@
 package io.github.syntaxpresso.core.common;
 
 import io.github.syntaxpresso.core.command.CreateNewFileCommand;
+import io.github.syntaxpresso.core.command.GetMainClassCommand;
 import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import lombok.RequiredArgsConstructor;
 import picocli.CommandLine.IFactory;
@@ -15,9 +16,9 @@ public class CommandFactory implements IFactory {
     if (cls == CreateNewFileCommand.class) {
       return (K) new CreateNewFileCommand(javaCommandService);
     }
-    // if (cls == GetMainClassCommand.class) {
-    //   return (K) new GetMainClassCommand(javaCommandService);
-    // }
+    if (cls == GetMainClassCommand.class) {
+      return (K) new GetMainClassCommand(javaCommandService);
+    }
     // if (cls == RenameCommand.class) {
     //   return (K) new RenameCommand(javaCommandService);
     // }
