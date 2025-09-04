@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
 import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
+import io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
@@ -26,6 +27,18 @@ import org.treesitter.TSNode;
 public class JavaCommandService {
   private final PathHelper pathHelper;
   private final JavaLanguageService javaLanguageService;
+
+  public DataTransferObject<ParseSourceCodeResponse> parseSourceCommand(
+      String sourceCode, Path filePath, SupportedLanguage language, SupportedIDE ide) {
+    ParseSourceCodeResponse response =
+        ParseSourceCodeResponse.builder()
+            .ide(ide)
+            .sourceCode(sourceCode)
+            .filePath(filePath != null ? filePath.toString() : null)
+            .parseSuccess(true)
+            .build();
+    return DataTransferObject.success(response);
+  }
 
   public DataTransferObject<GetCursorPositionInfoResponse> getTextFromCursorPosition(
       Path filePath, SupportedLanguage language, SupportedIDE ide, Integer line, Integer column) {
