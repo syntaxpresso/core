@@ -116,7 +116,7 @@ class CreateNewFileCommandTest {
       CreateNewFileCommand command = new CreateNewFileCommand(javaService);
       assertNotNull(command);
 
-      Field serviceField = CreateNewFileCommand.class.getDeclaredField("javaService");
+      Field serviceField = CreateNewFileCommand.class.getDeclaredField("javaCommandService");
       serviceField.setAccessible(true);
       assertEquals(javaService, serviceField.get(command));
     }

@@ -156,7 +156,7 @@ class GetMainClassCommandTest {
       GetMainClassCommand command = new GetMainClassCommand(javaCommandService);
       assertNotNull(command);
 
-      Field serviceField = GetMainClassCommand.class.getDeclaredField("javaService");
+      Field serviceField = GetMainClassCommand.class.getDeclaredField("javaCommandService");
       serviceField.setAccessible(true);
       assertEquals(javaCommandService, serviceField.get(command));
     }
