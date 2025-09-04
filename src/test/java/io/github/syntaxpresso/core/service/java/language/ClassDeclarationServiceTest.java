@@ -625,21 +625,21 @@ class ClassDeclarationServiceTest {
   }
 
   @Nested
-  @DisplayName("getMainClass Tests")
-  class GetMainClassTests {
+  @DisplayName("getPublicClass Tests")
+  class GetPublicClassTests {
 
     @Test
-    @DisplayName("should return main class when file name matches class name")
-    void shouldReturnMainClassWhenFileNameMatches() throws IOException {
+    @DisplayName("should return public class when file name matches class name")
+    void shouldReturnPublicClassWhenFileNameMatches() throws IOException {
       Path javaFile = tempDir.resolve("MyClass.java");
       Files.write(javaFile, SINGLE_CLASS_CODE.getBytes());
       TSFile fileWithPath = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      Optional<TSNode> mainClass = service.getMainClass(fileWithPath);
+      Optional<TSNode> publicClass = service.getPublicClass(fileWithPath);
 
-      assertTrue(mainClass.isPresent());
+      assertTrue(publicClass.isPresent());
       Optional<TSNode> classNameNode =
-          service.getClassDeclarationNameNode(fileWithPath, mainClass.get());
+          service.getClassDeclarationNameNode(fileWithPath, publicClass.get());
       assertTrue(classNameNode.isPresent());
       String className = fileWithPath.getTextFromNode(classNameNode.get());
       assertEquals("MyClass", className);
@@ -652,16 +652,16 @@ class ClassDeclarationServiceTest {
       Files.write(javaFile, SINGLE_CLASS_CODE.getBytes());
       TSFile fileWithPath = new TSFile(SupportedLanguage.JAVA, javaFile);
 
-      Optional<TSNode> mainClass = service.getMainClass(fileWithPath);
-      assertTrue(mainClass.isEmpty());
+      Optional<TSNode> publicClass = service.getPublicClass(fileWithPath);
+      assertTrue(publicClass.isEmpty());
     }
 
     @Test
     @DisplayName("should work with multiple classes files")
     void shouldWorkWithMultipleClassesFiles() {
       // Test that we can find classes in a file with multiple classes
-      Optional<TSNode> mainClass = service.findClassByName(multipleClassesFile, "MainClass");
-      assertTrue(mainClass.isPresent());
+      Optional<TSNode> publicClass = service.findClassByName(multipleClassesFile, "MainClass");
+      assertTrue(publicClass.isPresent());
 
       Optional<TSNode> helper = service.findClassByName(multipleClassesFile, "Helper");
       assertTrue(helper.isPresent());
@@ -673,21 +673,21 @@ class ClassDeclarationServiceTest {
     @Test
     @DisplayName("should return empty for null file")
     void shouldReturnEmptyForNullFile() {
-      Optional<TSNode> result = service.getMainClass(null);
+      Optional<TSNode> result = service.getPublicClass(null);
       assertTrue(result.isEmpty());
     }
 
     @Test
     @DisplayName("should return empty for file with null tree")
     void shouldReturnEmptyForNullTree() {
-      Optional<TSNode> result = service.getMainClass(null);
+      Optional<TSNode> result = service.getPublicClass(null);
       assertTrue(result.isEmpty());
     }
 
     @Test
     @DisplayName("should return empty for file without path")
     void shouldReturnEmptyForFileWithoutPath() {
-      Optional<TSNode> result = service.getMainClass(singleClassFile);
+      Optional<TSNode> result = service.getPublicClass(singleClassFile);
       assertTrue(result.isEmpty());
     }
   }
