@@ -172,7 +172,11 @@ class FieldDeclarationServiceTest {
   @BeforeEach
   void setUp() {
     service = new FieldDeclarationService();
-    classDeclarationService = new ClassDeclarationService();
+    FormalParameterDeclarationService formalParameterDeclarationService =
+        new FormalParameterDeclarationService();
+    MethodDeclarationService methodDeclarationService =
+        new MethodDeclarationService(formalParameterDeclarationService);
+    classDeclarationService = new ClassDeclarationService(service, methodDeclarationService);
 
     simpleClassFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_CLASS_CODE);
     initializedFieldsFile = new TSFile(SupportedLanguage.JAVA, CLASS_WITH_INITIALIZED_FIELDS_CODE);

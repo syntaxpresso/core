@@ -14,8 +14,11 @@ import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.FormalParameterDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.MethodDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.VariableNamingService;
 import io.github.syntaxpresso.core.util.PathHelper;
@@ -44,20 +47,27 @@ class CreateNewFileCommandTest {
   void setUp() {
     PathHelper pathHelper = new PathHelper();
     VariableNamingService variableNamingService = new VariableNamingService();
-    ClassDeclarationService classDeclarationService = new ClassDeclarationService();
+    FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+    FormalParameterDeclarationService formalParameterDeclarationService =
+        new FormalParameterDeclarationService();
+    MethodDeclarationService methodDeclarationService =
+        new MethodDeclarationService(formalParameterDeclarationService);
+    ClassDeclarationService classDeclarationService =
+        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
     PackageDeclarationService packageDeclarationService = new PackageDeclarationService();
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
-    LocalVariableDeclarationService localVariableDeclarationService = new LocalVariableDeclarationService();
-    
-    JavaLanguageService javaLanguageService = new JavaLanguageService(
-        pathHelper,
-        variableNamingService,
-        classDeclarationService,
-        packageDeclarationService,
-        importDeclarationService,
-        localVariableDeclarationService
-    );
-    
+    LocalVariableDeclarationService localVariableDeclarationService =
+        new LocalVariableDeclarationService();
+
+    JavaLanguageService javaLanguageService =
+        new JavaLanguageService(
+            pathHelper,
+            variableNamingService,
+            classDeclarationService,
+            packageDeclarationService,
+            importDeclarationService,
+            localVariableDeclarationService);
+
     this.javaService = new JavaCommandService(pathHelper, javaLanguageService);
   }
 
@@ -510,4 +520,3 @@ class CreateNewFileCommandTest {
     }
   }
 }
-

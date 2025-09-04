@@ -54,41 +54,28 @@ class GetMainClassCommandTest {
   void setUp() {
     PathHelper pathHelper = new PathHelper();
     VariableNamingService variableNamingService = new VariableNamingService();
-    
-    FormalParameterDeclarationService formalParameterDeclarationService = new FormalParameterDeclarationService();
-    MethodDeclarationService methodDeclarationService = new MethodDeclarationService();
+
+    FormalParameterDeclarationService formalParameterDeclarationService =
+        new FormalParameterDeclarationService();
+    MethodDeclarationService methodDeclarationService =
+        new MethodDeclarationService(formalParameterDeclarationService);
     FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
-    ClassDeclarationService classDeclarationService = new ClassDeclarationService();
+    ClassDeclarationService classDeclarationService =
+        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
     PackageDeclarationService packageDeclarationService = new PackageDeclarationService();
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
-    LocalVariableDeclarationService localVariableDeclarationService = new LocalVariableDeclarationService();
-    
-    // Wire up dependencies manually since they use field injection
-    try {
-      Field methodServiceField = MethodDeclarationService.class.getDeclaredField("formalParameterDeclarationService");
-      methodServiceField.setAccessible(true);
-      methodServiceField.set(methodDeclarationService, formalParameterDeclarationService);
-      
-      Field methodField = ClassDeclarationService.class.getDeclaredField("methodDeclarationService");
-      methodField.setAccessible(true);
-      methodField.set(classDeclarationService, methodDeclarationService);
-      
-      Field fieldField = ClassDeclarationService.class.getDeclaredField("fieldDeclarationService");
-      fieldField.setAccessible(true);
-      fieldField.set(classDeclarationService, fieldDeclarationService);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to wire dependencies", e);
-    }
-    
-    JavaLanguageService javaLanguageService = new JavaLanguageService(
-        pathHelper,
-        variableNamingService,
-        classDeclarationService,
-        packageDeclarationService,
-        importDeclarationService,
-        localVariableDeclarationService
-    );
-    
+    LocalVariableDeclarationService localVariableDeclarationService =
+        new LocalVariableDeclarationService();
+
+    JavaLanguageService javaLanguageService =
+        new JavaLanguageService(
+            pathHelper,
+            variableNamingService,
+            classDeclarationService,
+            packageDeclarationService,
+            importDeclarationService,
+            localVariableDeclarationService);
+
     this.javaCommandService = new JavaCommandService(pathHelper, javaLanguageService);
   }
 
@@ -117,23 +104,30 @@ class GetMainClassCommandTest {
     field.set(target, value);
   }
 
-  private void createJavaFile(Path baseDir, String packageName, String className, boolean hasMainMethod) throws Exception {
+  private void createJavaFile(
+      Path baseDir, String packageName, String className, boolean hasMainMethod) throws Exception {
     String packagePath = packageName.replace('.', '/');
     Path packageDir = baseDir.resolve("src/main/java").resolve(packagePath);
     Files.createDirectories(packageDir);
-    
-    String mainMethodCode = hasMainMethod ? 
-      "    public static void main(String[] args) {\n        System.out.println(\"Hello World!\");\n    }" : 
-      "";
-    
-    String sourceCode = String.format("""
-        package %s;
-        
-        public class %s {
-        %s
-        }
-        """, packageName, className, mainMethodCode);
-    
+
+    String mainMethodCode =
+        hasMainMethod
+            ? "    public static void main(String[] args) {\n"
+                  + "        System.out.println(\"Hello World!\");\n"
+                  + "    }"
+            : "";
+
+    String sourceCode =
+        String.format(
+            """
+            package %s;
+
+            public class %s {
+            %s
+            }
+            """,
+            packageName, className, mainMethodCode);
+
     Files.writeString(packageDir.resolve(className + ".java"), sourceCode);
   }
 
@@ -260,8 +254,9 @@ class GetMainClassCommandTest {
     void shouldHandleMainClassInDefaultPackage() throws Exception {
       Path srcDir = tempDir.resolve("src/main/java");
       Files.createDirectories(srcDir);
-      
-      String sourceCode = """
+
+      String sourceCode =
+          """
           public class Main {
               public static void main(String[] args) {
                   System.out.println("Hello World!");
@@ -275,7 +270,8 @@ class GetMainClassCommandTest {
 
       DataTransferObject<GetMainClassResponse> result = command.call();
       assertFalse(result.getSucceed());
-      assertTrue(result.getErrorReason().contains("Couldn't obtain public class' package name from"));
+      assertTrue(
+          result.getErrorReason().contains("Couldn't obtain public class' package name from"));
     }
 
     @Test
@@ -338,7 +334,8 @@ class GetMainClassCommandTest {
       Path srcDir = tempDir.resolve("src/main/java/com/example");
       Files.createDirectories(srcDir);
       // Create a file with a class name that doesn't match the filename
-      String validSourceCode = """
+      String validSourceCode =
+          """
           package com.example;
           public class DifferentName {
               public static void main(String[] args) {
@@ -376,7 +373,8 @@ class GetMainClassCommandTest {
     void shouldHandleProjectWithOnlyNonPublicClasses() throws Exception {
       Path srcDir = tempDir.resolve("src/main/java/com/example");
       Files.createDirectories(srcDir);
-      String nonPublicClassCode = """
+      String nonPublicClassCode =
+          """
           package com.example;
           class NonPublicClass {
               public static void main(String[] args) {
@@ -546,4 +544,3 @@ class GetMainClassCommandTest {
     }
   }
 }
-

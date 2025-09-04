@@ -17,8 +17,8 @@ import org.treesitter.TSNode;
 @Getter
 @RequiredArgsConstructor
 public class ClassDeclarationService {
-  private FieldDeclarationService fieldDeclarationService;
-  private MethodDeclarationService methodDeclarationService;
+  private final FieldDeclarationService fieldDeclarationService;
+  private final MethodDeclarationService methodDeclarationService;
 
   /**
    * Gets detailed information about a class declaration, including annotations, modifiers, class

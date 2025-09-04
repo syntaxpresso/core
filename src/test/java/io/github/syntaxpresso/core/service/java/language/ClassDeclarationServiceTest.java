@@ -147,7 +147,12 @@ class ClassDeclarationServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new ClassDeclarationService();
+    FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+    FormalParameterDeclarationService formalParameterDeclarationService =
+        new FormalParameterDeclarationService();
+    MethodDeclarationService methodDeclarationService =
+        new MethodDeclarationService(formalParameterDeclarationService);
+    service = new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
     singleClassFile = new TSFile(SupportedLanguage.JAVA, SINGLE_CLASS_CODE);
     multipleClassesFile = new TSFile(SupportedLanguage.JAVA, MULTIPLE_CLASSES_CODE);
     noSuperclassFile = new TSFile(SupportedLanguage.JAVA, NO_SUPERCLASS_CODE);

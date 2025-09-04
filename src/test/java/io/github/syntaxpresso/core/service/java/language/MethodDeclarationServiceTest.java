@@ -91,7 +91,9 @@ class MethodDeclarationServiceTest {
 
   @BeforeEach
   void setUp() {
-    methodDeclarationService = new MethodDeclarationService();
+    FormalParameterDeclarationService formalParameterDeclarationService =
+        new FormalParameterDeclarationService();
+    methodDeclarationService = new MethodDeclarationService(formalParameterDeclarationService);
   }
 
   @Nested
@@ -655,4 +657,3 @@ class MethodDeclarationServiceTest {
     }
   }
 }
-
