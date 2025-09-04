@@ -29,7 +29,10 @@ public class JavaCommandService {
   private final JavaLanguageService javaLanguageService;
 
   public DataTransferObject<ParseSourceCodeResponse> parseSourceCommand(
-      String sourceCode, Path filePath, SupportedLanguage language, SupportedIDE ide) {
+      final String sourceCode,
+      final Path filePath,
+      final SupportedLanguage language,
+      final SupportedIDE ide) {
     ParseSourceCodeResponse response =
         ParseSourceCodeResponse.builder()
             .ide(ide)
@@ -41,7 +44,11 @@ public class JavaCommandService {
   }
 
   public DataTransferObject<GetCursorPositionInfoResponse> getTextFromCursorPosition(
-      Path filePath, SupportedLanguage language, SupportedIDE ide, Integer line, Integer column) {
+      final Path filePath,
+      final SupportedLanguage language,
+      final SupportedIDE ide,
+      final Integer line,
+      final Integer column) {
     if (!Files.exists(filePath)) {
       return DataTransferObject.error("File does not exist: " + filePath);
     }
@@ -82,7 +89,7 @@ public class JavaCommandService {
     return DataTransferObject.success(response);
   }
 
-  public DataTransferObject<GetMainClassResponse> getMainClass(Path cwd) {
+  public DataTransferObject<GetMainClassResponse> getMainClass(final Path cwd) {
     if (cwd == null || !Files.exists(cwd)) {
       return DataTransferObject.error("Current working directory does not exist.");
     }
@@ -152,11 +159,11 @@ public class JavaCommandService {
   }
 
   public DataTransferObject<CreateNewFileResponse> createNewFile(
-      Path cwd,
-      String packageName,
-      String fileName,
-      JavaFileTemplate fileType,
-      JavaSourceDirectoryType sourceDirectoryType) {
+      final Path cwd,
+      final String packageName,
+      final String fileName,
+      final JavaFileTemplate fileType,
+      final JavaSourceDirectoryType sourceDirectoryType) {
     if (cwd == null || !Files.exists(cwd)) {
       return DataTransferObject.error("Current working directory does not exist.");
     }
@@ -211,4 +218,20 @@ public class JavaCommandService {
       return DataTransferObject.error("Unexpected error occurred: " + e.getMessage());
     }
   }
+
+  // public DataTransferObject<RenameResponse> rename(final Path filePath, final String newName) {
+  //   if (!Files.exists(filePath)) {
+  //     return DataTransferObject.error("File does not exist: " + filePath);
+  //   }
+  //   if (!filePath.toString().endsWith(".java")) {
+  //     return DataTransferObject.error("File is not a .java file: " + filePath);
+  //   }
+  //   try {
+  //     Path newFilePath = this.renameFileAndContent(filePath, newName);
+  //     return DataTransferObject.success(
+  //         RenameResponse.builder().filePath(newFilePath.toString()).build());
+  //   } catch (IOException e) {
+  //     return DataTransferObject.error("Failed to rename file: " + e.getMessage());
+  //   }
+  // }
 }
