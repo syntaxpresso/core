@@ -2,12 +2,15 @@ package io.github.syntaxpresso.core.service.java;
 
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
+import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
 import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
+import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
+import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,6 +26,48 @@ import org.treesitter.TSNode;
 public class JavaCommandService {
   private final PathHelper pathHelper;
   private final JavaLanguageService javaLanguageService;
+
+  public DataTransferObject<GetCursorPositionInfoResponse> getTextFromCursorPosition(
+      Path filePath, SupportedLanguage language, SupportedIDE ide, Integer line, Integer column) {
+    if (!Files.exists(filePath)) {
+      return DataTransferObject.error("File does not exist: " + filePath);
+    }
+    if (!filePath.toString().endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + filePath);
+    }
+    TSFile file = new TSFile(language, filePath);
+    TSNode node = file.getNodeFromPosition(line, column, ide);
+    if (node == null) {
+      return DataTransferObject.error("No symbol found at the specified position.");
+    }
+    JavaIdentifierType identifierType = this.javaLanguageService.getIdentifierType(node, ide);
+    if (identifierType == null) {
+      return DataTransferObject.error(
+          "Unable to determine symbol type at cursor position. Node type: "
+              + node.getType()
+              + ", Node text: '"
+              + file.getTextFromNode(node)
+              + "'");
+    }
+    String text;
+    try {
+      text = file.getTextFromRange(node.getStartByte(), node.getEndByte());
+    } catch (Exception e) {
+      return DataTransferObject.error("Error getting text from node: " + e.getMessage());
+    }
+    if (Strings.isNullOrEmpty(text)) {
+      return DataTransferObject.error("Unable to determine current symbol name.");
+    }
+    GetCursorPositionInfoResponse response =
+        GetCursorPositionInfoResponse.builder()
+            .filePath(filePath.toString())
+            .language(SupportedLanguage.JAVA)
+            .node(node.toString())
+            .nodeText(text)
+            .nodeType(identifierType)
+            .build();
+    return DataTransferObject.success(response);
+  }
 
   public DataTransferObject<GetMainClassResponse> getMainClass(Path cwd) {
     if (cwd == null || !Files.exists(cwd)) {
