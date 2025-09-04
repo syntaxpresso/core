@@ -14,7 +14,7 @@ import picocli.CommandLine.Option;
 @RequiredArgsConstructor
 @Command(name = "get-main-class", description = "Get Main class")
 public class GetMainClassCommand implements Callable<DataTransferObject<GetMainClassResponse>> {
-  private final JavaCommandService javaService;
+  private final JavaCommandService javaCommandService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;
@@ -34,7 +34,7 @@ public class GetMainClassCommand implements Callable<DataTransferObject<GetMainC
   @Override
   public DataTransferObject<GetMainClassResponse> call() {
     if (SupportedLanguage.JAVA.equals(this.language)) {
-      return this.javaService.getMainClass(this.cwd);
+      return this.javaCommandService.getMainClass(this.cwd);
     }
     return DataTransferObject.error("Language not supported.");
   }

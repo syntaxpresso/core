@@ -15,7 +15,7 @@ import picocli.CommandLine.Option;
 @Command(name = "get-info", description = "Get info of an specific node based on cursor position.")
 public class GetCursorPositionInfo
     implements Callable<DataTransferObject<GetCursorPositionInfoResponse>> {
-  private final JavaCommandService javaService;
+  private final JavaCommandService javaCommandService;
 
   @Option(
       names = {"--file-path"},
@@ -50,7 +50,7 @@ public class GetCursorPositionInfo
   @Override
   public DataTransferObject<GetCursorPositionInfoResponse> call() {
     if (this.language.equals(SupportedLanguage.JAVA)) {
-      return this.javaService.getTextFromCursorPosition(
+      return this.javaCommandService.getTextFromCursorPosition(
           this.filePath, this.language, this.ide, this.line, this.column);
     }
     return DataTransferObject.error("Language not supported.");

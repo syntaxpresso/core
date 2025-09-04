@@ -16,7 +16,7 @@ import picocli.CommandLine.Option;
 @RequiredArgsConstructor
 @Command(name = "create-new-file", description = "Create a new Java file")
 public class CreateNewFileCommand implements Callable<DataTransferObject<CreateNewFileResponse>> {
-  private final JavaCommandService javaService;
+  private final JavaCommandService javaCommandService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;
@@ -58,7 +58,7 @@ public class CreateNewFileCommand implements Callable<DataTransferObject<CreateN
   @Override
   public DataTransferObject<CreateNewFileResponse> call() {
     if (this.language != null && this.language.equals(SupportedLanguage.JAVA)) {
-      return this.javaService.createNewFile(
+      return this.javaCommandService.createNewFile(
           this.cwd, this.packageName, this.fileName, this.fileType, this.sourceDirectoryType);
     }
     return DataTransferObject.error("Language not supported.");
