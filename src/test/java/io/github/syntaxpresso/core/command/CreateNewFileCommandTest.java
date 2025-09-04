@@ -4,10 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
@@ -16,7 +12,16 @@ import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaCommandService;
+import io.github.syntaxpresso.core.service.java.JavaLanguageService;
+import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.VariableNamingService;
+import io.github.syntaxpresso.core.util.PathHelper;
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,15 +37,31 @@ import org.junit.jupiter.api.io.TempDir;
  */
 @DisplayName("CreateNewFileCommand Tests")
 class CreateNewFileCommandTest {
-  private JavaCommandService mockJavaService;
+  private JavaCommandService javaService;
   @TempDir Path tempDir;
 
   @BeforeEach
   void setUp() {
-    this.mockJavaService = mock(JavaCommandService.class);
+    PathHelper pathHelper = new PathHelper();
+    VariableNamingService variableNamingService = new VariableNamingService();
+    ClassDeclarationService classDeclarationService = new ClassDeclarationService();
+    PackageDeclarationService packageDeclarationService = new PackageDeclarationService();
+    ImportDeclarationService importDeclarationService = new ImportDeclarationService();
+    LocalVariableDeclarationService localVariableDeclarationService = new LocalVariableDeclarationService();
+    
+    JavaLanguageService javaLanguageService = new JavaLanguageService(
+        pathHelper,
+        variableNamingService,
+        classDeclarationService,
+        packageDeclarationService,
+        importDeclarationService,
+        localVariableDeclarationService
+    );
+    
+    this.javaService = new JavaCommandService(pathHelper, javaLanguageService);
   }
 
-  /** Creates a command instance with mock service and sets all required fields. */
+  /** Creates a command instance with real service and sets all required fields. */
   private CreateNewFileCommand createCommand(
       Path cwd,
       SupportedLanguage language,
@@ -50,7 +71,7 @@ class CreateNewFileCommandTest {
       JavaFileTemplate fileType,
       JavaSourceDirectoryType sourceDirectoryType)
       throws Exception {
-    CreateNewFileCommand command = new CreateNewFileCommand(this.mockJavaService);
+    CreateNewFileCommand command = new CreateNewFileCommand(this.javaService);
 
     setField(command, "cwd", cwd);
     setField(command, "language", language);
@@ -71,6 +92,11 @@ class CreateNewFileCommandTest {
     field.set(target, value);
   }
 
+  private void setupSourceDirectories() throws IOException {
+    Files.createDirectories(tempDir.resolve("src/main/java"));
+    Files.createDirectories(tempDir.resolve("src/test/java"));
+  }
+
   @Nested
   @DisplayName("Command Configuration Tests")
   class CommandConfigurationTests {
@@ -87,18 +113,18 @@ class CreateNewFileCommandTest {
     @Test
     @DisplayName("should have required constructor with JavaCommandService")
     void shouldHaveRequiredConstructorWithJavaCommandService() throws Exception {
-      CreateNewFileCommand command = new CreateNewFileCommand(mockJavaService);
+      CreateNewFileCommand command = new CreateNewFileCommand(javaService);
       assertNotNull(command);
 
       Field serviceField = CreateNewFileCommand.class.getDeclaredField("javaService");
       serviceField.setAccessible(true);
-      assertEquals(mockJavaService, serviceField.get(command));
+      assertEquals(javaService, serviceField.get(command));
     }
 
     @Test
     @DisplayName("should have default IDE as NONE")
     void shouldHaveDefaultIDEAsNone() throws Exception {
-      CreateNewFileCommand command = new CreateNewFileCommand(mockJavaService);
+      CreateNewFileCommand command = new CreateNewFileCommand(javaService);
       Field ideField = CreateNewFileCommand.class.getDeclaredField("ide");
       ideField.setAccessible(true);
       assertEquals(SupportedIDE.NONE, ideField.get(command));
@@ -107,7 +133,7 @@ class CreateNewFileCommandTest {
     @Test
     @DisplayName("should have default source directory as MAIN")
     void shouldHaveDefaultSourceDirectoryAsMain() throws Exception {
-      CreateNewFileCommand command = new CreateNewFileCommand(mockJavaService);
+      CreateNewFileCommand command = new CreateNewFileCommand(javaService);
       Field sourceDirectoryField =
           CreateNewFileCommand.class.getDeclaredField("sourceDirectoryType");
       sourceDirectoryField.setAccessible(true);
@@ -121,10 +147,7 @@ class CreateNewFileCommandTest {
     @Test
     @DisplayName("should delegate to JavaCommandService for JAVA language")
     void shouldDelegateToJavaCommandServiceForJavaLanguage() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/TestClass.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -138,13 +161,13 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
-      assertEquals("/path/to/TestClass.java", result.getData().getFilePath());
+      assertTrue(result.getData().getFilePath().endsWith("TestClass.java"));
     }
 
     @Test
     @DisplayName("should return error for unsupported language")
     void shouldReturnErrorForUnsupportedLanguage() throws Exception {
-      CreateNewFileCommand command = new CreateNewFileCommand(mockJavaService);
+      CreateNewFileCommand command = new CreateNewFileCommand(javaService);
 
       setField(command, "cwd", tempDir);
       setField(command, "language", null);
@@ -166,10 +189,7 @@ class CreateNewFileCommandTest {
     @Test
     @DisplayName("should handle CLASS file template")
     void shouldHandleClassFileTemplate() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/MyClass.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -183,15 +203,13 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertTrue(result.getData().getFilePath().endsWith("MyClass.java"));
     }
 
     @Test
     @DisplayName("should handle INTERFACE file template")
     void shouldHandleInterfaceFileTemplate() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/MyInterface.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -205,15 +223,13 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertTrue(result.getData().getFilePath().endsWith("MyInterface.java"));
     }
 
     @Test
     @DisplayName("should handle RECORD file template")
     void shouldHandleRecordFileTemplate() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/MyRecord.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -227,15 +243,13 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertTrue(result.getData().getFilePath().endsWith("MyRecord.java"));
     }
 
     @Test
     @DisplayName("should handle ENUM file template")
     void shouldHandleEnumFileTemplate() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/MyEnum.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -249,15 +263,13 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertTrue(result.getData().getFilePath().endsWith("MyEnum.java"));
     }
 
     @Test
     @DisplayName("should handle ANNOTATION file template")
     void shouldHandleAnnotationFileTemplate() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/MyAnnotation.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -271,6 +283,7 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertTrue(result.getData().getFilePath().endsWith("MyAnnotation.java"));
     }
   }
 
@@ -280,10 +293,7 @@ class CreateNewFileCommandTest {
     @Test
     @DisplayName("should handle MAIN source directory type")
     void shouldHandleMainSourceDirectoryType() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/MainClass.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -297,15 +307,13 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertTrue(result.getData().getFilePath().contains("src/main/java"));
     }
 
     @Test
     @DisplayName("should handle TEST source directory type")
     void shouldHandleTestSourceDirectoryType() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/TestClass.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -319,6 +327,7 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertTrue(result.getData().getFilePath().contains("src/test/java"));
     }
   }
 
@@ -328,10 +337,7 @@ class CreateNewFileCommandTest {
     @Test
     @DisplayName("should handle NONE IDE")
     void shouldHandleNoneIDE() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/TestClass.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -350,10 +356,7 @@ class CreateNewFileCommandTest {
     @Test
     @DisplayName("should handle NEOVIM IDE")
     void shouldHandleNeovimIDE() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/TestClass.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -372,10 +375,7 @@ class CreateNewFileCommandTest {
     @Test
     @DisplayName("should handle VSCODE IDE")
     void shouldHandleVscodeIDE() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/TestClass.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -396,11 +396,8 @@ class CreateNewFileCommandTest {
   @DisplayName("Error Handling Tests")
   class ErrorHandlingTests {
     @Test
-    @DisplayName("should propagate JavaCommandService errors")
-    void shouldPropagateJavaCommandServiceErrors() throws Exception {
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.error("Cannot find source directory."));
-
+    @DisplayName("should return error when source directory does not exist")
+    void shouldReturnErrorWhenSourceDirectoryDoesNotExist() throws Exception {
       CreateNewFileCommand command =
           createCommand(
               tempDir,
@@ -419,7 +416,7 @@ class CreateNewFileCommandTest {
     @Test
     @DisplayName("should handle null language")
     void shouldHandleNullLanguage() throws Exception {
-      CreateNewFileCommand command = new CreateNewFileCommand(mockJavaService);
+      CreateNewFileCommand command = new CreateNewFileCommand(javaService);
 
       setField(command, "cwd", tempDir);
       setField(command, "language", null);
@@ -439,17 +436,9 @@ class CreateNewFileCommandTest {
   @DisplayName("Integration Tests")
   class IntegrationTests {
     @Test
-    @DisplayName("should pass all parameters correctly to JavaCommandService")
-    void shouldPassAllParametersCorrectlyToJavaCommandService() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/IntegrationTest.java").build();
-      when(mockJavaService.createNewFile(
-              tempDir,
-              "com.example.test",
-              "IntegrationTest",
-              JavaFileTemplate.CLASS,
-              JavaSourceDirectoryType.TEST))
-          .thenReturn(DataTransferObject.success(mockResponse));
+    @DisplayName("should create file in test directory with all parameters")
+    void shouldCreateFileInTestDirectoryWithAllParameters() throws Exception {
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -463,16 +452,14 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
-      assertEquals("/path/to/IntegrationTest.java", result.getData().getFilePath());
+      assertTrue(result.getData().getFilePath().endsWith("IntegrationTest.java"));
+      assertTrue(result.getData().getFilePath().contains("src/test/java"));
     }
 
     @Test
     @DisplayName("should handle complex package names")
     void shouldHandleComplexPackageNames() throws Exception {
-      CreateNewFileResponse mockResponse =
-          CreateNewFileResponse.builder().filePath("/path/to/ComplexClass.java").build();
-      when(mockJavaService.createNewFile(any(), anyString(), anyString(), any(), any()))
-          .thenReturn(DataTransferObject.success(mockResponse));
+      setupSourceDirectories();
 
       CreateNewFileCommand command =
           createCommand(
@@ -486,6 +473,40 @@ class CreateNewFileCommandTest {
 
       DataTransferObject<CreateNewFileResponse> result = command.call();
       assertTrue(result.getSucceed());
+      assertTrue(result.getData().getFilePath().endsWith("ComplexClass.java"));
+    }
+
+    @Test
+    @DisplayName("should return error when file already exists")
+    void shouldReturnErrorWhenFileAlreadyExists() throws Exception {
+      setupSourceDirectories();
+
+      CreateNewFileCommand command1 =
+          createCommand(
+              tempDir,
+              SupportedLanguage.JAVA,
+              SupportedIDE.NONE,
+              "com.example",
+              "DuplicateClass",
+              JavaFileTemplate.CLASS,
+              JavaSourceDirectoryType.MAIN);
+
+      DataTransferObject<CreateNewFileResponse> result1 = command1.call();
+      assertTrue(result1.getSucceed());
+
+      CreateNewFileCommand command2 =
+          createCommand(
+              tempDir,
+              SupportedLanguage.JAVA,
+              SupportedIDE.NONE,
+              "com.example",
+              "DuplicateClass",
+              JavaFileTemplate.CLASS,
+              JavaSourceDirectoryType.MAIN);
+
+      DataTransferObject<CreateNewFileResponse> result2 = command2.call();
+      assertFalse(result2.getSucceed());
+      assertTrue(result2.getErrorReason().contains("File already exists"));
     }
   }
 }
