@@ -281,13 +281,13 @@ public class ClassDeclarationService {
    *   (#eq? @className "MyClass"))
    * </pre>
    *
-   * @param file {@link TSFile} containing the source code
+   * @param tsFile {@link TSFile} containing the source code
    * @param className Name of the class to search for
    * @return {@link Optional} containing the class declaration node, or empty if not found,
    *     file/tree is null, or className is empty
    */
-  public Optional<TSNode> findClassByName(TSFile file, String className) {
-    if (file == null || file.getTree() == null || Strings.isNullOrEmpty(className)) {
+  public Optional<TSNode> findClassByName(TSFile tsFile, String className) {
+    if (tsFile == null || tsFile.getTree() == null || Strings.isNullOrEmpty(className)) {
       return Optional.empty();
     }
     String queryString =
@@ -298,7 +298,7 @@ public class ClassDeclarationService {
             (#eq? @className "%s")) @classDeclaration
             """,
             className);
-    return file.query(queryString).returning("classDeclaration").execute().firstNodeOptional();
+    return tsFile.query(queryString).returning("classDeclaration").execute().firstNodeOptional();
   }
 
   /**
@@ -415,10 +415,11 @@ public class ClassDeclarationService {
   /**
    * Renames the class declaration node and updates the source file name if the class is public.
    *
-   * <p>If the class declaration node matches the public class of the file, the file itself is renamed.
-   * The class name identifier node within the source code is also updated to the new name.
+   * <p>If the class declaration node matches the public class of the file, the file itself is
+   * renamed. The class name identifier node within the source code is also updated to the new name.
    *
    * <p>Usage example:
+   *
    * <pre>
    * service.renameClass(tsFile, classNode, "NewClassName");
    * </pre>

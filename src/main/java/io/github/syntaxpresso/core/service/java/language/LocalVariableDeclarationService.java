@@ -2,6 +2,7 @@ package io.github.syntaxpresso.core.service.java.language;
 
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
+import io.github.syntaxpresso.core.service.java.language.extra.VariableCapture;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -84,31 +85,45 @@ public class LocalVariableDeclarationService {
       return Collections.emptyList();
     }
     String queryString =
-        """
-        [
-          (local_variable_declaration
-            (modifiers)? @modifiers
-            type: (_) @type
-            declarator: (variable_declarator
-              name: (identifier) @name
-              value: (_)? @value
-            )
-          ) @node
-          (formal_parameter
-            (modifiers)? @modifiers
-            type: (_) @type
-            name: (identifier) @name
-          ) @node
-          (field_declaration
-            (modifiers)? @modifiers
-            type: (_) @type
-            declarator: (variable_declarator
-              name: (identifier) @name
-              value: (_)? @value
-            )
-          ) @node
-        ]
-        """;
+        String.format(
+            """
+            [
+              (local_variable_declaration
+                (modifiers)? %s
+                type: (_) %s
+                declarator: (variable_declarator
+                  name: (identifier) %s
+                  value: (_)? %s
+                )
+              ) %s
+              (formal_parameter
+                (modifiers)? %s
+                type: (_) %s
+                name: (identifier) %s
+              ) %s
+              (field_declaration
+                (modifiers)? %s
+                type: (_) %s
+                declarator: (variable_declarator
+                  name: (identifier) %s
+                  value: (_)? %s
+                )
+              ) %s
+            ]
+            """,
+            VariableCapture.VARIABLE_MODIFIERS.getCaptureWithAt(),
+            VariableCapture.VARIABLE_TYPE.getCaptureWithAt(),
+            VariableCapture.VARIABLE_NAME.getCaptureWithAt(),
+            VariableCapture.VARIABLE_VALUE.getCaptureWithAt(),
+            VariableCapture.VARIABLE.getCaptureWithAt(),
+            VariableCapture.VARIABLE_MODIFIERS.getCaptureWithAt(),
+            VariableCapture.VARIABLE_TYPE.getCaptureWithAt(),
+            VariableCapture.VARIABLE_NAME.getCaptureWithAt(),
+            VariableCapture.VARIABLE.getCaptureWithAt(),
+            VariableCapture.VARIABLE_MODIFIERS.getCaptureWithAt(),
+            VariableCapture.VARIABLE_TYPE.getCaptureWithAt(),
+            VariableCapture.VARIABLE_NAME.getCaptureWithAt(),
+            VariableCapture.VARIABLE.getCaptureWithAt());
     return tsFile
         .query(queryString)
         .within(localVariableDeclarationNode)
@@ -125,8 +140,8 @@ public class LocalVariableDeclarationService {
    * @param localVariableDeclarationNode The variable declaration node
    * @return Optional containing the requested node if found, empty otherwise
    */
-  public Optional<TSNode> getLocalVariableDeclarationNodeByCaptureName(
-      TSFile tsFile, String captureName, TSNode localVariableDeclarationNode) {
+  public Optional<TSNode> getLocalVariableDeclarationChildNodeByCaptureName(
+      TSFile tsFile, TSNode localVariableDeclarationNode, VariableCapture capture) {
     if (tsFile == null
         || tsFile.getTree() == null
         || (!localVariableDeclarationNode.getType().equals("field_declaration")
@@ -137,7 +152,7 @@ public class LocalVariableDeclarationService {
     List<Map<String, TSNode>> localVariableDeclarationInfo =
         this.getLocalVariableDeclarationNodeInfo(tsFile, localVariableDeclarationNode);
     for (Map<String, TSNode> map : localVariableDeclarationInfo) {
-      TSNode node = map.get(captureName);
+      TSNode node = map.get(capture.getCaptureName());
       if (node != null) {
         return Optional.of(node);
       }
@@ -154,8 +169,8 @@ public class LocalVariableDeclarationService {
    */
   public Optional<TSNode> getLocalVariableDeclarationNameNode(
       TSFile tsFile, TSNode localVariableDeclarationNode) {
-    return this.getLocalVariableDeclarationNodeByCaptureName(
-        tsFile, "name", localVariableDeclarationNode);
+    return this.getLocalVariableDeclarationChildNodeByCaptureName(
+        tsFile, localVariableDeclarationNode, VariableCapture.VARIABLE_NAME);
   }
 
   /**
@@ -167,8 +182,8 @@ public class LocalVariableDeclarationService {
    */
   public Optional<TSNode> getLocalVariableDeclarationValueNode(
       TSFile tsFile, TSNode localVariableDeclarationNode) {
-    return this.getLocalVariableDeclarationNodeByCaptureName(
-        tsFile, "type", localVariableDeclarationNode);
+    return this.getLocalVariableDeclarationChildNodeByCaptureName(
+        tsFile, localVariableDeclarationNode, VariableCapture.VARIABLE_TYPE);
   }
 
   /**
@@ -180,8 +195,8 @@ public class LocalVariableDeclarationService {
    */
   public Optional<TSNode> getLocalVariableDeclarationModifiersNode(
       TSFile tsFile, TSNode localVariableDeclarationNode) {
-    return this.getLocalVariableDeclarationNodeByCaptureName(
-        tsFile, "modifiers", localVariableDeclarationNode);
+    return this.getLocalVariableDeclarationChildNodeByCaptureName(
+        tsFile, localVariableDeclarationNode, VariableCapture.VARIABLE_MODIFIERS);
   }
 
   /**
@@ -209,20 +224,33 @@ public class LocalVariableDeclarationService {
             """
             [
               (formal_parameter
-                type: (_) @type
-              ) @node
-              (#eq? @type "%s")
+                type: (_) %s
+                (#eq? %s "%s")
+              ) %s
+
               (local_variable_declaration
-                type: (_) @type
-              ) @node
-              (#eq? @type "%s")
+                type: (_) %s
+                (#eq? %s "%s")
+              ) %s
+
               (field_declaration
-                type: (_) @type
-              ) @node
-              (#eq? @type "%s")
+                type: (_) %s
+                (#eq? %s "%s")
+              ) %s
             ]
             """,
-            type, type, type);
+            VariableCapture.VARIABLE_TYPE,
+            VariableCapture.VARIABLE_TYPE,
+            type,
+            VariableCapture.VARIABLE,
+            VariableCapture.VARIABLE_TYPE,
+            VariableCapture.VARIABLE_TYPE,
+            type,
+            VariableCapture.VARIABLE,
+            VariableCapture.VARIABLE_TYPE,
+            VariableCapture.VARIABLE_TYPE,
+            type,
+            VariableCapture.VARIABLE);
     return tsFile.query(queryString).execute().nodes();
   }
 }
