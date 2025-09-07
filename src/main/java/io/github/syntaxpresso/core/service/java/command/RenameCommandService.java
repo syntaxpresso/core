@@ -95,6 +95,29 @@ public class RenameCommandService {
     return true;
   }
 
+  private boolean renameImportDeclaration(
+      TSFile tsFile, RenameSourceFileData sourceFileData, String newName) {
+    Optional<TSNode> importDeclarationNode =
+        this.javaLanguageService
+            .getImportDeclarationService()
+            .findImportDeclarationNode(
+                tsFile,
+                sourceFileData.getSourcePackageScopeText(),
+                sourceFileData.getSourceCursorPositionText());
+    if (importDeclarationNode.isEmpty()) {
+      return false;
+    }
+    Optional<TSNode> importDeclarationClassNode =
+        this.javaLanguageService
+            .getImportDeclarationService()
+            .getImportDeclarationClassNameNode(tsFile, importDeclarationNode.get());
+    if (importDeclarationClassNode.isEmpty()) {
+      return false;
+    }
+    this.addRenameOperation(tsFile, importDeclarationClassNode.get(), newName);
+    return true;
+  }
+
   private void renameFieldDeclarations(
       TSFile tsFile, TSNode classDeclarationNode, String oldFieldType, String newFieldType) {
     List<TSNode> allFieldDeclarationNodes =
@@ -309,6 +332,7 @@ public class RenameCommandService {
       if (!isImported) {
         continue;
       }
+      this.renameImportDeclaration(tsFile, sourceFileData, newName);
       this.renameFieldDeclarations(
           tsFile,
           classDeclarationNode.get(),
