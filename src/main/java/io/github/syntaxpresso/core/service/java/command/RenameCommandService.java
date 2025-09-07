@@ -34,7 +34,7 @@ public class RenameCommandService {
         RenameOperation.builder().tsFile(tsFile).node(tsNode).text(text).build());
   }
 
-  private void executeAllRenameOperations() {
+  private DataTransferObject<RenameResponse> executeAllRenameOperations() {
     this.renameOperations.sort(
         (a, b) -> Integer.compare(b.getNode().getStartByte(), a.getNode().getStartByte()));
     for (RenameOperation renameOperation : this.renameOperations) {
@@ -44,9 +44,10 @@ public class RenameCommandService {
       try {
         renameOperation.getTsFile().save();
       } catch (IOException e) {
-        System.out.println(1);
+        return DataTransferObject.error("Unable to save file: " + e.getMessage());
       }
     }
+    return DataTransferObject.success();
   }
 
   private DataTransferObject<RenameResponse> renameSourceFile(
@@ -390,7 +391,10 @@ public class RenameCommandService {
       }
     }
     if (sourceFileData.getSourceCursorPositionType().equals(JavaIdentifierType.METHOD_NAME)) {}
-    this.executeAllRenameOperations();
+    DataTransferObject<RenameResponse> operationsExecution = this.executeAllRenameOperations();
+    if (!operationsExecution.getSucceed()) {
+      return operationsExecution;
+    }
     return DataTransferObject.success(
         RenameResponse.builder()
             .filePath(filePath.toString())
