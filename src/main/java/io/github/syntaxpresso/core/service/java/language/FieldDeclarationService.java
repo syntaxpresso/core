@@ -3,7 +3,6 @@ package io.github.syntaxpresso.core.service.java.language;
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.service.java.language.extra.FieldCapture;
-import io.github.syntaxpresso.core.util.StringHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -495,9 +494,17 @@ public class FieldDeclarationService {
     String queryString =
         String.format(
             """
-            ((field_declaration
-              type: (_) @type)
-             (#eq? @type "%s")) @fieldDeclaration
+            (field_declaration
+              type: [
+                (type_identifier) @type
+                (generic_type
+                  (type_arguments
+                    (type_identifier) @type
+                  )
+                )
+              ]
+            ) @fieldDeclaration
+            (#eq? @type "%s")
             """,
             fieldDeclaratorType);
     return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
@@ -582,7 +589,7 @@ public class FieldDeclarationService {
    * @param newTypeName The new type name to convert to camelCase and apply
    * @return true if the rename operation was successful, false otherwise
    */
-  public boolean renamedFieldDeclarationUsageNode(
+  public boolean renameFieldDeclarationUsageNode(
       TSFile tsFile, TSNode fieldDeclarationUsageNode, String newTypeName) {
     if (tsFile == null
         || tsFile.getTree() == null
@@ -590,7 +597,7 @@ public class FieldDeclarationService {
         || !fieldDeclarationUsageNode.getType().equals("identifier")) {
       return false;
     }
-    tsFile.updateSourceCode(fieldDeclarationUsageNode, StringHelper.pascalToCamel(newTypeName));
+    tsFile.updateSourceCode(fieldDeclarationUsageNode, newTypeName);
     return true;
   }
 }

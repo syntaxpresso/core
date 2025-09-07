@@ -13,11 +13,12 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
+import io.github.syntaxpresso.core.service.java.command.RenameCommandService;
+import io.github.syntaxpresso.core.service.java.language.VariableNamingService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
@@ -29,6 +30,8 @@ import org.treesitter.TSNode;
 public class JavaCommandService {
   private final PathHelper pathHelper;
   private final JavaLanguageService javaLanguageService;
+  private final VariableNamingService variableNamingService;
+  private final RenameCommandService renameCommandService;
 
   public DataTransferObject<ParseSourceCodeResponse> parseSourceCommand(
       final String sourceCode,
@@ -228,129 +231,6 @@ public class JavaCommandService {
       final int line,
       final int column,
       final String newName) {
-    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
-    TSNode cursorPositionNode = tsFile.getNodeFromPosition(line, column, ide);
-    if (cursorPositionNode == null) {
-      return DataTransferObject.error("No symbol found at the specified position.");
-    }
-    String cursorPositionNodeName;
-    cursorPositionNodeName = tsFile.getTextFromNode(cursorPositionNode);
-    if (Strings.isNullOrEmpty(cursorPositionNodeName)) {
-      return DataTransferObject.error("Unable to determine current symbol name.");
-    }
-    Optional<TSNode> packageNameNode =
-        this.javaLanguageService.getPackageDeclarationService().getPackageDeclarationNode(tsFile);
-    if (packageNameNode.isEmpty()) {
-      return DataTransferObject.error("Unable to determine package name.");
-    }
-    JavaIdentifierType cursorPositionNodeType =
-        this.javaLanguageService.getIdentifierType(cursorPositionNode, ide);
-    if (cursorPositionNodeType == null) {
-      return DataTransferObject.error(
-          "Unable to determine symbol type at cursor position. Node type: "
-              + cursorPositionNode.getType()
-              + ", Node text: '"
-              + tsFile.getTextFromNode(cursorPositionNode)
-              + "'");
-    }
-    List<TSFile> allJavaFiles = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
-    if (cursorPositionNodeType.equals(JavaIdentifierType.CLASS_NAME)) {
-      Optional<TSNode> classDeclarationNode =
-          this.javaLanguageService
-              .getClassDeclarationService()
-              .findClassByName(tsFile, cursorPositionNodeName);
-      if (classDeclarationNode.isEmpty()) {
-        DataTransferObject.error(
-            "Couldn't find the class declaration node that matches this name.");
-      }
-      this.getJavaLanguageService()
-          .getClassDeclarationService()
-          .renameClass(tsFile, classDeclarationNode.get(), newName);
-      for (TSFile projectJavaFile : allJavaFiles) {
-        List<TSNode> allVariableDeclarationNodes =
-            this.javaLanguageService
-                .getLocalVariableDeclarationService()
-                .findLocalVariableDeclarationByType(projectJavaFile, cursorPositionNodeName);
-        List<String> foundLocalVariableNameNodes = new ArrayList<>();
-        for (TSNode variableDeclarationNode : allVariableDeclarationNodes) {
-          Optional<TSNode> variableDeclarationNameNode =
-              this.javaLanguageService
-                  .getLocalVariableDeclarationService()
-                  .getLocalVariableDeclarationNameNode(projectJavaFile, variableDeclarationNode);
-          if (variableDeclarationNameNode.isPresent()) {
-            String variableName =
-                projectJavaFile.getTextFromNode(variableDeclarationNameNode.get());
-            foundLocalVariableNameNodes.add(variableName);
-          }
-        }
-        // TODO: find all usages and rename backward.
-
-      }
-    }
-    if (cursorPositionNodeType.equals(JavaIdentifierType.METHOD_NAME)) {}
-
-    //     if (identifierType.equals(JavaIdentifierType.CLASS_NAME)) {
-    //       modifiedFiles.addAll(
-    //           this.javaLanguageService.processClassRename(
-    //               cwd, file, cursorPositionNode, packageName.get(), cursorPositionNodeName,
-    // newName));
-    //       renamedNodes = 1;
-    //       String fileName =
-    //
-    // com.google.common.io.Files.getNameWithoutExtension(file.getFile().getAbsolutePath());
-    //       if (fileName.equals(cursorPositionNodeName)) {
-    //         renamedNodes += 1;
-    //       }
-    //       for (TSFile modifiedFile : modifiedFiles) {
-    //         if (!modifiedFile.getFile().equals(file.getFile()) && modifiedFile.isModified()) {
-    //           renamedNodes += 1;
-    //         }
-    //       }
-    //     } else if (identifierType.equals(JavaIdentifierType.METHOD_NAME)) {
-    //       TSNode methodDeclarationNode = cursorPositionNode.getParent();
-    //       if (methodDeclarationNode != null) {
-    //         Optional<TSNode> classDeclarationNode =
-    //             this.javaLanguageService.getClassDeclarationService().getMainClass(file);
-    //         if (classDeclarationNode.isEmpty()) {
-    //           return DataTransferObject.error("Unable to find main class declaration in file.");
-    //         }
-    //         Optional<String> className =
-    //             this.javaLanguageService
-    //                 .getClassDeclarationService()
-    //                 .getClassName(file, classDeclarationNode.get());
-    //         if (className.isEmpty()) {
-    //           return DataTransferObject.error("Unable to determine class name from
-    // declaration.");
-    //         }
-    //         List<TSFile> renamedMethodFiles =
-    //             this.javaLanguageService.processMethodRename(
-    //                 cwd,
-    //                 file,
-    //                 methodDeclarationNode,
-    //                 cursorPositionNodeName,
-    //                 newName,
-    //                 className.get());
-    //         if (renamedMethodFiles != null) {
-    //           modifiedFiles.addAll(renamedMethodFiles);
-    //         }
-    //         renamedNodes = modifiedFiles.size();
-    //       }
-    //     } else {
-    //       return DataTransferObject.error("Renaming of " + identifierType + " is not yet
-    // supported.");
-    //     }
-    //     for (TSFile modifiedFile : modifiedFiles) {
-    //       modifiedFile.save();
-    //     }
-    //     return DataTransferObject.success(
-    //         RenameResponse.builder()
-    //             .filePath(file.getFile().getAbsolutePath())
-    //             .renamedNodes(renamedNodes)
-    //             .newName(newName)
-    //             .build());
-    //   } catch (Exception e) {
-    //     return DataTransferObject.error("Unexpected error: " + e.getMessage());
-    //   }
-    return DataTransferObject.success();
+    return this.renameCommandService.rename(cwd, filePath, ide, line, column, newName);
   }
 }

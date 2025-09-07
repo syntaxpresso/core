@@ -7,6 +7,7 @@ package io.github.syntaxpresso.core.service.java.language.extra;
 public enum FieldCapture {
   // Corresponds to the captures in the associated query
   FIELD("field"),
+  FIELD_TYPE_ARGUMENT("field_type_argument"),
   FIELD_TYPE("fieldType"),
   FIELD_NAME("fieldName"),
   FIELD_VALUE("fieldValue");

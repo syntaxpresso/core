@@ -9,9 +9,10 @@ import io.github.syntaxpresso.core.command.RenameCommand;
 import io.github.syntaxpresso.core.common.CommandFactory;
 import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
+import io.github.syntaxpresso.core.service.java.command.RenameCommandService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.FormalParameterDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.FormalParameterService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.MethodDeclarationService;
@@ -70,22 +71,17 @@ public class Core {
 
   private static CommandFactory createCommandFactory() {
     PathHelper pathHelper = new PathHelper();
-
-    // Initialize services with proper dependency injection
-    FormalParameterDeclarationService formalParameterDeclarationService =
-        new FormalParameterDeclarationService();
+    VariableNamingService variableNamingService = new VariableNamingService();
+    FormalParameterService formalParameterDeclarationService = new FormalParameterService();
     MethodDeclarationService methodDeclarationService =
         new MethodDeclarationService(formalParameterDeclarationService);
     FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
     ClassDeclarationService classDeclarationService =
         new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
-
-    VariableNamingService variableNamingService = new VariableNamingService();
     PackageDeclarationService packageDeclarationService = new PackageDeclarationService();
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();
-
     JavaLanguageService javaLanguageService =
         new JavaLanguageService(
             pathHelper,
@@ -94,9 +90,11 @@ public class Core {
             packageDeclarationService,
             importDeclarationService,
             localVariableDeclarationService);
-
-    JavaCommandService javaCommandService = new JavaCommandService(pathHelper, javaLanguageService);
-
+    RenameCommandService renameCommandService =
+        new RenameCommandService(variableNamingService, javaLanguageService);
+    JavaCommandService javaCommandService =
+        new JavaCommandService(
+            pathHelper, javaLanguageService, variableNamingService, renameCommandService);
     return new CommandFactory(javaCommandService);
   }
 }

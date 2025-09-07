@@ -20,7 +20,7 @@ import org.treesitter.TSNode;
 @Getter
 @RequiredArgsConstructor
 public class MethodDeclarationService {
-  private final FormalParameterDeclarationService formalParameterDeclarationService;
+  private final FormalParameterService formalParameterService;
 
   /**
    * Retrieves all method declaration nodes within a given class declaration node.

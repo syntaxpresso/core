@@ -14,6 +14,58 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
+/**
+ * Service for analyzing and manipulating class declarations in Java source code using tree-sitter.
+ *
+ * <p>This service provides comprehensive functionality for working with class declarations within
+ * Java source files, including extraction of class information, finding classes by name, resolving
+ * superclass relationships, and performing class-related transformations. It leverages tree-sitter
+ * queries to accurately parse and analyze class declarations at the AST level.
+ *
+ * <p>Key capabilities include:
+ *
+ * <ul>
+ *   <li>Extracting class name, annotations, modifiers, and superclass information
+ *   <li>Finding all class declarations within a file
+ *   <li>Locating classes by name or file-based public class lookup
+ *   <li>Resolving superclass fully qualified names
+ *   <li>Checking for local vs external class references
+ *   <li>Renaming class declarations and associated files
+ * </ul>
+ *
+ * <p>Usage example:
+ *
+ * <pre>
+ * ClassDeclarationService classService = new ClassDeclarationService(fieldService, methodService);
+ *
+ * // Find a specific class by name
+ * Optional&lt;TSNode&gt; classNode = classService.findClassByName(tsFile, "UserService");
+ * if (classNode.isPresent()) {
+ *   // Get detailed class information
+ *   List&lt;Map&lt;String, TSNode&gt;&gt; classInfo = classService.getClassDeclarationNodeInfo(tsFile, classNode.get());
+ *   for (Map&lt;String, TSNode&gt; info : classInfo) {
+ *     String className = tsFile.getTextFromNode(info.get("className"));
+ *     TSNode superclass = info.get("superclass");
+ *     if (superclass != null) {
+ *       String superclassName = tsFile.getTextFromNode(superclass);
+ *       System.out.println("Class " + className + " extends " + superclassName);
+ *     }
+ *   }
+ * }
+ *
+ * // Find the main public class of a file
+ * Optional&lt;TSNode&gt; publicClass = classService.getPublicClass(tsFile);
+ * if (publicClass.isPresent()) {
+ *   // Rename the class
+ *   classService.renameClass(tsFile, publicClass.get(), "NewClassName");
+ * }
+ * </pre>
+ *
+ * @see TSFile
+ * @see ClassCapture
+ * @see FieldDeclarationService
+ * @see MethodDeclarationService
+ */
 @Getter
 @RequiredArgsConstructor
 public class ClassDeclarationService {
@@ -441,8 +493,14 @@ public class ClassDeclarationService {
     if (publicClassNode.isEmpty()) {
       return;
     }
-    if (classDeclarationNode.equals(publicClassNode.get())) {
-      tsFile.rename(newName);
+    Optional<TSNode> publicClassNameNode =
+        this.getClassDeclarationNameNode(tsFile, publicClassNode.get());
+    if (publicClassNameNode.isPresent()) {
+      String classDeclarationName = tsFile.getTextFromNode(classDeclarationNameNode.get());
+      String publicClassName = tsFile.getTextFromNode(publicClassNameNode.get());
+      if (publicClassName.equals(classDeclarationName)) {
+        tsFile.rename(newName);
+      }
     }
     tsFile.updateSourceCode(classDeclarationNameNode.get(), newName);
   }

@@ -256,10 +256,10 @@ public class TSFile {
     TSNode rootNode = this.tree.getRootNode();
     TSPoint endPoint = rootNode.getEndPoint();
     int requestedLine = line - 1;
-    int requestedColumn = column - 1;
-    if (ide.equals(SupportedIDE.NEOVIM) || ide.equals(SupportedIDE.VSCODE)) {
-      requestedColumn++;
-    }
+    int requestedColumn = column;
+    // if (ide.equals(SupportedIDE.NEOVIM) || ide.equals(SupportedIDE.VSCODE)) {
+    //   requestedColumn++;
+    // }
     if (requestedLine > endPoint.getRow()
         || (requestedLine == endPoint.getRow() && requestedColumn > endPoint.getColumn())) {
       return null;
