@@ -6,10 +6,14 @@ package io.github.syntaxpresso.core.service.java.language.extra;
  */
 public enum VariableCapture {
   // Corresponds to the captures in the associated query
+  VARIABLE_TYPE_BASE("variableTypeBase"),
+  VARIABLE_TYPE_ARGUMENT("variableTypeArgument"),
   VARIABLE_MODIFIERS("variableModifiers"),
   VARIABLE_TYPE("variableType"),
   VARIABLE_NAME("variableName"),
   VARIABLE_VALUE("variableValue"),
+  VARIABLE_VALUE_TYPE("variable_value_type"),
+  VARIABLE_VALUE_TYPE_ARGUMENT("variable_value_type_argument"),
   VARIABLE("variable");
 
   private final String captureName;

@@ -1,33 +1,8 @@
 package io.github.syntaxpresso.core.service.java.language;
 
-import com.google.common.base.Strings;
-import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.util.StringHelper;
-import java.util.Collections;
-import java.util.List;
-import org.treesitter.TSNode;
 
 public class VariableNamingService {
-
-  public List<TSNode> findAllIdentifierNodes(
-      TSFile tsFile, TSNode scopeNode, String identiferText) {
-    if (tsFile == null
-        || tsFile.getTree() == null
-        || scopeNode == null
-        || Strings.isNullOrEmpty(identiferText)) {
-      return Collections.emptyList();
-    }
-    String queryString =
-        String.format(
-            """
-            (
-              (identifier) @usage
-                (#eq? @usage "%s")
-            )
-            """,
-            identiferText);
-    return tsFile.query(queryString).within(scopeNode).execute().nodes();
-  }
 
   /**
    * Checks if a type represents a collection (List, Set, ArrayList, etc.).

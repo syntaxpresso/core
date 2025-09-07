@@ -30,8 +30,20 @@ public class RenameCommandService {
   private final List<RenameOperation> renameOperations = new ArrayList<>();
 
   private void addRenameOperation(TSFile tsFile, TSNode tsNode, String text) {
-    this.renameOperations.add(
-        RenameOperation.builder().tsFile(tsFile).node(tsNode).text(text).build());
+    String filePath = tsFile.getFile().getAbsolutePath();
+    int startByte = tsNode.getStartByte();
+    int endByte = tsNode.getEndByte();
+    boolean alreadyExists =
+        this.renameOperations.stream()
+            .anyMatch(
+                operation ->
+                    operation.getTsFile().getFile().getAbsolutePath().equals(filePath)
+                        && operation.getNode().getStartByte() == startByte
+                        && operation.getNode().getEndByte() == endByte);
+    if (!alreadyExists) {
+      this.renameOperations.add(
+          RenameOperation.builder().tsFile(tsFile).node(tsNode).text(text).build());
+    }
   }
 
   private DataTransferObject<RenameResponse> executeAllRenameOperations() {
@@ -273,6 +285,57 @@ public class RenameCommandService {
     return DataTransferObject.success();
   }
 
+  private DataTransferObject<RenameResponse> renameLocalVariables(
+      TSFile tsFile, TSNode classDeclarationNode, String oldName, String newName) {
+    List<TSNode> allLocalVariableNodes =
+        this.javaLanguageService
+            .getLocalVariableDeclarationService()
+            .findLocalVariableDeclarationByType(tsFile, oldName);
+    for (TSNode localVariableNode : allLocalVariableNodes) {
+      Optional<TSNode> localVariableNameNode =
+          this.javaLanguageService
+              .getLocalVariableDeclarationService()
+              .getLocalVariableDeclarationNameNode(tsFile, localVariableNode);
+      Optional<TSNode> localVariableTypeNode =
+          this.javaLanguageService
+              .getLocalVariableDeclarationService()
+              .getVariableDeclarationClassTypeNode(tsFile, localVariableNode);
+      Optional<TSNode> localVariableFullTypeNode =
+          this.javaLanguageService
+              .getLocalVariableDeclarationService()
+              .getVariableDeclarationFullTypeNode(tsFile, localVariableNode);
+      Optional<TSNode> localVariableValueType =
+          this.javaLanguageService
+              .getLocalVariableDeclarationService()
+              .getLocalVariableValueClassTypeNode(tsFile, localVariableNode);
+      boolean isCollection = false;
+      if (localVariableFullTypeNode.isPresent()) {
+        String localVariableFullTypeText = tsFile.getTextFromNode(localVariableFullTypeNode.get());
+        isCollection = this.variableNamingService.isCollectionType(localVariableFullTypeText);
+      }
+      if (localVariableNameNode.isEmpty() || localVariableTypeNode.isEmpty()) {
+        continue;
+      }
+      String newTypeName = StringHelper.toPascalCase(newName);
+      String localVariableNameText = tsFile.getTextFromNode(localVariableNameNode.get());
+      String localVariableTypeText = tsFile.getTextFromNode(localVariableTypeNode.get());
+      boolean shouldRenameVariable =
+          this.variableNamingService.shouldRenameVariable(
+              localVariableNameText, localVariableTypeText, isCollection);
+      if (shouldRenameVariable) {
+        String generatedLocalVariableName =
+            this.variableNamingService.generateNewVariableName(
+                localVariableNameText, localVariableTypeText, newName, isCollection);
+        this.addRenameOperation(tsFile, localVariableNameNode.get(), generatedLocalVariableName);
+      }
+      if (localVariableValueType.isPresent()) {
+        this.addRenameOperation(tsFile, localVariableValueType.get(), newTypeName);
+      }
+      this.addRenameOperation(tsFile, localVariableTypeNode.get(), newTypeName);
+    }
+    return DataTransferObject.success();
+  }
+
   private RenameSourceFileData prepareSourceFileData(
       final Path cwd,
       final Path filePath,
@@ -366,6 +429,15 @@ public class RenameCommandService {
               newName);
       if (!formalParametersRename.getSucceed()) {
         return formalParametersRename;
+      }
+      DataTransferObject<RenameResponse> localVariablesRename =
+          this.renameLocalVariables(
+              tsFile,
+              classDeclarationNode.get(),
+              sourceFileData.getSourceCursorPositionText(),
+              newName);
+      if (!localVariablesRename.getSucceed()) {
+        return localVariablesRename;
       }
     }
     return DataTransferObject.success();
