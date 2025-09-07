@@ -13,8 +13,9 @@ import lombok.Getter;
 import org.treesitter.TSNode;
 
 /**
- * Service responsible for handling Java import declarations in source files.
- * Provides functionality to query, analyze, add, and update import statements.
+ * Service for analyzing, extracting, and manipulating import declarations in Java source code using Tree-sitter parsing.
+ * <p>
+ * Provides methods to query, inspect, and update import statements, including support for wildcard imports and insertion points.
  */
 @Getter
 public class ImportDeclarationService {
@@ -22,16 +23,16 @@ public class ImportDeclarationService {
       new PackageDeclarationService();
 
   /**
-   * Retrieves all import declaration nodes from a source file.
+   * Retrieves all import declaration nodes from the given Java source file.
    *
-   * @param tsFile The TSFile representing the source code
-   * @return A list of TSNode objects representing import declarations, or an empty list if none found
-   *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * List<TSNode> imports = importDeclarationService.getAllImportDeclarationNodes(javaFile);
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @return List of import_declaration nodes, or empty if none found or input is invalid
+   * @example
+   * <pre>{@code
+   * TSFile tsFile = new TSFile("import java.util.List;\nclass A {}");
+   * List<TSNode> imports = service.getAllImportDeclarationNodes(tsFile);
+   * // Returns nodes for all import declarations
+   * }</pre>
    */
   public List<TSNode> getAllImportDeclarationNodes(TSFile tsFile) {
     if (tsFile == null || tsFile.getTree() == null) {
@@ -45,26 +46,18 @@ public class ImportDeclarationService {
   }
 
   /**
-   * Retrieves detailed information about a specific import declaration node.
-   * Parses the node structure to extract scopes, class names and other elements.
+   * Extracts detailed information about a specific import declaration node.
    *
-   * @param tsFile The TSFile representing the source code
-   * @param importDeclarationNode The import declaration node to analyze
-   * @return A list of maps containing the captured nodes keyed by their capture names
-   *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * TSNode importNode = importDeclarationService.getAllImportDeclarationNodes(javaFile).get(0);
-   * List<Map<String, TSNode>> info = importDeclarationService.getImportDeclarationNodeInfo(javaFile, importNode);
-   * 
-   * Capture names used in query:
-   * - {@link ImportCapture#RELATIVE_IMPORT_SCOPE}: The relative import scope
-   * - {@link ImportCapture#CLASS_NAME}: The class name being imported
-   * - {@link ImportCapture#FULL_IMPORT_SCOPE}: The full import scope
-   * - {@link ImportCapture#ASTERISK}: The asterisk if present (for wildcard imports)
-   * - {@link ImportCapture#IMPORT}: The entire import declaration
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @param importDeclarationNode The import_declaration node to analyze
+   * @return List of maps containing captured nodes with keys: "full_import_scope", "relative_import_scope", "class_name", "asterisk", "import"
+   * @example
+   * <pre>{@code
+   * TSFile tsFile = new TSFile("import org.example.Test;\nclass A {}");
+   * TSNode importNode = ... // get import_declaration node
+   * List<Map<String, TSNode>> info = service.getImportDeclarationNodeInfo(tsFile, importNode);
+   * // Returns map with keys for each capture in the import
+   * }</pre>
    */
   public List<Map<String, TSNode>> getImportDeclarationNodeInfo(
       TSFile tsFile, TSNode importDeclarationNode) {
@@ -77,16 +70,18 @@ public class ImportDeclarationService {
         String.format(
             """
             (import_declaration
-              (scoped_identifier
-                  scope: (scoped_identifier) %s
-                      name: (identifier) %s
-                ) %s
-                (asterisk)? %s
+              [
+                (scoped_identifier) %s
+                (scoped_identifier
+                  scope: (_) %s
+                  name: (_) %s)
+              ]
+              (asterisk)? %s
             ) %s
             """,
+            ImportCapture.FULL_IMPORT_SCOPE.getCaptureWithAt(),
             ImportCapture.RELATIVE_IMPORT_SCOPE.getCaptureWithAt(),
             ImportCapture.CLASS_NAME.getCaptureWithAt(),
-            ImportCapture.FULL_IMPORT_SCOPE.getCaptureWithAt(),
             ImportCapture.ASTERISK.getCaptureWithAt(),
             ImportCapture.IMPORT.getCaptureWithAt());
     return tsFile
@@ -98,20 +93,19 @@ public class ImportDeclarationService {
   }
 
   /**
-   * Retrieves a specific child node from an import declaration based on the capture type.
+   * Retrieves a specific child node from an import declaration by capture name.
    *
-   * @param tsFile The TSFile representing the source code
-   * @param importDeclarationNode The import declaration node to analyze
-   * @param capture The specific capture type to retrieve
-   * @return An Optional containing the node if found, or empty if not found
-   *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * TSNode importNode = importDeclarationService.getAllImportDeclarationNodes(javaFile).get(0);
-   * Optional<TSNode> classNameNode = importDeclarationService.getImportDeclarationChildByCaptureName(
-   *     javaFile, importNode, ImportCapture.CLASS_NAME);
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @param importDeclarationNode The import_declaration node to search within
+   * @param capture The specific capture type to retrieve (e.g., CLASS_NAME, FULL_IMPORT_SCOPE)
+   * @return Optional containing the requested node, empty if not found or invalid input
+   * @example
+   * <pre>{@code
+   * TSFile tsFile = new TSFile("import org.example.Test;\nclass A {}");
+   * TSNode importNode = ... // get import_declaration node
+   * Optional<TSNode> classNameNode = service.getImportDeclarationChildByCaptureName(tsFile, importNode, ImportCapture.CLASS_NAME);
+   * // Returns TSNode for "Test"
+   * }</pre>
    */
   public Optional<TSNode> getImportDeclarationChildByCaptureName(
       TSFile tsFile, TSNode importDeclarationNode, ImportCapture capture) {
@@ -132,19 +126,19 @@ public class ImportDeclarationService {
   }
 
   /**
-   * Finds an import declaration node that matches the specified package and class name.
+   * Finds the import_declaration node for a given package scope and class name.
+   * Handles both regular and wildcard imports.
    *
-   * @param tsFile The TSFile representing the source code
-   * @param packageScope The package scope to search for
-   * @param className The class name to search for
-   * @return An Optional containing the matching import declaration node if found, or empty if not found
-   *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * Optional<TSNode> importNode = importDeclarationService.findImportDeclarationNode(
-   *     javaFile, "java.util", "List");
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @param packageScope The package scope (e.g., "org.example")
+   * @param className The class name (e.g., "Test")
+   * @return Optional containing the matching import_declaration node, or empty if not found
+   * @example
+   * <pre>{@code
+   * TSFile tsFile = new TSFile("import org.example.Test;\nclass A {}");
+   * Optional<TSNode> node = service.findImportDeclarationNode(tsFile, "org.example", "Test");
+   * // Returns the import_declaration node for "org.example.Test"
+   * }</pre>
    */
   public Optional<TSNode> findImportDeclarationNode(
       TSFile tsFile, String packageScope, String className) {
@@ -160,22 +154,25 @@ public class ImportDeclarationService {
           this.getImportDeclarationNodeInfo(tsFile, importDeclarationNode);
       for (Map<String, TSNode> map : importDeclarationNodeInfo) {
         TSNode fullImportNode = map.get(ImportCapture.FULL_IMPORT_SCOPE.getCaptureName());
+        TSNode relativeImportScopeNode =
+            map.get(ImportCapture.RELATIVE_IMPORT_SCOPE.getCaptureName());
         TSNode classNameNode = map.get(ImportCapture.CLASS_NAME.getCaptureName());
         TSNode asteriskNode = map.get(ImportCapture.ASTERISK.getCaptureName());
-        if (fullImportNode == null) {
-          continue;
-        }
-        String fullImportText = tsFile.getTextFromNode(fullImportNode);
-        if (asteriskNode != null) {
+
+        // Handle wildcard imports (e.g., import org.example.*;)
+        if (asteriskNode != null && fullImportNode != null) {
+          String fullImportText = tsFile.getTextFromNode(fullImportNode);
           if (packageScope.equals(fullImportText)) {
             return Optional.of(importDeclarationNode);
           }
-        } else {
-          if (classNameNode != null) {
-            String classNameText = tsFile.getTextFromNode(classNameNode);
-            if (className.equals(classNameText)) {
-              return Optional.of(importDeclarationNode);
-            }
+        }
+
+        // Handle regular imports (e.g., import org.example.Test;)
+        if (asteriskNode == null && classNameNode != null && relativeImportScopeNode != null) {
+          String scopeText = tsFile.getTextFromNode(relativeImportScopeNode);
+          String classText = tsFile.getTextFromNode(classNameNode);
+          if (packageScope.equals(scopeText) && className.equals(classText)) {
+            return Optional.of(importDeclarationNode);
           }
         }
       }
@@ -184,39 +181,58 @@ public class ImportDeclarationService {
   }
 
   /**
-   * Checks if a specific class from a package is already imported in the source file.
+   * Determines if the given import_declaration node is a wildcard import (e.g., import org.example.*;).
    *
-   * @param tsFile The TSFile representing the source code
-   * @param packageScope The package scope to check
-   * @param className The class name to check
-   * @return True if the class is already imported, false otherwise
+   * @param tsFile The parsed Java source file
+   * @param importDeclarationNode The import_declaration node to check
+   * @return true if the import is a wildcard import, false otherwise
+   * @example
+   * <pre>{@code
+   * TSFile tsFile = new TSFile("import org.example.*;\nclass A {}");
+   * TSNode importNode = ... // get import_declaration node
+   * boolean isWildcard = service.isWildCardImport(tsFile, importNode);
+   * // Returns true
+   * }</pre>
+   */
+  public boolean isWildCardImport(TSFile tsFile, TSNode importDeclarationNode) {
+    if (tsFile == null || tsFile.getTree() == null) {
+      return false;
+    }
+    List<Map<String, TSNode>> importDeclarationNodeInfo =
+        this.getImportDeclarationNodeInfo(tsFile, importDeclarationNode);
+    for (Map<String, TSNode> map : importDeclarationNodeInfo) {
+      TSNode asteriskNode = map.get(ImportCapture.ASTERISK.getCaptureName());
+      if (asteriskNode != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Checks if a class is imported in the given Java source file.
    *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * boolean isImported = importDeclarationService.isClassImported(javaFile, "java.util", "List");
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @param packageScope The package scope (e.g., "org.example")
+   * @param className The class name (e.g., "Test")
+   * @return true if the class is imported, false otherwise
+   * @example
+   * <pre>{@code
+   * TSFile tsFile = new TSFile("import org.example.Test;\nclass A {}");
+   * boolean imported = service.isClassImported(tsFile, "org.example", "Test");
+   * // Returns true
+   * }</pre>
    */
   public Boolean isClassImported(TSFile tsFile, String packageScope, String className) {
     return this.findImportDeclarationNode(tsFile, packageScope, className).isPresent();
   }
 
   /**
-   * Gets the relative import scope node from an import declaration.
-   * This represents the part of the import before the class name.
+   * Retrieves the relative import scope node from an import_declaration (e.g., "org.example" in "import org.example.Test;").
    *
-   * @param tsFile The TSFile representing the source code
-   * @param importDeclarationNode The import declaration node to analyze
-   * @return An Optional containing the relative import scope node if found, or empty if not found
-   *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * TSNode importNode = importDeclarationService.getAllImportDeclarationNodes(javaFile).get(0);
-   * Optional<TSNode> relativeScope = importDeclarationService.getImportDeclarationRelativeImportScopeNode(
-   *     javaFile, importNode);
-   * // For import java.util.List, the relative scope would be "java.util"
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @param importDeclarationNode The import_declaration node
+   * @return Optional containing the relative import scope node, or empty if not found
    */
   public Optional<TSNode> getImportDeclarationRelativeImportScopeNode(
       TSFile tsFile, TSNode importDeclarationNode) {
@@ -225,20 +241,11 @@ public class ImportDeclarationService {
   }
 
   /**
-   * Gets the class name node from an import declaration.
+   * Retrieves the class name node from an import_declaration (e.g., "Test" in "import org.example.Test;").
    *
-   * @param tsFile The TSFile representing the source code
-   * @param importDeclarationNode The import declaration node to analyze
-   * @return An Optional containing the class name node if found, or empty if not found
-   *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * TSNode importNode = importDeclarationService.getAllImportDeclarationNodes(javaFile).get(0);
-   * Optional<TSNode> classNameNode = importDeclarationService.getImportDeclarationClassNameNode(
-   *     javaFile, importNode);
-   * // For import java.util.List, the class name would be "List"
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @param importDeclarationNode The import_declaration node
+   * @return Optional containing the class name node, or empty if not found
    */
   public Optional<TSNode> getImportDeclarationClassNameNode(
       TSFile tsFile, TSNode importDeclarationNode) {
@@ -247,21 +254,11 @@ public class ImportDeclarationService {
   }
 
   /**
-   * Gets the full import scope node from an import declaration.
-   * This represents the entire qualified name in the import statement.
+   * Retrieves the full import scope node from an import_declaration (e.g., "org.example" in "import org.example.*;" or "import org.example.Test;").
    *
-   * @param tsFile The TSFile representing the source code
-   * @param importDeclarationNode The import declaration node to analyze
-   * @return An Optional containing the full import scope node if found, or empty if not found
-   *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * TSNode importNode = importDeclarationService.getAllImportDeclarationNodes(javaFile).get(0);
-   * Optional<TSNode> fullScope = importDeclarationService.getImportDeclarationFullImportScopeNode(
-   *     javaFile, importNode);
-   * // For import java.util.List, the full scope would be "java.util.List"
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @param importDeclarationNode The import_declaration node
+   * @return Optional containing the full import scope node, or empty if not found
    */
   public Optional<TSNode> getImportDeclarationFullImportScopeNode(
       TSFile tsFile, TSNode importDeclarationNode) {
@@ -269,13 +266,6 @@ public class ImportDeclarationService {
         tsFile, importDeclarationNode, ImportCapture.FULL_IMPORT_SCOPE);
   }
 
-  /**
-   * Determines the best position to insert a new import statement in the source file.
-   *
-   * @param tsFile The TSFile representing the source code
-   * @param packageDeclarationNode The package declaration node, if present
-   * @return An ImportInsertionPoint containing the position information for the new import
-   */
   private ImportInsertionPoint getImportInsertionPoint(
       TSFile tsFile, TSNode packageDeclarationNode) {
     if (tsFile == null || tsFile.getTree() == null) {
@@ -299,23 +289,19 @@ public class ImportDeclarationService {
   }
 
   /**
-   * Adds a new import statement to the source file if it doesn't already exist.
-   * Determines the appropriate position to insert the import based on existing imports
-   * and package declaration.
+   * Adds an import statement for the specified class to the Java source file, if not already imported.
    *
-   * @param tsFile The TSFile representing the source code
-   * @param packageScope The package scope to import from
-   * @param className The class name to import
-   * @param packageDeclarationNode The package declaration node, if present
-   *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * PackageDeclarationService packageService = new PackageDeclarationService();
-   * TSNode packageNode = packageService.getPackageDeclarationNode(javaFile).orElse(null);
-   * importDeclarationService.addImport(javaFile, "java.util", "ArrayList", packageNode);
-   * // This will add "import java.util.ArrayList;" to the file
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @param packageScope The package scope (e.g., "org.example")
+   * @param className The class name (e.g., "Test")
+   * @param packageDeclarationNode The package_declaration node (for determining insertion point)
+   * @example
+   * <pre>{@code
+   * TSFile tsFile = new TSFile("package foo;\nclass A {}");
+   * TSNode pkgNode = ... // get package_declaration node
+   * service.addImport(tsFile, "org.example", "Test", pkgNode);
+   * // Adds "import org.example.Test;" after the package declaration
+   * }</pre>
    */
   public void addImport(
       TSFile tsFile, String packageScope, String className, TSNode packageDeclarationNode) {
@@ -344,23 +330,20 @@ public class ImportDeclarationService {
   }
 
   /**
-   * Updates an existing import statement in the source file.
-   * Can modify both the package scope and class name parts of the import.
+   * Updates an existing import statement in the Java source file, changing the package scope and/or class name.
    *
-   * @param tsFile The TSFile representing the source code
-   * @param oldPackageScope The current package scope to find
-   * @param newPackageScope The new package scope to replace with
-   * @param oldClassName The current class name to find
-   * @param newClassName The new class name to replace with
-   * @return True if the import was successfully updated, false otherwise
-   *
-   * <pre>
-   * Example usage:
-   * TSFile javaFile = new TSFile("/path/to/MyClass.java", "Java");
-   * boolean updated = importDeclarationService.updateImport(
-   *     javaFile, "java.util", "java.util.concurrent", "List", "ConcurrentList");
-   * // This will update "import java.util.List;" to "import java.util.concurrent.ConcurrentList;"
-   * </pre>
+   * @param tsFile The parsed Java source file
+   * @param oldPackageScope The old package scope
+   * @param newPackageScope The new package scope
+   * @param oldClassName The old class name
+   * @param newClassName The new class name
+   * @return true if the import was updated, false otherwise
+   * @example
+   * <pre>{@code
+   * TSFile tsFile = new TSFile("import org.example.Test;\nclass A {}");
+   * boolean updated = service.updateImport(tsFile, "org.example", "org.new", "Test", "NewTest");
+   * // Updates the import to "import org.new.NewTest;"
+   * }</pre>
    */
   public boolean updateImport(
       TSFile tsFile,
