@@ -97,23 +97,23 @@ public class FieldDeclarationService {
               type: [
                 (type_identifier) %s
                 (generic_type
-                  (type_identifier) %s
+                  (type_identifier)
                   (type_arguments
                     [
                       (type_identifier) %s
                       (generic_type) %s
                     ]
                   )
-                )
+                ) %s
               ]
               declarator: (variable_declarator
                 name: (identifier) %s
                 (_)? %s)) %s
             """,
             FieldCapture.FIELD_TYPE.getCaptureWithAt(),
+            FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureWithAt(),
+            FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureWithAt(),
             FieldCapture.FIELD_TYPE.getCaptureWithAt(),
-            FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureWithAt(),
-            FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureWithAt(),
             FieldCapture.FIELD_NAME.getCaptureWithAt(),
             FieldCapture.FIELD_VALUE.getCaptureWithAt(),
             FieldCapture.FIELD.getCaptureWithAt());

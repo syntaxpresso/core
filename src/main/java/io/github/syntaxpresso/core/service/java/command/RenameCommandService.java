@@ -167,7 +167,7 @@ public class RenameCommandService {
           || fieldDeclarationFullTypeNode.isEmpty()) {
         return DataTransferObject.error("Unable to collect base field data.");
       }
-      String currentFieldFullType = tsFile.getTextFromNode(fieldDeclarationTypeNode.get());
+      String currentFieldFullType = tsFile.getTextFromNode(fieldDeclarationFullTypeNode.get());
       String currentFieldType = tsFile.getTextFromNode(fieldDeclarationTypeNode.get());
       String currentFieldName = tsFile.getTextFromNode(fieldDeclarationNameNode.get());
       if (!currentFieldType.equals(oldFieldType)) {
