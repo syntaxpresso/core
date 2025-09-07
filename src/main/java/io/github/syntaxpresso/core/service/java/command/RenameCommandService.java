@@ -43,21 +43,21 @@ public class RenameCommandService {
           .updateSourceCode(renameOperation.getNode(), renameOperation.getText());
       try {
         renameOperation.getTsFile().save();
-
       } catch (IOException e) {
         System.out.println(1);
       }
     }
   }
 
-  private boolean renameSourceFile(RenameSourceFileData sourceFileData, String newName) {
+  private DataTransferObject<RenameResponse> renameSourceFile(
+      RenameSourceFileData sourceFileData, String newName) {
     Optional<TSNode> classDeclarationNode =
         this.javaLanguageService
             .getClassDeclarationService()
             .findClassByName(
                 sourceFileData.getSourceFile(), sourceFileData.getSourceCursorPositionText());
     if (classDeclarationNode.isEmpty()) {
-      return false;
+      return DataTransferObject.error("Unable to find source file's related class.");
     }
     Optional<TSNode> classDeclarationNameNode =
         this.javaLanguageService
@@ -65,7 +65,7 @@ public class RenameCommandService {
             .getClassDeclarationNameNode(
                 sourceFileData.getSourceFile(), classDeclarationNode.get());
     if (classDeclarationNameNode.isEmpty()) {
-      return false;
+      return DataTransferObject.error("Unable to find source file's class name node.");
     }
     String newNamePascalCase = StringHelper.convert(newName, CaseFormat.PASCAL_CASE);
     Optional<TSNode> publicClassNode =
@@ -73,7 +73,7 @@ public class RenameCommandService {
             .getClassDeclarationService()
             .getPublicClass(sourceFileData.getSourceFile());
     if (publicClassNode.isEmpty()) {
-      return false;
+      return DataTransferObject.error("Unable to find the public class of source file.");
     }
     Optional<TSNode> publicClassNameNode =
         this.javaLanguageService
@@ -88,14 +88,15 @@ public class RenameCommandService {
         sourceFileData.getSourceFile().rename(newNamePascalCase);
       }
     } else {
-      return false;
+      return DataTransferObject.error(
+          "Unable to find the name of the public class of the source file.");
     }
     this.addRenameOperation(
         sourceFileData.getSourceFile(), classDeclarationNameNode.get(), newNamePascalCase);
-    return true;
+    return DataTransferObject.success();
   }
 
-  private boolean renameImportDeclaration(
+  private DataTransferObject<RenameResponse> renameImportDeclaration(
       TSFile tsFile, RenameSourceFileData sourceFileData, String newName) {
     Optional<TSNode> importDeclarationNode =
         this.javaLanguageService
@@ -105,20 +106,27 @@ public class RenameCommandService {
                 sourceFileData.getSourcePackageScopeText(),
                 sourceFileData.getSourceCursorPositionText());
     if (importDeclarationNode.isEmpty()) {
-      return false;
+      return DataTransferObject.error("Unable to find import declaration to rename.");
+    }
+    boolean isWildCardImport =
+        this.javaLanguageService
+            .getImportDeclarationService()
+            .isWildCardImport(tsFile, importDeclarationNode.get());
+    if (isWildCardImport) {
+      return DataTransferObject.success();
     }
     Optional<TSNode> importDeclarationClassNode =
         this.javaLanguageService
             .getImportDeclarationService()
             .getImportDeclarationClassNameNode(tsFile, importDeclarationNode.get());
     if (importDeclarationClassNode.isEmpty()) {
-      return false;
+      return DataTransferObject.error("Unable to find class name in the import scope.");
     }
     this.addRenameOperation(tsFile, importDeclarationClassNode.get(), newName);
-    return true;
+    return DataTransferObject.success();
   }
 
-  private void renameFieldDeclarations(
+  private DataTransferObject<RenameResponse> renameFieldDeclarations(
       TSFile tsFile, TSNode classDeclarationNode, String oldFieldType, String newFieldType) {
     List<TSNode> allFieldDeclarationNodes =
         this.javaLanguageService
@@ -144,7 +152,7 @@ public class RenameCommandService {
       if (fieldDeclarationNameNode.isEmpty()
           || fieldDeclarationTypeNode.isEmpty()
           || fieldDeclarationFullTypeNode.isEmpty()) {
-        return;
+        return DataTransferObject.error("Unable to collect base field data.");
       }
       String currentFieldFullType = tsFile.getTextFromNode(fieldDeclarationTypeNode.get());
       String currentFieldType = tsFile.getTextFromNode(fieldDeclarationTypeNode.get());
@@ -182,9 +190,10 @@ public class RenameCommandService {
       }
       this.addRenameOperation(tsFile, fieldDeclarationTypeNode.get(), newFieldType);
     }
+    return DataTransferObject.success();
   }
 
-  private void renameFormalParameters(
+  private DataTransferObject<RenameResponse> renameFormalParameters(
       TSFile tsFile,
       TSNode classDeclarationNode,
       String oldParameterType,
@@ -260,6 +269,7 @@ public class RenameCommandService {
             tsFile, formalParamenterDeclarationTypeNode.get(), newParameterType);
       }
     }
+    return DataTransferObject.success();
   }
 
   private RenameSourceFileData prepareSourceFileData(
@@ -308,10 +318,12 @@ public class RenameCommandService {
         .build();
   }
 
-  public boolean processClassRename(RenameSourceFileData sourceFileData, String newName) {
-    boolean sourceFileRenamed = this.renameSourceFile(sourceFileData, newName);
-    if (!sourceFileRenamed) {
-      return false;
+  public DataTransferObject<RenameResponse> processClassRename(
+      RenameSourceFileData sourceFileData, String newName) {
+    DataTransferObject<RenameResponse> sourceFileRenamed =
+        this.renameSourceFile(sourceFileData, newName);
+    if (!sourceFileRenamed.getSucceed()) {
+      return sourceFileRenamed;
     }
     List<TSFile> allJavaFiles =
         this.javaLanguageService.getAllJavaFilesFromCwd(sourceFileData.getCwd());
@@ -319,9 +331,10 @@ public class RenameCommandService {
       Optional<TSNode> classDeclarationNode =
           this.javaLanguageService.getClassDeclarationService().getPublicClass(tsFile);
       if (classDeclarationNode.isEmpty()) {
-        return false;
+        continue;
       }
       // TODO: check if is checking same package and wildcard import.
+      // FIX: NOT WORKING WITH WILDCARD IMPORT
       boolean isImported =
           this.javaLanguageService
               .getImportDeclarationService()
@@ -332,19 +345,31 @@ public class RenameCommandService {
       if (!isImported) {
         continue;
       }
-      this.renameImportDeclaration(tsFile, sourceFileData, newName);
-      this.renameFieldDeclarations(
-          tsFile,
-          classDeclarationNode.get(),
-          sourceFileData.getSourceCursorPositionText(),
-          newName);
-      this.renameFormalParameters(
-          tsFile,
-          classDeclarationNode.get(),
-          sourceFileData.getSourceCursorPositionText(),
-          newName);
+      DataTransferObject<RenameResponse> importDeclarationsRename =
+          this.renameImportDeclaration(tsFile, sourceFileData, newName);
+      if (!importDeclarationsRename.getSucceed()) {
+        return importDeclarationsRename;
+      }
+      DataTransferObject<RenameResponse> fieldDeclarationsRename =
+          this.renameFieldDeclarations(
+              tsFile,
+              classDeclarationNode.get(),
+              sourceFileData.getSourceCursorPositionText(),
+              newName);
+      if (!fieldDeclarationsRename.getSucceed()) {
+        return fieldDeclarationsRename;
+      }
+      DataTransferObject<RenameResponse> formalParametersRename =
+          this.renameFormalParameters(
+              tsFile,
+              classDeclarationNode.get(),
+              sourceFileData.getSourceCursorPositionText(),
+              newName);
+      if (!formalParametersRename.getSucceed()) {
+        return formalParametersRename;
+      }
     }
-    return true;
+    return DataTransferObject.success();
   }
 
   public DataTransferObject<RenameResponse> rename(
@@ -360,7 +385,11 @@ public class RenameCommandService {
       DataTransferObject.error("Unable to fetch source file data.");
     }
     if (sourceFileData.getSourceCursorPositionType().equals(JavaIdentifierType.CLASS_NAME)) {
-      boolean classRenameSuccessful = this.processClassRename(sourceFileData, newName);
+      DataTransferObject<RenameResponse> classRename =
+          this.processClassRename(sourceFileData, newName);
+      if (!classRename.getSucceed()) {
+        return classRename;
+      }
     }
     if (sourceFileData.getSourceCursorPositionType().equals(JavaIdentifierType.METHOD_NAME)) {}
     this.executeAllRenameOperations();
