@@ -322,16 +322,25 @@ public class RenameCommandService {
       boolean shouldRenameVariable =
           this.variableNamingService.shouldRenameVariable(
               localVariableNameText, localVariableTypeText, isCollection);
+      String generatedLocalVariableName =
+          this.variableNamingService.generateNewVariableName(
+              localVariableNameText, localVariableTypeText, newName, isCollection);
       if (shouldRenameVariable) {
-        String generatedLocalVariableName =
-            this.variableNamingService.generateNewVariableName(
-                localVariableNameText, localVariableTypeText, newName, isCollection);
         this.addRenameOperation(tsFile, localVariableNameNode.get(), generatedLocalVariableName);
       }
       if (localVariableValueType.isPresent()) {
         this.addRenameOperation(tsFile, localVariableValueType.get(), newTypeName);
       }
       this.addRenameOperation(tsFile, localVariableTypeNode.get(), newTypeName);
+      List<TSNode> allLocalVariableUsageNodes =
+          this.javaLanguageService
+              .getLocalVariableDeclarationService()
+              .findVariableUsagesInScope(tsFile, localVariableNode);
+      for (TSNode localVariableUsageNode : allLocalVariableUsageNodes) {
+        if (shouldRenameVariable) {
+          this.addRenameOperation(tsFile, localVariableUsageNode, generatedLocalVariableName);
+        }
+      }
     }
     return DataTransferObject.success();
   }

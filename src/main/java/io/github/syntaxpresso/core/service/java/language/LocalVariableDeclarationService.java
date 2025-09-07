@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.treesitter.TSNode;
 
 public class LocalVariableDeclarationService {
@@ -696,6 +697,271 @@ public class LocalVariableDeclarationService {
             )
             """,
             identiferText);
+    return tsFile.query(queryString).within(scopeNode).execute().nodes();
+  }
+
+  /**
+   * Finds all usages of a variable within its valid scope.
+   *
+   * <p>This method determines the appropriate scope for a variable based on its declaration type:
+   *
+   * <ul>
+   *   <li>Local variables: searches within the enclosing block or method
+   *   <li>Parameters: searches within the method body
+   *   <li>Fields: searches within the entire class
+   * </ul>
+   *
+   * @param tsFile The TSFile containing the source code
+   * @param variableDeclarationNode The variable declaration node (local_variable_declaration,
+   *     formal_parameter, or field_declaration)
+   * @return List of identifier nodes representing usages of the variable
+   */
+  public List<TSNode> findVariableUsagesInScope(TSFile tsFile, TSNode variableDeclarationNode) {
+    if (tsFile == null || tsFile.getTree() == null || variableDeclarationNode == null) {
+      return Collections.emptyList();
+    }
+    Optional<TSNode> nameNode =
+        getLocalVariableDeclarationNameNode(tsFile, variableDeclarationNode);
+    if (nameNode.isEmpty()) {
+      return Collections.emptyList();
+    }
+    String variableName = tsFile.getTextFromNode(nameNode.get());
+    TSNode scopeNode = determineScopeForVariable(variableDeclarationNode);
+    if (scopeNode == null) {
+      return Collections.emptyList();
+    }
+    return findVariableUsagesInNode(tsFile, scopeNode, variableName, variableDeclarationNode);
+  }
+
+  /**
+   * Determines the appropriate scope node for a variable based on its declaration type.
+   *
+   * @param variableDeclarationNode The variable declaration node
+   * @return The scope node within which the variable is valid, or null if not found
+   */
+  private TSNode determineScopeForVariable(TSNode variableDeclarationNode) {
+    String nodeType = variableDeclarationNode.getType();
+    TSNode current = variableDeclarationNode;
+    switch (nodeType) {
+      case "local_variable_declaration":
+        while (current != null && !current.isNull()) {
+          TSNode parent = current.getParent();
+          if (parent != null
+              && !parent.isNull()
+              && (parent.getType().equals("block")
+                  || parent.getType().equals("method_body")
+                  || parent.getType().equals("constructor_body"))) {
+            return parent;
+          }
+          current = parent;
+        }
+        break;
+      case "formal_parameter":
+        while (current != null && !current.isNull()) {
+          TSNode parent = current.getParent();
+          if (parent != null
+              && !parent.isNull()
+              && (parent.getType().equals("method_declaration")
+                  || parent.getType().equals("constructor_declaration"))) {
+            for (int i = 0; i < parent.getChildCount(); i++) {
+              TSNode child = parent.getChild(i);
+              if (child.getType().equals("method_body")
+                  || child.getType().equals("constructor_body")) {
+                return child;
+              }
+            }
+          }
+          current = parent;
+        }
+        break;
+      case "field_declaration":
+        while (current != null && !current.isNull()) {
+          TSNode parent = current.getParent();
+          if (parent != null && !parent.isNull() && parent.getType().equals("class_body")) {
+            return parent;
+          }
+          current = parent;
+        }
+        break;
+    }
+    return null;
+  }
+
+  /**
+   * Finds all usages of a variable within a given scope node.
+   *
+   * @param tsFile The TSFile containing the source code
+   * @param scopeNode The node defining the scope to search within
+   * @param variableName The name of the variable to find
+   * @param declarationNode The original declaration node to exclude from results
+   * @return List of identifier nodes representing usages of the variable
+   */
+  private List<TSNode> findVariableUsagesInNode(
+      TSFile tsFile, TSNode scopeNode, String variableName, TSNode declarationNode) {
+    String queryString =
+        String.format(
+            """
+            (identifier) @usage
+              (#eq? @usage "%s")
+            """,
+            variableName);
+    List<TSNode> allUsages = tsFile.query(queryString).within(scopeNode).execute().nodes();
+    return allUsages.stream()
+        .filter(usage -> usage != null && !usage.isNull())
+        .filter(usage -> !isPartOfDeclaration(tsFile, usage, declarationNode))
+        .filter(usage -> isInCorrectScope(tsFile, usage, declarationNode, variableName))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Checks if an identifier node is part of the variable's declaration.
+   *
+   * @param tsFile The TSFile containing the source code
+   * @param identifierNode The identifier node to check
+   * @param declarationNode The declaration node
+   * @return true if the identifier is part of the declaration, false otherwise
+   */
+  private boolean isPartOfDeclaration(
+      TSFile tsFile, TSNode identifierNode, TSNode declarationNode) {
+    Optional<TSNode> declNameNode = getLocalVariableDeclarationNameNode(tsFile, declarationNode);
+    if (declNameNode.isEmpty()) {
+      return false;
+    }
+    return identifierNode.equals(declNameNode.get());
+  }
+
+  /**
+   * Checks if a usage is in the correct scope for the variable. This handles shadowing - ensures we
+   * don't include usages that belong to a different variable with the same name.
+   *
+   * @param tsFile The TSFile containing the source code
+   * @param usageNode The usage identifier node
+   * @param declarationNode The original declaration node
+   * @param variableName The variable name
+   * @return true if the usage belongs to this variable declaration, false if it's shadowed
+   */
+  private boolean isInCorrectScope(
+      TSFile tsFile, TSNode usageNode, TSNode declarationNode, String variableName) {
+    if (declarationNode.getType().equals("field_declaration")) {
+      TSNode current = usageNode.getParent();
+      while (current != null && !current.isNull()) {
+        if (current.getType().equals("method_declaration")
+            || current.getType().equals("constructor_declaration")) {
+          for (int i = 0; i < current.getChildCount(); i++) {
+            TSNode child = current.getChild(i);
+            if (child.getType().equals("formal_parameters")) {
+              if (hasParameterWithName(tsFile, child, variableName)) {
+                return false;
+              }
+            }
+          }
+        }
+        if (current.getType().equals("block")) {
+          if (hasLocalVariableBeforeUsage(tsFile, current, variableName, usageNode)) {
+            return false;
+          }
+        }
+        current = current.getParent();
+      }
+    }
+    return true;
+  }
+
+  /** Checks if a formal_parameters node contains a parameter with the given name. */
+  private boolean hasParameterWithName(TSFile tsFile, TSNode parametersNode, String name) {
+    for (int i = 0; i < parametersNode.getChildCount(); i++) {
+      TSNode child = parametersNode.getChild(i);
+      if (child.getType().equals("formal_parameter")) {
+        for (int j = 0; j < child.getChildCount(); j++) {
+          TSNode paramChild = child.getChild(j);
+          if (paramChild.getType().equals("identifier")
+              && tsFile.getTextFromNode(paramChild).equals(name)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Checks if there's a local variable declaration with the given name before the usage point. */
+  private boolean hasLocalVariableBeforeUsage(
+      TSFile tsFile, TSNode blockNode, String name, TSNode usageNode) {
+    for (int i = 0; i < blockNode.getChildCount(); i++) {
+      TSNode child = blockNode.getChild(i);
+      if (child.getType().equals("local_variable_declaration")) {
+        for (int j = 0; j < child.getChildCount(); j++) {
+          TSNode declChild = child.getChild(j);
+          if (declChild.getType().equals("variable_declarator")) {
+            for (int k = 0; k < declChild.getChildCount(); k++) {
+              TSNode nameNode = declChild.getChild(k);
+              if (nameNode.getType().equals("identifier")
+                  && tsFile.getTextFromNode(nameNode).equals(name)) {
+                if (child.getStartByte() < usageNode.getStartByte()) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Finds all references to a specific type within a given scope. This is useful for finding where
+   * a class is used (as variable types, method parameters, etc.)
+   *
+   * @param tsFile The TSFile containing the source code
+   * @param scopeNode The scope to search within (e.g., a class body or method)
+   * @param typeName The name of the type to find
+   * @return List of type_identifier nodes representing uses of the type
+   */
+  public List<TSNode> findTypeReferencesInScope(TSFile tsFile, TSNode scopeNode, String typeName) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || scopeNode == null
+        || Strings.isNullOrEmpty(typeName)) {
+      return Collections.emptyList();
+    }
+    String queryString =
+        String.format(
+            """
+            [
+              (type_identifier) @type_ref
+                (#eq? @type_ref "%s")
+              (generic_type
+                (type_identifier) @type_ref
+                (#eq? @type_ref "%s")
+              )
+              (generic_type
+                (type_arguments
+                  (type_identifier) @type_ref
+                  (#eq? @type_ref "%s")
+                )
+              )
+              (object_creation_expression
+                type: (type_identifier) @type_ref
+                (#eq? @type_ref "%s")
+              )
+              (object_creation_expression
+                type: (generic_type
+                  (type_identifier) @type_ref
+                  (#eq? @type_ref "%s")
+                )
+              )
+              (object_creation_expression
+                type: (generic_type
+                  (type_arguments
+                    (type_identifier) @type_ref
+                    (#eq? @type_ref "%s")
+                  )
+                )
+              )
+            ]
+            """,
+            typeName, typeName, typeName, typeName, typeName, typeName);
     return tsFile.query(queryString).within(scopeNode).execute().nodes();
   }
 }
