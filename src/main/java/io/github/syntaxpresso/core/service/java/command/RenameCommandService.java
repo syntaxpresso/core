@@ -333,8 +333,6 @@ public class RenameCommandService {
       if (classDeclarationNode.isEmpty()) {
         continue;
       }
-      // TODO: check if is checking same package and wildcard import.
-      // FIX: NOT WORKING WITH WILDCARD IMPORT
       boolean isImported =
           this.javaLanguageService
               .getImportDeclarationService()
