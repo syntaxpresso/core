@@ -10,23 +10,85 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.treesitter.TSNode;
 
+/**
+ * Service for analyzing and manipulating local variable declarations, formal parameters, and field declarations in Java source code using tree-sitter.
+ *
+ * <p>This service provides comprehensive functionality for working with variable declarations of all
+ * types within Java source files, including extraction of variable information, finding variable
+ * usages, scope analysis, and performing variable-related transformations. It leverages tree-sitter
+ * queries to accurately parse and analyze variable declarations at the AST level.
+ *
+ * <p>Key capabilities include:
+ *
+ * <ul>
+ *   <li>Extracting variable type, name, modifiers, and initialization values
+ *   <li>Finding all variable declarations (local, parameters, fields) within a file
+ *   <li>Locating variable usages within appropriate scopes
+ *   <li>Analyzing generic types and type arguments
+ *   <li>Handling scope-based variable resolution and shadowing
+ *   <li>Finding type references across different contexts
+ * </ul>
+ *
+ * <p>Variable types supported:
+ * <ul>
+ *   <li><strong>Local variables:</strong> Variables declared within method bodies or blocks
+ *   <li><strong>Formal parameters:</strong> Method and constructor parameters
+ *   <li><strong>Field declarations:</strong> Class-level instance and static fields
+ * </ul>
+ *
+ * <p>Usage example:
+ *
+ * <pre>
+ * LocalVariableDeclarationService varService = new LocalVariableDeclarationService();
+ *
+ * // Find all variable declarations in a file
+ * List&lt;TSNode&gt; allVars = varService.getAllMethodParameterNodes(tsFile);
+ * for (TSNode varNode : allVars) {
+ *   List&lt;Map&lt;String, TSNode&gt;&gt; info = varService.getLocalVariableDeclarationNodeInfo(tsFile, varNode);
+ *   for (Map&lt;String, TSNode&gt; infoMap : info) {
+ *     String type = tsFile.getTextFromNode(infoMap.get("variable_type"));
+ *     String name = tsFile.getTextFromNode(infoMap.get("variable_name"));
+ *     System.out.println("Variable: " + type + " " + name);
+ *   }
+ * }
+ *
+ * // Find all usages of a specific variable
+ * List&lt;TSNode&gt; usages = varService.findVariableUsagesInScope(tsFile, varNode);
+ * for (TSNode usage : usages) {
+ *   int line = usage.getStartPoint().getRow() + 1;
+ *   System.out.println("Usage at line: " + line);
+ * }
+ * </pre>
+ *
+ * @see TSFile
+ * @see VariableCapture
+ */
 public class LocalVariableDeclarationService {
   /**
    * Retrieves all variable declaration nodes from a file, including local variables, formal
    * parameters, and field declarations.
    *
-   * @param tsFile The TSFile containing the source code
-   * @return List of TSNodes representing variable declarations. Returns empty list if file is null.
-   *     <p>Query capture groups: - @node: The entire declaration node
-   *     <p>Example:
-   *     <pre>
-   * public class Example {
-   *   private String field;           // field_declaration
-   *   public void method(int param) { // formal_parameter
-   *     String local = "value";      // local_variable_declaration
-   *   }
+   * <p>This method finds all types of variable declarations within the source file:
+   * <ul>
+   *   <li><strong>Local variables:</strong> Variables declared within methods or blocks
+   *   <li><strong>Formal parameters:</strong> Method and constructor parameters
+   *   <li><strong>Field declarations:</strong> Class-level instance and static fields
+   * </ul>
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * List&lt;TSNode&gt; allVars = service.getAllMethodParameterNodes(tsFile);
+   * for (TSNode varNode : allVars) {
+   *   String nodeType = varNode.getType();
+   *   // nodeType can be: "local_variable_declaration", "formal_parameter", or "field_declaration"
    * }
    * </pre>
+   *
+   * Query captures: - node: The entire declaration node for each variable type
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @return List of variable declaration nodes, empty if none found or file/tree is null
    */
   public List<TSNode> getAllMethodParameterNodes(TSFile tsFile) {
     if (tsFile == null || tsFile.getTree() == null) {
@@ -59,34 +121,46 @@ public class LocalVariableDeclarationService {
 
   /**
    * Extracts detailed information about a variable declaration node, including modifiers, type,
-   * name, and value if present. Now also captures type components for generic and array types, as
-   * well as the class type from initialization values.
+   * name, and initialization value if present.
    *
-   * @param tsFile The TSFile containing the source code
-   * @param localVariableDeclarationNode The variable declaration node to analyze
-   * @return List of maps containing the captured nodes with their names. Returns empty list if file
-   *     is null.
-   *     <p>Query capture groups: - @variable_modifiers: Optional modifiers (e.g., private, final)
-   *     - @variable_type: Full type node - @variable_type_base: Base type identifier (e.g., "List"
-   *     in "List<String>") - @variable_type_argument: Type arguments in generics (e.g., "String" in
-   *     "List<String>") - @variable_name: Variable name identifier - @variable_value: Optional
-   *     initialization value - @variable_value_type: Class type in object creation (e.g., "Test" in
-   *     "new Test()") - @variable_value_type_argument: Type argument in generic object creation
-   *     (e.g., "Test" in "new ArrayList<Test>()") - @variable: The entire declaration node
-   *     <p>Example:
-   *     <pre>
-   * // For this declaration:
-   * List<String> names = new ArrayList<String>();
+   * <p>This method analyzes any type of variable declaration (local variables, formal parameters,
+   * or field declarations) to extract comprehensive information about its components using
+   * tree-sitter queries. It supports complex type structures including generics, arrays, and
+   * object creation expressions.
    *
-   * // The captures will be:
-   * variable_type -> "List<String>"
-   * variable_type_base -> "List"
-   * variable_type_argument -> "String"
-   * variable_name -> "names"
-   * variable_value -> "new ArrayList<String>()"
-   * variable_value_type -> "ArrayList"
-   * variable_value_type_argument -> "String"
+   * <p>The method handles various type patterns:
+   * <ul>
+   *   <li>Simple types: {@code String name}
+   *   <li>Generic types: {@code List<String> items}
+   *   <li>Array types: {@code String[] names}
+   *   <li>Object creation: {@code List<String> items = new ArrayList<String>()}
+   * </ul>
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * List&lt;TSNode&gt; varNodes = service.getAllMethodParameterNodes(tsFile);
+   * List&lt;Map&lt;String, TSNode&gt;&gt; info = service.getLocalVariableDeclarationNodeInfo(tsFile, varNodes.get(0));
+   * for (Map&lt;String, TSNode&gt; infoMap : info) {
+   *   TSNode type = infoMap.get("variable_type");              // Full type node
+   *   TSNode name = infoMap.get("variable_name");              // Variable name identifier
+   *   TSNode value = infoMap.get("variable_value");            // Initialization value (if present)
+   *   TSNode typeBase = infoMap.get("variable_type_base");     // Base type (e.g., "List" in "List&lt;String&gt;")
+   *   TSNode typeArg = infoMap.get("variable_type_argument");  // Type argument (e.g., "String" in "List&lt;String&gt;")
+   * }
    * </pre>
+   *
+   * Query captures: - variable_modifiers: Optional modifiers (e.g., private, final) -
+   * variable_type: Full type node - variable_type_base: Base type identifier (e.g., "List" in
+   * "List<String>") - variable_type_argument: Type arguments in generics (e.g., "String" in
+   * "List<String>") - variable_name: Variable name identifier - variable_value: Optional
+   * initialization value - variable_value_type: Class type in object creation (e.g., "ArrayList"
+   * in "new ArrayList()") - variable_value_type_argument: Type argument in generic object creation
+   * - variable: The entire declaration node
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param localVariableDeclarationNode The variable declaration {@link TSNode} to analyze
+   * @return List of maps containing captured nodes, empty if invalid input
    */
   public List<Map<String, TSNode>> getLocalVariableDeclarationNodeInfo(
       TSFile tsFile, TSNode localVariableDeclarationNode) {
@@ -400,12 +474,28 @@ public class LocalVariableDeclarationService {
   }
 
   /**
-   * Retrieves a specific node from a variable declaration based on the capture name.
+   * Retrieves a specific child node from a variable declaration by capture name.
    *
-   * @param tsFile The TSFile containing the source code
-   * @param captureName The name of the capture to retrieve (e.g., "type", "name", "modifiers")
-   * @param localVariableDeclarationNode The variable declaration node
-   * @return Optional containing the requested node if found, empty otherwise
+   * <p>This method extracts a specific component of a variable declaration based on the provided
+   * capture type. It works with all types of variable declarations (local variables, formal
+   * parameters, and field declarations).
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * List&lt;TSNode&gt; varNodes = service.getAllMethodParameterNodes(tsFile);
+   * Optional&lt;TSNode&gt; nameNode = service.getLocalVariableDeclarationChildNodeByCaptureName(
+   *     tsFile, varNodes.get(0), VariableCapture.VARIABLE_NAME);
+   * if (nameNode.isPresent()) {
+   *   String varName = tsFile.getTextFromNode(nameNode.get());
+   *   // varName = "myVariable"
+   * }
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param localVariableDeclarationNode The variable declaration {@link TSNode} to search within
+   * @param capture The specific {@link VariableCapture} type to retrieve
+   * @return Optional containing the requested node, empty if not found or invalid input
    */
   public Optional<TSNode> getLocalVariableDeclarationChildNodeByCaptureName(
       TSFile tsFile, TSNode localVariableDeclarationNode, VariableCapture capture) {
@@ -430,9 +520,23 @@ public class LocalVariableDeclarationService {
   /**
    * Gets the name identifier node from a variable declaration.
    *
-   * @param tsFile The TSFile containing the source code
-   * @param localVariableDeclarationNode The variable declaration node
-   * @return Optional containing the name identifier node if found, empty otherwise
+   * <p>This method extracts the identifier node that represents the variable's name from any type
+   * of variable declaration (local variable, formal parameter, or field declaration).
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * List&lt;TSNode&gt; varNodes = service.getAllMethodParameterNodes(tsFile);
+   * Optional&lt;TSNode&gt; nameNode = service.getLocalVariableDeclarationNameNode(tsFile, varNodes.get(0));
+   * if (nameNode.isPresent()) {
+   *   String varName = tsFile.getTextFromNode(nameNode.get());
+   *   // varName = "myVariable" from "String myVariable = \"value\";"
+   * }
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param localVariableDeclarationNode The variable declaration {@link TSNode}
+   * @return Optional containing the name identifier node, empty if not found or invalid input
    */
   public Optional<TSNode> getLocalVariableDeclarationNameNode(
       TSFile tsFile, TSNode localVariableDeclarationNode) {
@@ -441,11 +545,26 @@ public class LocalVariableDeclarationService {
   }
 
   /**
-   * Gets the value node from a variable declaration.
+   * Gets the initialization value node from a variable declaration.
    *
-   * @param tsFile The TSFile containing the source code
-   * @param localVariableDeclarationNode The variable declaration node
-   * @return Optional containing the value node if found, empty otherwise
+   * <p>This method extracts the node representing the initialization value of a variable, if one
+   * exists. The value can be any valid Java expression (literals, object creation, method calls, etc.).
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * List&lt;TSNode&gt; varNodes = service.getAllMethodParameterNodes(tsFile);
+   * Optional&lt;TSNode&gt; valueNode = service.getLocalVariableDeclarationValueNode(tsFile, varNodes.get(0));
+   * if (valueNode.isPresent()) {
+   *   String value = tsFile.getTextFromNode(valueNode.get());
+   *   // value = "\"Hello\"" from "String message = \"Hello\";"
+   *   // value = "new ArrayList<>()" from "List<String> items = new ArrayList<>();"
+   * }
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param localVariableDeclarationNode The variable declaration {@link TSNode}
+   * @return Optional containing the value node, empty if no initialization value or invalid input
    */
   public Optional<TSNode> getLocalVariableDeclarationValueNode(
       TSFile tsFile, TSNode localVariableDeclarationNode) {
@@ -638,19 +757,25 @@ public class LocalVariableDeclarationService {
   /**
    * Finds all variable declarations of a specific type in the file.
    *
-   * @param tsFile The TSFile containing the source code
-   * @param type The type to search for (e.g., "String", "int", "Test")
-   * @return List of variable declaration nodes with matching type. Returns empty list if type is
-   *     null or empty.
-   *     <p>Query capture groups: - @variable_type: The type node - @variable: The entire
-   *     declaration node
-   *     <p>Example:
-   *     <pre>
-   * // Will find all these declarations when searching for "Test":
-   * private Test field;
-   * public void method(Test param) { }
-   * Test localVar = new Test();
+   * <p>This method searches for all variable declarations (local variables, formal parameters, and
+   * field declarations) that have the specified type. The search is case-sensitive and matches
+   * exact type names.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * List&lt;TSNode&gt; stringVars = service.findLocalVariableDeclarationByType(tsFile, "String");
+   * for (TSNode varNode : stringVars) {
+   *   String nodeType = varNode.getType();
+   *   // Will find: "String field;", "method(String param)", "String local = \"value\";"
+   * }
    * </pre>
+   *
+   * Query captures: - variable_type: The type node - variable: The entire declaration node
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param type The type name to search for (e.g., "String", "int", "MyClass")
+   * @return List of variable declaration nodes with matching type, empty if type is null/empty or none found
    */
   public List<TSNode> findLocalVariableDeclarationByType(TSFile tsFile, String type) {
     if (tsFile == null || tsFile.getTree() == null || Strings.isNullOrEmpty(type)) {
@@ -680,12 +805,36 @@ public class LocalVariableDeclarationService {
     return tsFile.query(queryString).execute().nodes();
   }
 
+  /**
+   * Finds all identifier nodes with a specific text within a given scope.
+   *
+   * <p>This method searches for all identifier nodes that match the specified text within the
+   * provided scope node. It's a utility method used by other methods to find variable usages.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * TSNode methodBody = ... // get method body node
+   * List&lt;TSNode&gt; identifiers = service.findAllIdentifierNodes(tsFile, methodBody, "myVariable");
+   * for (TSNode identifier : identifiers) {
+   *   int line = identifier.getStartPoint().getRow() + 1;
+   *   System.out.println("Found identifier at line: " + line);
+   * }
+   * </pre>
+   *
+   * Query captures: - usage: The identifier node matching the specified text
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param scopeNode The scope {@link TSNode} to search within
+   * @param identifierText The text to search for in identifier nodes
+   * @return List of identifier nodes matching the text, empty if no matches found or invalid input
+   */
   public List<TSNode> findAllIdentifierNodes(
-      TSFile tsFile, TSNode scopeNode, String identiferText) {
+      TSFile tsFile, TSNode scopeNode, String identifierText) {
     if (tsFile == null
         || tsFile.getTree() == null
         || scopeNode == null
-        || Strings.isNullOrEmpty(identiferText)) {
+        || Strings.isNullOrEmpty(identifierText)) {
       return Collections.emptyList();
     }
     String queryString =
@@ -696,7 +845,7 @@ public class LocalVariableDeclarationService {
                 (#eq? @usage "%s")
             )
             """,
-            identiferText);
+             identifierText);
     return tsFile.query(queryString).within(scopeNode).execute().nodes();
   }
 

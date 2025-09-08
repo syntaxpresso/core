@@ -14,18 +14,46 @@ import java.util.Optional;
 import org.treesitter.TSNode;
 
 /**
- * Service for handling Java package declarations using Tree-sitter AST. Provides functionality to
- * analyze and extract information from package declarations in Java source files.
+ * Service for analyzing and manipulating package declarations in Java source code using tree-sitter.
  *
- * <p>Example usage: {@code TSFile tsFile = new TSFile("path/to/file.java");
- * PackageDeclarationService service = new PackageDeclarationService();
+ * <p>This service provides comprehensive functionality for working with package declarations within
+ * Java source files, including extraction of package information, resolving package paths, and
+ * performing package-related transformations. It leverages tree-sitter queries to accurately parse
+ * and analyze package declarations at the AST level.
  *
- * <p><p><p><p><p>// Get package declaration node Optional<TSNode> packageNode =
- * service.getPackageDeclarationNode(tsFile);
+ * <p>Key capabilities include:
  *
- * <p><p><p><p><p>// Get package information with captures // Captures
- * used: @class_scope, @class_name, @package_scope, @package List<Map<String, TSNode>> info =
- * service.getPackageDeclarationInfo(tsFile, packageNode.get()); }
+ * <ul>
+ *   <li>Extracting package names and scopes from source files
+ *   <li>Finding package declaration nodes
+ *   <li>Resolving package paths to file system directories
+ *   <li>Determining source directory types (main, test, etc.)
+ *   <li>Converting between package names and directory structures
+ * </ul>
+ *
+ * <p>Usage example:
+ *
+ * <pre>
+ * PackageDeclarationService packageService = new PackageDeclarationService();
+ *
+ * // Get package declaration from a file
+ * Optional&lt;TSNode&gt; packageNode = packageService.getPackageDeclarationNode(tsFile);
+ * if (packageNode.isPresent()) {
+ *   List&lt;Map&lt;String, TSNode&gt;&gt; info = packageService.getPackageDeclarationInfo(tsFile, packageNode.get());
+ *   for (Map&lt;String, TSNode&gt; infoMap : info) {
+ *     String packageName = tsFile.getTextFromNode(infoMap.get("package_scope"));
+ *     System.out.println("Package: " + packageName);
+ *   }
+ * }
+ *
+ * // Resolve package path
+ * Path packagePath = packageService.resolvePackagePath(projectRoot, "com.example.service");
+ * System.out.println("Package directory: " + packagePath);
+ * </pre>
+ *
+ * @see TSFile
+ * @see PackageCapture
+ * @see JavaSourceDirectoryType
  */
 public class PackageDeclarationService {
   private final PathHelper pathHelper = new PathHelper();

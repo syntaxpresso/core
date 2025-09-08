@@ -13,9 +13,58 @@ import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
 /**
- * Service class for handling operations related to method declarations and invocations in Java code
- * using Tree-sitter. This service provides functionalities to find method nodes, extract their
- * components, and identify specific types of methods like the main method.
+ * Service for analyzing and manipulating method declarations and invocations in Java source code using tree-sitter.
+ *
+ * <p>This service provides comprehensive functionality for working with method declarations and
+ * method invocations within Java source files, including extraction of method information, finding
+ * method usages, and performing method-related transformations. It leverages tree-sitter queries
+ * to accurately parse and analyze method declarations and invocations at the AST level.
+ *
+ * <p>Key capabilities include:
+ *
+ * <ul>
+ *   <li>Extracting method name, return type, parameters, and modifiers
+ *   <li>Finding all method declarations within a class
+ *   <li>Locating method invocations and their components
+ *   <li>Identifying special methods like main method
+ *   <li>Analyzing method signatures and parameter lists
+ *   <li>Finding method usages across different contexts
+ * </ul>
+ *
+ * <p>Usage example:
+ *
+ * <pre>
+ * MethodDeclarationService methodService = new MethodDeclarationService(parameterService);
+ *
+ * // Find all methods in a class
+ * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
+ * List&lt;TSNode&gt; methods = methodService.getAllMethodDeclarationNodes(tsFile, classNode);
+ *
+ * // Analyze each method
+ * for (TSNode methodNode : methods) {
+ *   List&lt;Map&lt;String, TSNode&gt;&gt; methodInfo = methodService.getMethodDeclarationNodeInfo(tsFile, methodNode);
+ *   for (Map&lt;String, TSNode&gt; info : methodInfo) {
+ *     String methodName = tsFile.getTextFromNode(info.get("method_name"));
+ *     String returnType = tsFile.getTextFromNode(info.get("method_return_type"));
+ *     System.out.println("Method: " + returnType + " " + methodName);
+ *   }
+ * }
+ *
+ * // Find method invocations
+ * List&lt;TSNode&gt; invocations = methodService.getAllMethodInvocationNodes(tsFile, classNode);
+ * for (TSNode invocation : invocations) {
+ *   Optional&lt;TSNode&gt; nameNode = methodService.getMethodInvocationNameNode(tsFile, invocation);
+ *   if (nameNode.isPresent()) {
+ *     String methodName = tsFile.getTextFromNode(nameNode.get());
+ *     System.out.println("Method called: " + methodName);
+ *   }
+ * }
+ * </pre>
+ *
+ * @see TSFile
+ * @see MethodCapture
+ * @see MethodInvocationCapture
+ * @see FormalParameterService
  */
 @Getter
 @RequiredArgsConstructor
@@ -25,19 +74,24 @@ public class MethodDeclarationService {
   /**
    * Retrieves all method declaration nodes within a given class declaration node.
    *
-   * @param tsFile The parsed source file wrapper.
-   * @param classDeclarationNode The {@link TSNode} representing the class declaration to search
-   *     within.
-   * @return A list of {@link TSNode} objects, each representing a method declaration. Returns an
-   *     empty list if the inputs are invalid or no methods are found.
-   *     <pre>{@code
-   * // Assuming 'file' is a parsed TSFile and 'classNode' is a class_declaration node
-   * MethodDeclarationService service = new MethodDeclarationService();
-   * List<TSNode> methodNodes = service.getAllMethodDeclarationNodes(file, classNode);
-   * for (TSNode methodNode : methodNodes) {
-   * System.out.println("Found method: " + file.getTextFromNode(methodNode));
+   * <p>This method finds all method declarations within the specified class scope, regardless of
+   * their visibility modifiers, return types, or parameters. It excludes constructors, which are
+   * handled separately.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
+   * List&lt;TSNode&gt; methods = service.getAllMethodDeclarationNodes(tsFile, classNode);
+   * for (TSNode methodNode : methods) {
+   *   String methodText = tsFile.getTextFromNode(methodNode);
+   *   // methodText = "public String getName() { return name; }"
    * }
-   * }</pre>
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param classDeclarationNode The class declaration {@link TSNode} to search within
+   * @return List of method declaration nodes, empty if none found or invalid input
    */
   public List<TSNode> getAllMethodDeclarationNodes(TSFile tsFile, TSNode classDeclarationNode) {
     if (tsFile == null
