@@ -8,7 +8,7 @@ public enum ParameterCapture {
   // Corresponds to the captures in the associated query
   PARAMETER("parameter"),
   PARAMETER_NAME("parameterName"),
-  PARAMETER_TYPE_ARGUMENT("paramenterTypeArgument"),
+  PARAMETER_TYPE_ARGUMENT("parameterTypeArgument"),
   PARAMETER_TYPE("parameterType");
 
   private final String captureName;
