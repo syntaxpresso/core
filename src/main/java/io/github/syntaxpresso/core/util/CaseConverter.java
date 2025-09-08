@@ -1,6 +1,7 @@
 package io.github.syntaxpresso.core.util;
 
 import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.util.extra.CaseFormat;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -300,7 +301,7 @@ public final class CaseConverter {
    * CaseConverter.convert("hello-world", CaseFormat.PASCAL_CASE)   // returns "HelloWorld"
    * </pre>
    */
-  public static String convert(String input, StringHelper.CaseFormat targetFormat) {
+  public static String convert(String input, CaseFormat targetFormat) {
     switch (targetFormat) {
       case CAMEL_CASE:
         return toCamelCase(input);

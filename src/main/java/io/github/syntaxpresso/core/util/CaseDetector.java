@@ -1,6 +1,7 @@
 package io.github.syntaxpresso.core.util;
 
 import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.util.extra.CaseFormat;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
@@ -163,39 +164,39 @@ public final class CaseDetector {
    * CaseDetector.detectFormat("Hello world")   // returns CaseFormat.SENTENCE_CASE
    * </pre>
    */
-  public static StringHelper.CaseFormat detectFormat(String input) {
+  public static CaseFormat detectFormat(String input) {
     if (Strings.isNullOrEmpty(input)) {
-      return StringHelper.CaseFormat.UNKNOWN;
+      return CaseFormat.UNKNOWN;
     }
 
     if (input.contains("_")) {
       if (input.equals(input.toUpperCase())) {
-        return StringHelper.CaseFormat.SCREAMING_SNAKE_CASE;
+        return CaseFormat.SCREAMING_SNAKE_CASE;
       }
-      return StringHelper.CaseFormat.SNAKE_CASE;
+      return CaseFormat.SNAKE_CASE;
     }
 
     if (input.contains("-")) {
-      return StringHelper.CaseFormat.KEBAB_CASE;
+      return CaseFormat.KEBAB_CASE;
     }
 
     if (input.contains(".")) {
-      return StringHelper.CaseFormat.DOT_CASE;
+      return CaseFormat.DOT_CASE;
     }
 
     if (input.contains(" ")) {
       String[] words = input.split("\\s+");
       boolean allCapitalized =
           Arrays.stream(words).allMatch(w -> w.isEmpty() || Character.isUpperCase(w.charAt(0)));
-      return allCapitalized ? StringHelper.CaseFormat.TITLE_CASE : StringHelper.CaseFormat.SENTENCE_CASE;
+      return allCapitalized ? CaseFormat.TITLE_CASE : CaseFormat.SENTENCE_CASE;
     }
 
     if (Character.isUpperCase(input.charAt(0))) {
-      return StringHelper.CaseFormat.PASCAL_CASE;
+      return CaseFormat.PASCAL_CASE;
     } else if (CAMEL_PATTERN.matcher(input).find()) {
-      return StringHelper.CaseFormat.CAMEL_CASE;
+      return CaseFormat.CAMEL_CASE;
     }
 
-    return StringHelper.CaseFormat.UNKNOWN;
+    return CaseFormat.UNKNOWN;
   }
 }

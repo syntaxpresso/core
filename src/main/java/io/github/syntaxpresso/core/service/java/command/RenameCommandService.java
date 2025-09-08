@@ -12,7 +12,7 @@ import io.github.syntaxpresso.core.service.java.command.extra.RenameOperation;
 import io.github.syntaxpresso.core.service.java.command.extra.RenameSourceFileData;
 import io.github.syntaxpresso.core.service.java.language.VariableNamingService;
 import io.github.syntaxpresso.core.util.StringHelper;
-import io.github.syntaxpresso.core.util.StringHelper.CaseFormat;
+import io.github.syntaxpresso.core.util.extra.CaseFormat;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;

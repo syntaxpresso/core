@@ -1,6 +1,7 @@
 package io.github.syntaxpresso.core.util;
 
 import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.util.extra.CaseFormat;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -209,7 +210,7 @@ public final class StringPluralizer {
       return str;
     }
 
-    StringHelper.CaseFormat format = CaseDetector.detectFormat(str);
+    CaseFormat format = CaseDetector.detectFormat(str);
     String[] words = splitIntoWords(str);
 
     if (words.length > 0) {

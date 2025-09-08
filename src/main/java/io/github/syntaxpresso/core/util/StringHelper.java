@@ -1,5 +1,7 @@
 package io.github.syntaxpresso.core.util;
 
+import io.github.syntaxpresso.core.util.extra.CaseFormat;
+
 /**
  * Facade utility class providing convenient access to string manipulation operations.
  * 
@@ -278,18 +280,5 @@ public final class StringHelper {
    */
   public static String pluralize(String str) {
     return StringPluralizer.pluralize(str);
-  }
-
-  /** Enum for different case formats. */
-  public enum CaseFormat {
-    CAMEL_CASE,
-    PASCAL_CASE,
-    SNAKE_CASE,
-    SCREAMING_SNAKE_CASE,
-    KEBAB_CASE,
-    DOT_CASE,
-    TITLE_CASE,
-    SENTENCE_CASE,
-    UNKNOWN
   }
 }
