@@ -13,6 +13,10 @@ public class StringHelper {
   private static final Pattern PASCAL_CASE_PATTERN =
       Pattern.compile("^[A-Z][a-z0-9]*([A-Z][a-z0-9]*)*$");
   private static final Pattern CAMEL_CASE_PATTERN = Pattern.compile("^[a-z]+([A-Z][a-z0-9]*)*$");
+  private static final Pattern SNAKE_CASE_PATTERN = Pattern.compile("^[a-z]+(_[a-z0-9]+)*$");
+  private static final Pattern SCREAMING_SNAKE_CASE_PATTERN = Pattern.compile("^[A-Z]+(_[A-Z0-9]+)*$");
+  private static final Pattern KEBAB_CASE_PATTERN = Pattern.compile("^[a-z]+(-[a-z0-9]+)*$");
+  private static final Pattern CAMEL_CASE_SPLIT_PATTERN = Pattern.compile("(?=\\p{Upper})");
 
   /**
    * Checks if a string is in PascalCase (also known as UpperCamelCase).
@@ -50,7 +54,7 @@ public class StringHelper {
     if (Strings.isNullOrEmpty(str)) {
       return false;
     }
-    return str.matches("^[a-z]+(_[a-z0-9]+)*$");
+    return SNAKE_CASE_PATTERN.matcher(str).matches();
   }
 
   /**
@@ -63,7 +67,7 @@ public class StringHelper {
     if (Strings.isNullOrEmpty(str)) {
       return false;
     }
-    return str.matches("^[A-Z]+(_[A-Z0-9]+)*$");
+    return SCREAMING_SNAKE_CASE_PATTERN.matcher(str).matches();
   }
 
   /**
@@ -76,7 +80,7 @@ public class StringHelper {
     if (Strings.isNullOrEmpty(str)) {
       return false;
     }
-    return str.matches("^[a-z]+(-[a-z0-9]+)*$");
+    return KEBAB_CASE_PATTERN.matcher(str).matches();
   }
 
   /**
@@ -257,7 +261,7 @@ public class StringHelper {
     if (Strings.isNullOrEmpty(camelCaseStr)) {
       return camelCaseStr;
     }
-    String[] words = camelCaseStr.split("(?=\\p{Upper})");
+    String[] words = CAMEL_CASE_SPLIT_PATTERN.split(camelCaseStr);
     if (words.length > 0) {
       int lastWordIndex = words.length - 1;
       words[lastWordIndex] = Noun.pluralOf(words[lastWordIndex]);
@@ -313,7 +317,7 @@ public class StringHelper {
       return false;
     }
     // Split camelCase to get the last word
-    String[] words = camelCaseStr.split("(?=\\p{Upper})");
+    String[] words = CAMEL_CASE_SPLIT_PATTERN.split(camelCaseStr);
     if (words.length > 0) {
       String lastWord = words[words.length - 1].toLowerCase();
       // Check if the pluralized form of the singular would match this word
