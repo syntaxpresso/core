@@ -7,8 +7,11 @@ import io.github.syntaxpresso.core.command.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.ParseSourceCodeCommand;
 import io.github.syntaxpresso.core.command.RenameCommand;
 import io.github.syntaxpresso.core.common.CommandFactory;
-import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
+import io.github.syntaxpresso.core.service.java.command.CreateNewFileCommandService;
+import io.github.syntaxpresso.core.service.java.command.GetCursorPositionInfoCommandService;
+import io.github.syntaxpresso.core.service.java.command.GetMainClassCommandService;
+import io.github.syntaxpresso.core.service.java.command.ParseSourceCodeCommandService;
 import io.github.syntaxpresso.core.service.java.command.RenameCommandService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
@@ -92,9 +95,19 @@ public class Core {
             localVariableDeclarationService);
     RenameCommandService renameCommandService =
         new RenameCommandService(variableNamingService, javaLanguageService);
-    JavaCommandService javaCommandService =
-        new JavaCommandService(
-            pathHelper, javaLanguageService, variableNamingService, renameCommandService);
-    return new CommandFactory(javaCommandService);
+    GetMainClassCommandService getMainClassCommandService =
+        new GetMainClassCommandService(javaLanguageService);
+    CreateNewFileCommandService createNewFileCommandService =
+        new CreateNewFileCommandService(javaLanguageService, pathHelper);
+    GetCursorPositionInfoCommandService getCursorPositionInfoCommandService =
+        new GetCursorPositionInfoCommandService(javaLanguageService, pathHelper);
+    ParseSourceCodeCommandService parseSourceCodeCommandService =
+        new ParseSourceCodeCommandService();
+    return new CommandFactory(
+        renameCommandService,
+        getMainClassCommandService,
+        createNewFileCommandService,
+        getCursorPositionInfoCommandService,
+        parseSourceCodeCommandService);
   }
 }
