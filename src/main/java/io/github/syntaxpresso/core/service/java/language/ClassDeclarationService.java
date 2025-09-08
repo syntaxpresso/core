@@ -56,8 +56,8 @@ import org.treesitter.TSNode;
  * // Find the main public class of a file
  * Optional&lt;TSNode&gt; publicClass = classService.getPublicClass(tsFile);
  * if (publicClass.isPresent()) {
- *   // Rename the class
- *   classService.renameClass(tsFile, publicClass.get(), "NewClassName");
+ *   String className = tsFile.getTextFromNode(classService.getClassDeclarationNameNode(tsFile, publicClass.get()).get());
+ *   System.out.println("Public class: " + className);
  * }
  * </pre>
  *
@@ -464,44 +464,5 @@ public class ClassDeclarationService {
         .contains(className);
   }
 
-  /**
-   * Renames the class declaration node and updates the source file name if the class is public.
-   *
-   * <p>If the class declaration node matches the public class of the file, the file itself is
-   * renamed. The class name identifier node within the source code is also updated to the new name.
-   *
-   * <p>Usage example:
-   *
-   * <pre>
-   * service.renameClass(tsFile, classNode, "NewClassName");
-   * </pre>
-   *
-   * @param tsFile The {@link TSFile} containing the class declaration.
-   * @param classDeclarationNode The class declaration node to rename.
-   * @param newName The new name for the class.
-   */
-  public void renameClass(TSFile tsFile, TSNode classDeclarationNode, String newName) {
-    if (Strings.isNullOrEmpty(newName)) {
-      return;
-    }
-    Optional<TSNode> classDeclarationNameNode =
-        this.getClassDeclarationNameNode(tsFile, classDeclarationNode);
-    if (classDeclarationNameNode.isEmpty()) {
-      return;
-    }
-    Optional<TSNode> publicClassNode = this.getPublicClass(tsFile);
-    if (publicClassNode.isEmpty()) {
-      return;
-    }
-    Optional<TSNode> publicClassNameNode =
-        this.getClassDeclarationNameNode(tsFile, publicClassNode.get());
-    if (publicClassNameNode.isPresent()) {
-      String classDeclarationName = tsFile.getTextFromNode(classDeclarationNameNode.get());
-      String publicClassName = tsFile.getTextFromNode(publicClassNameNode.get());
-      if (publicClassName.equals(classDeclarationName)) {
-        tsFile.rename(newName);
-      }
-    }
-    tsFile.updateSourceCode(classDeclarationNameNode.get(), newName);
-  }
+
 }

@@ -11,12 +11,13 @@ import java.util.stream.Collectors;
 import org.treesitter.TSNode;
 
 /**
- * Service for analyzing and manipulating local variable declarations, formal parameters, and field declarations in Java source code using tree-sitter.
+ * Service for analyzing and manipulating local variable declarations, formal parameters, and field
+ * declarations in Java source code using tree-sitter.
  *
- * <p>This service provides comprehensive functionality for working with variable declarations of all
- * types within Java source files, including extraction of variable information, finding variable
- * usages, scope analysis, and performing variable-related transformations. It leverages tree-sitter
- * queries to accurately parse and analyze variable declarations at the AST level.
+ * <p>This service provides comprehensive functionality for working with variable declarations of
+ * all types within Java source files, including extraction of variable information, finding
+ * variable usages, scope analysis, and performing variable-related transformations. It leverages
+ * tree-sitter queries to accurately parse and analyze variable declarations at the AST level.
  *
  * <p>Key capabilities include:
  *
@@ -30,6 +31,7 @@ import org.treesitter.TSNode;
  * </ul>
  *
  * <p>Variable types supported:
+ *
  * <ul>
  *   <li><strong>Local variables:</strong> Variables declared within method bodies or blocks
  *   <li><strong>Formal parameters:</strong> Method and constructor parameters
@@ -69,6 +71,7 @@ public class LocalVariableDeclarationService {
    * parameters, and field declarations.
    *
    * <p>This method finds all types of variable declarations within the source file:
+   *
    * <ul>
    *   <li><strong>Local variables:</strong> Variables declared within methods or blocks
    *   <li><strong>Formal parameters:</strong> Method and constructor parameters
@@ -125,10 +128,11 @@ public class LocalVariableDeclarationService {
    *
    * <p>This method analyzes any type of variable declaration (local variables, formal parameters,
    * or field declarations) to extract comprehensive information about its components using
-   * tree-sitter queries. It supports complex type structures including generics, arrays, and
-   * object creation expressions.
+   * tree-sitter queries. It supports complex type structures including generics, arrays, and object
+   * creation expressions.
    *
    * <p>The method handles various type patterns:
+   *
    * <ul>
    *   <li>Simple types: {@code String name}
    *   <li>Generic types: {@code List<String> items}
@@ -154,9 +158,9 @@ public class LocalVariableDeclarationService {
    * variable_type: Full type node - variable_type_base: Base type identifier (e.g., "List" in
    * "List<String>") - variable_type_argument: Type arguments in generics (e.g., "String" in
    * "List<String>") - variable_name: Variable name identifier - variable_value: Optional
-   * initialization value - variable_value_type: Class type in object creation (e.g., "ArrayList"
-   * in "new ArrayList()") - variable_value_type_argument: Type argument in generic object creation
-   * - variable: The entire declaration node
+   * initialization value - variable_value_type: Class type in object creation (e.g., "ArrayList" in
+   * "new ArrayList()") - variable_value_type_argument: Type argument in generic object creation -
+   * variable: The entire declaration node
    *
    * @param tsFile The {@link TSFile} containing the Java source code
    * @param localVariableDeclarationNode The variable declaration {@link TSNode} to analyze
@@ -548,7 +552,8 @@ public class LocalVariableDeclarationService {
    * Gets the initialization value node from a variable declaration.
    *
    * <p>This method extracts the node representing the initialization value of a variable, if one
-   * exists. The value can be any valid Java expression (literals, object creation, method calls, etc.).
+   * exists. The value can be any valid Java expression (literals, object creation, method calls,
+   * etc.).
    *
    * <p>Usage example:
    *
@@ -775,7 +780,8 @@ public class LocalVariableDeclarationService {
    *
    * @param tsFile The {@link TSFile} containing the Java source code
    * @param type The type name to search for (e.g., "String", "int", "MyClass")
-   * @return List of variable declaration nodes with matching type, empty if type is null/empty or none found
+   * @return List of variable declaration nodes with matching type, empty if type is null/empty or
+   *     none found
    */
   public List<TSNode> findLocalVariableDeclarationByType(TSFile tsFile, String type) {
     if (tsFile == null || tsFile.getTree() == null || Strings.isNullOrEmpty(type)) {
@@ -803,50 +809,6 @@ public class LocalVariableDeclarationService {
             """,
             type, type, type);
     return tsFile.query(queryString).execute().nodes();
-  }
-
-  /**
-   * Finds all identifier nodes with a specific text within a given scope.
-   *
-   * <p>This method searches for all identifier nodes that match the specified text within the
-   * provided scope node. It's a utility method used by other methods to find variable usages.
-   *
-   * <p>Usage example:
-   *
-   * <pre>
-   * TSNode methodBody = ... // get method body node
-   * List&lt;TSNode&gt; identifiers = service.findAllIdentifierNodes(tsFile, methodBody, "myVariable");
-   * for (TSNode identifier : identifiers) {
-   *   int line = identifier.getStartPoint().getRow() + 1;
-   *   System.out.println("Found identifier at line: " + line);
-   * }
-   * </pre>
-   *
-   * Query captures: - usage: The identifier node matching the specified text
-   *
-   * @param tsFile The {@link TSFile} containing the Java source code
-   * @param scopeNode The scope {@link TSNode} to search within
-   * @param identifierText The text to search for in identifier nodes
-   * @return List of identifier nodes matching the text, empty if no matches found or invalid input
-   */
-  public List<TSNode> findAllIdentifierNodes(
-      TSFile tsFile, TSNode scopeNode, String identifierText) {
-    if (tsFile == null
-        || tsFile.getTree() == null
-        || scopeNode == null
-        || Strings.isNullOrEmpty(identifierText)) {
-      return Collections.emptyList();
-    }
-    String queryString =
-        String.format(
-            """
-            (
-              (identifier) @usage
-                (#eq? @usage "%s")
-            )
-            """,
-             identifierText);
-    return tsFile.query(queryString).within(scopeNode).execute().nodes();
   }
 
   /**
