@@ -1,6 +1,5 @@
 package io.github.syntaxpresso.core.service.java.language;
 
-import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.service.java.language.extra.ParameterCapture;
 import java.util.Collections;
@@ -14,9 +13,9 @@ import org.treesitter.TSNode;
  * Tree-sitter parsing.
  *
  * <p>This service provides comprehensive functionality for working with method (formal) parameters
- * in Java, including extraction of parameter nodes, detailed parameter info, finding usages
- * within method bodies, and renaming parameters. It leverages tree-sitter queries to accurately 
- * parse and analyze parameter declarations at the AST level.
+ * in Java, including extraction of parameter nodes, detailed parameter info, finding usages within
+ * method bodies, and renaming parameters. It leverages tree-sitter queries to accurately parse and
+ * analyze parameter declarations at the AST level.
  *
  * <p>Key capabilities include:
  *
@@ -282,9 +281,9 @@ public class FormalParameterService {
   /**
    * Finds all usages of a method parameter within the method body.
    *
-   * <p>This method searches for a parameter in various contexts including method calls, assignments,
-   * binary expressions, ternary expressions, and argument lists. It identifies all locations where
-   * the parameter is referenced within the method scope.
+   * <p>This method searches for a parameter in various contexts including method calls,
+   * assignments, binary expressions, ternary expressions, and argument lists. It identifies all
+   * locations where the parameter is referenced within the method scope.
    *
    * <p>Usage example:
    *
@@ -307,7 +306,8 @@ public class FormalParameterService {
    * @param tsFile The {@link TSFile} containing the Java source code
    * @param methodParameterNode The formal parameter {@link TSNode} whose usages to find
    * @param methodDeclarationNode The method declaration {@link TSNode} to search within
-   * @return List of identifier nodes where the parameter is used, empty if no usages found or invalid input
+   * @return List of identifier nodes where the parameter is used, empty if no usages found or
+   *     invalid input
    */
   public List<TSNode> findAllFormalParameterNodeUsages(
       TSFile tsFile, TSNode methodParameterNode, TSNode methodDeclarationNode) {
@@ -365,8 +365,4 @@ public class FormalParameterService {
             methodParameterName);
     return tsFile.query(queryString).within(methodDeclarationNode).execute().nodes();
   }
-
-
-
-
 }
