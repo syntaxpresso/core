@@ -148,8 +148,7 @@ class ClassDeclarationServiceTest {
   @BeforeEach
   void setUp() {
     FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
-    FormalParameterDeclarationService formalParameterDeclarationService =
-        new FormalParameterDeclarationService();
+    FormalParameterService formalParameterDeclarationService = new FormalParameterService();
     MethodDeclarationService methodDeclarationService =
         new MethodDeclarationService(formalParameterDeclarationService);
     service = new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);

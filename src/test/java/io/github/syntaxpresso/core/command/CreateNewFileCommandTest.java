@@ -15,7 +15,7 @@ import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.FormalParameterDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.FormalParameterService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.MethodDeclarationService;
@@ -48,8 +48,7 @@ class CreateNewFileCommandTest {
     PathHelper pathHelper = new PathHelper();
     VariableNamingService variableNamingService = new VariableNamingService();
     FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
-    FormalParameterDeclarationService formalParameterDeclarationService =
-        new FormalParameterDeclarationService();
+    FormalParameterService formalParameterDeclarationService = new FormalParameterService();
     MethodDeclarationService methodDeclarationService =
         new MethodDeclarationService(formalParameterDeclarationService);
     ClassDeclarationService classDeclarationService =
@@ -68,7 +67,8 @@ class CreateNewFileCommandTest {
             importDeclarationService,
             localVariableDeclarationService);
 
-    this.javaService = new JavaCommandService(pathHelper, javaLanguageService);
+    this.javaService =
+        new JavaCommandService(pathHelper, javaLanguageService, variableNamingService);
   }
 
   /** Creates a command instance with real service and sets all required fields. */

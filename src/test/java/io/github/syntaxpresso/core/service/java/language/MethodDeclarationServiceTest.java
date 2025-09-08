@@ -398,7 +398,7 @@ class MethodDeclarationServiceTest {
           tsFile.query("(method_invocation) @invocation").execute().nodes();
 
       Optional<TSNode> methodNode =
-          methodDeclarationService.getMethodInvocationMethodNode(tsFile, invocationNodes.get(0));
+          methodDeclarationService.getMethodInvocationNameNode(tsFile, invocationNodes.get(0));
 
       // The current implementation may not find the method node due to complex query
       // We just verify the method doesn't crash and returns an Optional
@@ -416,9 +416,9 @@ class MethodDeclarationServiceTest {
       TSNode validInvocationNode = invocationNodes.get(0);
 
       Optional<TSNode> result1 =
-          methodDeclarationService.getMethodInvocationMethodNode(null, validInvocationNode);
+          methodDeclarationService.getMethodInvocationNameNode(null, validInvocationNode);
       Optional<TSNode> result2 =
-          methodDeclarationService.getMethodInvocationMethodNode(tsFile, null);
+          methodDeclarationService.getMethodInvocationNameNode(tsFile, null);
 
       assertFalse(result1.isPresent());
       assertFalse(result2.isPresent());

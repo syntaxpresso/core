@@ -14,7 +14,7 @@ import io.github.syntaxpresso.core.service.java.JavaCommandService;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.FormalParameterDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.FormalParameterService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.MethodDeclarationService;

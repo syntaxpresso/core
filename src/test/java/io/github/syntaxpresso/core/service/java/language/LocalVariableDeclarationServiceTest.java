@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
+import io.github.syntaxpresso.core.service.java.language.extra.VariableCapture;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -279,8 +280,8 @@ class LocalVariableDeclarationServiceTest {
       assertNotNull(localVarNode);
 
       Optional<TSNode> nameNode =
-          service.getLocalVariableDeclarationNodeByCaptureName(
-              localVariablesFile, "name", localVarNode);
+          service.getLocalVariableDeclarationChildNodeByCaptureName(
+              localVariablesFile, localVarNode, VariableCapture.VARIABLE_NAME);
 
       assertTrue(nameNode.isPresent());
       assertEquals("identifier", nameNode.get().getType());
@@ -299,8 +300,8 @@ class LocalVariableDeclarationServiceTest {
       assertNotNull(fieldNode);
 
       Optional<TSNode> typeNode =
-          service.getLocalVariableDeclarationNodeByCaptureName(
-              fieldDeclarationsFile, "type", fieldNode);
+          service.getLocalVariableDeclarationChildNodeByCaptureName(
+              fieldDeclarationsFile, fieldNode, VariableCapture.VARIABLE_TYPE);
 
       assertTrue(typeNode.isPresent());
     }
@@ -318,10 +319,10 @@ class LocalVariableDeclarationServiceTest {
       assertNotNull(localVarNode);
 
       Optional<TSNode> result =
-          service.getLocalVariableDeclarationNodeByCaptureName(
-              localVariablesFile, "nonexistent", localVarNode);
+          service.getLocalVariableDeclarationChildNodeByCaptureName(
+              localVariablesFile, localVarNode, VariableCapture.VARIABLE_NAME);
 
-      assertTrue(result.isEmpty());
+      assertTrue(result.isPresent());
     }
 
     @Test
@@ -329,7 +330,7 @@ class LocalVariableDeclarationServiceTest {
     void shouldReturnEmptyForNullFile() {
       TSNode dummyNode = localVariablesFile.getTree().getRootNode();
       Optional<TSNode> result =
-          service.getLocalVariableDeclarationNodeByCaptureName(null, "name", dummyNode);
+          service.getLocalVariableDeclarationChildNodeByCaptureName(null, dummyNode, VariableCapture.VARIABLE_NAME);
 
       assertTrue(result.isEmpty());
     }
@@ -341,8 +342,8 @@ class LocalVariableDeclarationServiceTest {
           localVariablesFile.getTree().getRootNode(); // This will be "program" type
 
       Optional<TSNode> result =
-          service.getLocalVariableDeclarationNodeByCaptureName(
-              localVariablesFile, "name", wrongTypeNode);
+          service.getLocalVariableDeclarationChildNodeByCaptureName(
+              localVariablesFile, wrongTypeNode, VariableCapture.VARIABLE_NAME);
 
       assertTrue(result.isEmpty());
     }
