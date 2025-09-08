@@ -739,7 +739,7 @@ public class LocalVariableDeclarationService {
    * @param variableDeclarationNode The variable declaration node
    * @return The scope node within which the variable is valid, or null if not found
    */
-  private TSNode determineScopeForVariable(TSNode variableDeclarationNode) {
+  public TSNode determineScopeForVariable(TSNode variableDeclarationNode) {
     String nodeType = variableDeclarationNode.getType();
     TSNode current = variableDeclarationNode;
     switch (nodeType) {

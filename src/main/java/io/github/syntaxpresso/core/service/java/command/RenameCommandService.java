@@ -62,6 +62,39 @@ public class RenameCommandService {
     return DataTransferObject.success();
   }
 
+  public DataTransferObject<RenameResponse> renameMethodsInSourceFile(
+      RenameSourceFileData sourceFileData, String newName) {
+    Optional<TSNode> sourceFilePublicClass =
+        this.javaLanguageService
+            .getClassDeclarationService()
+            .getPublicClass(sourceFileData.getSourceFile());
+    if (sourceFilePublicClass.isEmpty()) {
+      return DataTransferObject.error("Couldn't find source file's public class.");
+    }
+    List<TSNode> allLocalMethodInvocationNodes =
+        this.getJavaLanguageService()
+            .getClassDeclarationService()
+            .getMethodDeclarationService()
+            .getAllLocalMethodInvocationNodes(
+                sourceFileData.getSourceFile(), sourceFilePublicClass.get());
+    for (TSNode methodInvocationNode : allLocalMethodInvocationNodes) {
+      Optional<TSNode> methodInvocationNameNode =
+          this.javaLanguageService
+              .getClassDeclarationService()
+              .getMethodDeclarationService()
+              .getMethodInvocationNameNode(sourceFileData.getSourceFile(), methodInvocationNode);
+      if (methodInvocationNameNode.isPresent()) {
+        String methodInvocationName =
+            sourceFileData.getSourceFile().getTextFromNode(methodInvocationNameNode.get());
+        if (methodInvocationName.equals(sourceFileData.getSourceCursorPositionText())) {
+          this.addRenameOperation(
+              sourceFileData.getSourceFile(), methodInvocationNameNode.get(), newName);
+        }
+      }
+    }
+    return DataTransferObject.success();
+  }
+
   private DataTransferObject<RenameResponse> renameSourceFile(
       RenameSourceFileData sourceFileData, String newName) {
     Optional<TSNode> classDeclarationNode =
@@ -352,6 +385,19 @@ public class RenameCommandService {
       final int line,
       final int column) {
     TSFile tsFile = new TSFile(SupportedLanguage.JAVA, filePath);
+    Optional<TSNode> publicClassNode =
+        this.javaLanguageService.getClassDeclarationService().getPublicClass(tsFile);
+    if (publicClassNode.isEmpty()) {
+      return null;
+    }
+    Optional<TSNode> publicClassNameNode =
+        this.javaLanguageService
+            .getClassDeclarationService()
+            .getClassDeclarationNameNode(tsFile, publicClassNode.get());
+    if (publicClassNameNode.isEmpty()) {
+      return null;
+    }
+    String publicClassNameText = tsFile.getTextFromNode(publicClassNameNode.get());
     TSNode cursorPositionNode = tsFile.getNodeFromPosition(line, column, ide);
     if (cursorPositionNode == null) {
       return null;
@@ -382,6 +428,9 @@ public class RenameCommandService {
     return RenameSourceFileData.builder()
         .cwd(cwd)
         .sourceFile(tsFile)
+        .publicClassNode(publicClassNode.get())
+        .publicClassNameNode(publicClassNameNode.get())
+        .publicClassNameText(publicClassNameText)
         .sourcePackageNode(packageNode.get())
         .sourcePackageScopeNode(packageScopeNode.get())
         .sourcePackageScopeText(packageScopeText)
@@ -452,6 +501,57 @@ public class RenameCommandService {
     return DataTransferObject.success();
   }
 
+  public DataTransferObject<RenameResponse> processMethodRename(
+      RenameSourceFileData sourceFileData, String newName) {
+    DataTransferObject<RenameResponse> sourceFileMethodsRenamed =
+        this.renameMethodsInSourceFile(sourceFileData, newName);
+    if (!sourceFileMethodsRenamed.getSucceed()) {
+      return sourceFileMethodsRenamed;
+    }
+    List<TSFile> allJavaFiles =
+        this.javaLanguageService.getAllJavaFilesFromCwd(sourceFileData.getCwd());
+    for (TSFile tsFile : allJavaFiles) {
+      List<TSNode> allVariablesOfTargetType =
+          this.javaLanguageService
+              .getLocalVariableDeclarationService()
+              .findLocalVariableDeclarationByType(tsFile, sourceFileData.getPublicClassNameText());
+      for (TSNode variableNode : allVariablesOfTargetType) {
+        Optional<TSNode> variableNameNode =
+            this.javaLanguageService
+                .getLocalVariableDeclarationService()
+                .getLocalVariableDeclarationNameNode(tsFile, variableNode);
+        if (variableNameNode.isEmpty()) {
+          continue;
+        }
+        String variableName = tsFile.getTextFromNode(variableNameNode.get());
+        TSNode scopeNode =
+            this.javaLanguageService
+                .getLocalVariableDeclarationService()
+                .determineScopeForVariable(variableNode);
+        if (scopeNode == null) {
+          continue;
+        }
+        List<TSNode> methodInvocations =
+            this.javaLanguageService
+                .getClassDeclarationService()
+                .getMethodDeclarationService()
+                .findMethodInvocationsByVariableNameAndMethodName(
+                    tsFile, variableName, sourceFileData.getSourceCursorPositionText(), scopeNode);
+        for (TSNode invocation : methodInvocations) {
+          Optional<TSNode> methodNameNode =
+              this.javaLanguageService
+                  .getClassDeclarationService()
+                  .getMethodDeclarationService()
+                  .getMethodInvocationNameNode(tsFile, invocation);
+          if (methodNameNode.isPresent()) {
+            this.addRenameOperation(tsFile, methodNameNode.get(), newName);
+          }
+        }
+      }
+    }
+    return DataTransferObject.success();
+  }
+
   public DataTransferObject<RenameResponse> rename(
       final Path cwd,
       final Path filePath,
@@ -471,7 +571,9 @@ public class RenameCommandService {
         return classRename;
       }
     }
-    if (sourceFileData.getSourceCursorPositionType().equals(JavaIdentifierType.METHOD_NAME)) {}
+    if (sourceFileData.getSourceCursorPositionType().equals(JavaIdentifierType.METHOD_NAME)) {
+      this.processMethodRename(sourceFileData, newName);
+    }
     DataTransferObject<RenameResponse> operationsExecution = this.executeAllRenameOperations();
     if (!operationsExecution.getSucceed()) {
       return operationsExecution;

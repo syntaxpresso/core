@@ -56,6 +56,26 @@ public class MethodDeclarationService {
     return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
   }
 
+  public List<TSNode> getAllLocalMethodInvocationNodes(TSFile tsFile, TSNode classDeclarationNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || !classDeclarationNode.getType().equals("class_declaration")) {
+      return Collections.emptyList();
+    }
+    String queryString =
+        """
+        [
+          (method_invocation
+            object: (this))
+          (
+            (method_invocation) @invocation
+            (#not-match? @invocation "\\.")
+          )
+        ] @local_invocation
+        """;
+    return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
+  }
+
   /**
    * Extracts detailed information from a method declaration node, such as modifiers, return type,
    * name, parameters, and body.
@@ -288,23 +308,13 @@ public class MethodDeclarationService {
         tsFile, methodInvocationNode, MethodInvocationCapture.OBJECT);
   }
 
-  /**
-   * Gets the method name (identifier) node from a method invocation.
-   *
-   * @param tsFile The parsed source file wrapper.
-   * @param methodInvocationNode The method invocation node.
-   * @return An {@link Optional} containing the method name {@link TSNode}, or empty if not found.
-   *     <pre>{@code
-   * // Assuming 'file' and 'invocationNode' are available
-   * service.getMethodInvocationMethodNode(file, invocationNode).ifPresent(methodIdentifier -> {
-   * System.out.println("Method called: " + file.getTextFromNode(methodIdentifier));
-   * });
-   * }</pre>
-   */
-  public Optional<TSNode> getMethodInvocationMethodNode(
-      TSFile tsFile, TSNode methodInvocationNode) {
-    return this.getMethodInvocationChildByCapture(
-        tsFile, methodInvocationNode, MethodInvocationCapture.METHOD);
+  public Optional<TSNode> getMethodInvocationNameNode(TSFile tsFile, TSNode methodInvocationNode) {
+    String queryString =
+        """
+         (method_invocation
+            name: (_) @name)
+        """;
+    return tsFile.query(queryString).within(methodInvocationNode).execute().firstNodeOptional();
   }
 
   /**

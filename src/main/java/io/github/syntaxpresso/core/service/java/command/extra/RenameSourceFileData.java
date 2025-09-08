@@ -16,6 +16,9 @@ import org.treesitter.TSNode;
 public class RenameSourceFileData {
   private Path cwd;
   private TSFile sourceFile;
+  private TSNode publicClassNode;
+  private TSNode publicClassNameNode;
+  private String publicClassNameText;
   private TSNode sourcePackageNode;
   private TSNode sourcePackageScopeNode;
   private String sourcePackageScopeText;
