@@ -917,8 +917,11 @@ public class LocalVariableDeclarationService {
             """,
             variableName);
     List<TSNode> allUsages = tsFile.query(queryString).within(scopeNode).execute().nodes();
+    Optional<TSNode> nameNode = getLocalVariableDeclarationNameNode(tsFile, declarationNode);
+
     return allUsages.stream()
         .filter(usage -> usage != null && !usage.isNull())
+        .filter(usage -> nameNode.map(node -> !usage.equals(node)).orElse(true))
         .filter(usage -> !isPartOfDeclaration(tsFile, usage, declarationNode))
         .filter(usage -> isInCorrectScope(tsFile, usage, declarationNode, variableName))
         .collect(Collectors.toList());

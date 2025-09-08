@@ -13,12 +13,13 @@ import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
 /**
- * Service for analyzing and manipulating method declarations and invocations in Java source code using tree-sitter.
+ * Service for analyzing and manipulating method declarations and invocations in Java source code
+ * using tree-sitter.
  *
  * <p>This service provides comprehensive functionality for working with method declarations and
  * method invocations within Java source files, including extraction of method information, finding
- * method usages, and performing method-related transformations. It leverages tree-sitter queries
- * to accurately parse and analyze method declarations and invocations at the AST level.
+ * method usages, and performing method-related transformations. It leverages tree-sitter queries to
+ * accurately parse and analyze method declarations and invocations at the AST level.
  *
  * <p>Key capabilities include:
  *
@@ -363,6 +364,14 @@ public class MethodDeclarationService {
   }
 
   public Optional<TSNode> getMethodInvocationNameNode(TSFile tsFile, TSNode methodInvocationNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || methodInvocationNode == null
+        || methodInvocationNode.isNull()
+        || !"method_invocation".equals(methodInvocationNode.getType())) {
+      return Optional.empty();
+    }
+
     String queryString =
         """
          (method_invocation

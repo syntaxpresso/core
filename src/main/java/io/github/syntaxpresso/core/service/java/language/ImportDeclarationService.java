@@ -16,9 +16,9 @@ import org.treesitter.TSNode;
  * Service for analyzing and manipulating import declarations in Java source code using tree-sitter.
  *
  * <p>This service provides comprehensive functionality for working with import declarations within
- * Java source files, including extraction of import information, finding import statements, checking
- * for existing imports, and performing import-related transformations. It leverages tree-sitter
- * queries to accurately parse and analyze import declarations at the AST level.
+ * Java source files, including extraction of import information, finding import statements,
+ * checking for existing imports, and performing import-related transformations. It leverages
+ * tree-sitter queries to accurately parse and analyze import declarations at the AST level.
  *
  * <p>Key capabilities include:
  *
@@ -72,7 +72,8 @@ public class ImportDeclarationService {
    * Retrieves all import declaration nodes from the given Java source file.
    *
    * <p>This method finds all import statements within the source file, including both regular
-   * imports (e.g., {@code import java.util.List;}) and wildcard imports (e.g., {@code import java.util.*;}).
+   * imports (e.g., {@code import java.util.List;}) and wildcard imports (e.g., {@code import
+   * java.util.*;}).
    *
    * <p>Usage example:
    *
@@ -219,7 +220,8 @@ public class ImportDeclarationService {
    * @param tsFile The {@link TSFile} containing the Java source code
    * @param packageScope The package scope to search for (e.g., "java.util")
    * @param className The class name to search for (e.g., "List")
-   * @return Optional containing the matching import declaration node, empty if not found or invalid input
+   * @return Optional containing the matching import declaration node, empty if not found or invalid
+   *     input
    */
   public Optional<TSNode> findImportDeclarationNode(
       TSFile tsFile, String packageScope, String className) {
@@ -412,29 +414,33 @@ public class ImportDeclarationService {
     }
     ImportInsertionPoint insertPoint = new ImportInsertionPoint();
     List<TSNode> existingImports = this.getAllImportDeclarationNodes(tsFile);
-    if (existingImports.isEmpty()) {
-      insertPoint.setInsertByte(packageDeclarationNode.getEndByte());
-      insertPoint.setPosition(ImprtInsertionPosition.AFTER_PACKAGE_DECLARATION);
-      return insertPoint;
-    } else if (packageDeclarationNode == null) {
-      insertPoint.setInsertByte(0);
-      insertPoint.setPosition(ImprtInsertionPosition.BEGINNING);
-      return insertPoint;
+
+    if (!existingImports.isEmpty()) {
+      TSNode lastImportNode = existingImports.get(existingImports.size() - 1);
+      insertPoint.setInsertByte(lastImportNode.getEndByte());
+      insertPoint.setPosition(ImprtInsertionPosition.AFTER_LAST_IMPORT);
+    } else { // No existing imports
+      if (packageDeclarationNode != null) {
+        insertPoint.setInsertByte(packageDeclarationNode.getEndByte());
+        insertPoint.setPosition(ImprtInsertionPosition.AFTER_PACKAGE_DECLARATION);
+      } else {
+        insertPoint.setInsertByte(0);
+        insertPoint.setPosition(ImprtInsertionPosition.BEGINNING);
+      }
     }
-    TSNode lastImportNode = existingImports.get(existingImports.size() - 1);
-    insertPoint.setInsertByte(lastImportNode.getEndByte());
-    insertPoint.setPosition(ImprtInsertionPosition.AFTER_LAST_IMPORT);
     return insertPoint;
   }
 
   /**
-   * Adds an import statement for the specified class to the Java source file, if not already imported.
+   * Adds an import statement for the specified class to the Java source file, if not already
+   * imported.
    *
    * <p>This method intelligently inserts a new import statement at the appropriate location in the
    * file. It determines the insertion point based on existing package declarations and imports, and
    * only adds the import if the class is not already imported.
    *
    * <p>The insertion follows these rules:
+   *
    * <ul>
    *   <li>After package declaration (with proper spacing) if no imports exist
    *   <li>At the beginning of file if no package or imports exist
@@ -455,7 +461,8 @@ public class ImportDeclarationService {
    * @param tsFile The {@link TSFile} containing the Java source code
    * @param packageScope The package scope to import from (e.g., "java.util")
    * @param className The class name to import (e.g., "List")
-   * @param packageDeclarationNode The package declaration {@link TSNode} for determining insertion point, can be null
+   * @param packageDeclarationNode The package declaration {@link TSNode} for determining insertion
+   *     point, can be null
    */
   public void addImport(
       TSFile tsFile, String packageScope, String className, TSNode packageDeclarationNode) {
@@ -464,42 +471,44 @@ public class ImportDeclarationService {
     }
     ImportInsertionPoint insertionPoint =
         this.getImportInsertionPoint(tsFile, packageDeclarationNode);
+    if (insertionPoint == null) {
+      return; // Should not happen with valid inputs, but good practice
+    }
     String fullImportStatement = packageScope + "." + className;
-    String importStatement = null;
-    if (insertionPoint.getPosition().equals(ImprtInsertionPosition.AFTER_PACKAGE_DECLARATION)) {
-      importStatement = "\n\nimport " + fullImportStatement + ";";
-      tsFile.updateSourceCode(
-          insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), importStatement);
-    } else if (insertionPoint.getPosition().equals(ImprtInsertionPosition.BEGINNING)) {
+    String importStatement;
+    if (insertionPoint.getPosition().equals(ImprtInsertionPosition.BEGINNING)) {
       // No package, no imports - insert at start
-      importStatement = "import " + fullImportStatement + ";\n";
-      tsFile.updateSourceCode(
-          insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), importStatement);
+      importStatement = "import " + fullImportStatement + ";\n\n";
+    } else if (insertionPoint
+        .getPosition()
+        .equals(ImprtInsertionPosition.AFTER_PACKAGE_DECLARATION)) {
+      importStatement = "\n\nimport " + fullImportStatement + ";";
     } else {
       // After existing imports
       importStatement = "\nimport " + fullImportStatement + ";";
-      tsFile.updateSourceCode(
-          insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), importStatement);
     }
+    tsFile.updateSourceCode(
+        insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), importStatement);
   }
 
   /**
-   * Updates an existing import statement in the Java source file, changing the package scope and/or class name.
+   * Updates an existing import statement in the Java source file, changing the package scope and/or
+   * class name.
    *
    * <p>This method modifies an existing import declaration by updating its package scope and class
-   * name components. It's useful for refactoring operations where classes are moved between packages
-   * or renamed.
+   * name components. It's useful for refactoring operations where classes are moved between
+   * packages or renamed.
    *
    * <p>Usage example:
    *
    * <pre>
    * // Update an import from old package/class to new package/class
    * boolean updated = service.updateImport(
-   *     tsFile, 
+   *     tsFile,
    *     "com.old.package", "com.new.package",
    *     "OldClass", "NewClass");
    * if (updated) {
-   *   // Import was successfully updated from "import com.old.package.OldClass;" 
+   *   // Import was successfully updated from "import com.old.package.OldClass;"
    *   // to "import com.new.package.NewClass;"
    * }
    * </pre>
@@ -517,30 +526,19 @@ public class ImportDeclarationService {
       String newPackageScope,
       String oldClassName,
       String newClassName) {
-    if (this.isClassImported(tsFile, oldPackageScope, newClassName)) {
+    if (this.isClassImported(tsFile, newPackageScope, newClassName)) {
       return false;
     }
     Optional<TSNode> existingImport =
-        this.findImportDeclarationNode(tsFile, oldPackageScope, newClassName);
+        this.findImportDeclarationNode(tsFile, oldPackageScope, oldClassName);
     if (existingImport.isEmpty()) {
       return false;
     }
-    List<Map<String, TSNode>> existingImportInfo =
-        this.getImportDeclarationNodeInfo(tsFile, existingImport.get());
-    boolean isModified = false;
-    for (Map<String, TSNode> map : existingImportInfo) {
-      TSNode fullImportScopeNode = map.get(ImportCapture.FULL_IMPORT_SCOPE.getCaptureName());
-      TSNode classNameNode = map.get(ImportCapture.CLASS_NAME.getCaptureName());
-      TSNode asteriskNode = map.get(ImportCapture.ASTERISK.getCaptureName());
-      if (fullImportScopeNode != null) {
-        tsFile.updateSourceCode(fullImportScopeNode, newPackageScope);
-        isModified = true;
-      }
-      if (asteriskNode != null && classNameNode != null) {
-        tsFile.updateSourceCode(classNameNode, newClassName);
-        isModified = true;
-      }
-    }
-    return isModified;
+
+    TSNode importNode = existingImport.get();
+    String newImportStatement = "import " + newPackageScope + "." + newClassName + ";";
+    tsFile.updateSourceCode(importNode, newImportStatement);
+
+    return true;
   }
 }
