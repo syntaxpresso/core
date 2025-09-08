@@ -96,11 +96,18 @@ public class FieldDeclarationService {
             (field_declaration
               type: [
                 (type_identifier) %s
+                (integral_type) %s
+                (floating_point_type) %s
+                (boolean_type) %s
+                (void_type) %s
                 (generic_type
                   (type_identifier)
                   (type_arguments
                     [
                       (type_identifier) %s
+                      (integral_type) %s
+                      (floating_point_type) %s
+                      (boolean_type) %s
                       (generic_type) %s
                     ]
                   )
@@ -111,6 +118,13 @@ public class FieldDeclarationService {
                 (_)? %s)) %s
             """,
             FieldCapture.FIELD_TYPE.getCaptureWithAt(),
+            FieldCapture.FIELD_TYPE.getCaptureWithAt(),
+            FieldCapture.FIELD_TYPE.getCaptureWithAt(),
+            FieldCapture.FIELD_TYPE.getCaptureWithAt(),
+            FieldCapture.FIELD_TYPE.getCaptureWithAt(),
+            FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureWithAt(),
+            FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureWithAt(),
+            FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureWithAt(),
             FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureWithAt(),
             FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureWithAt(),
             FieldCapture.FIELD_TYPE.getCaptureWithAt(),
@@ -497,9 +511,18 @@ public class FieldDeclarationService {
             (field_declaration
               type: [
                 (type_identifier) @type
+                (integral_type) @type
+                (floating_point_type) @type
+                (boolean_type) @type
+                (void_type) @type
                 (generic_type
                   (type_arguments
-                    (type_identifier) @type
+                    [
+                      (type_identifier) @type
+                      (integral_type) @type
+                      (floating_point_type) @type
+                      (boolean_type) @type
+                    ]
                   )
                 )
               ]
@@ -509,8 +532,4 @@ public class FieldDeclarationService {
             fieldDeclaratorType);
     return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
   }
-
-
-
-
 }

@@ -79,10 +79,14 @@ public class FormalParameterService {
             """
             (method_declaration
               parameters: (formal_parameters
-                (formal_parameter) %s
+                [
+                  (formal_parameter) %s
+                  (spread_parameter) %s
+                ]
               )
             )
             """,
+            ParameterCapture.PARAMETER.getCaptureWithAt(),
             ParameterCapture.PARAMETER.getCaptureWithAt());
     return tsFile.query(queryString).within(methodDeclarationNode).execute().nodes();
   }
@@ -126,20 +130,39 @@ public class FormalParameterService {
             """
             (formal_parameter
               type: [
-                (type_identifier)
+                (type_identifier) %s
+                (integral_type) %s
+                (floating_point_type) %s
+                (boolean_type) %s
+                (void_type) %s
+                (array_type) %s
                 (generic_type
                   (type_identifier)
                   (type_arguments
                     [
                       (type_identifier) %s
+                      (integral_type) %s
+                      (floating_point_type) %s
+                      (boolean_type) %s
                       (generic_type) %s
+                      (wildcard) %s
                     ]
                   )
-                )
-              ] %s
+                ) %s
+              ]
               name: (identifier) %s
             ) %s
             """,
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
             ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
             ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
             ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
