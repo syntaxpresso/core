@@ -5,7 +5,7 @@ import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.JavaCommandService;
+import io.github.syntaxpresso.core.service.java.command.RenameCommandService;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
@@ -19,7 +19,7 @@ import picocli.CommandLine.Option;
     mixinStandardHelpOptions = true)
 @RequiredArgsConstructor
 public class RenameCommand implements Callable<DataTransferObject<RenameResponse>> {
-  private final JavaCommandService javaCommandService;
+  private final RenameCommandService renameCommandService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;
@@ -69,7 +69,7 @@ public class RenameCommand implements Callable<DataTransferObject<RenameResponse
   @Override
   public DataTransferObject<RenameResponse> call() {
     if (this.language.equals(SupportedLanguage.JAVA)) {
-      return this.javaCommandService.rename(
+      return this.renameCommandService.run(
           this.cwd, this.filePath.toPath(), this.ide, this.line, this.column, this.newName);
     }
     return DataTransferObject.error("Language not supported.");

@@ -4,7 +4,7 @@ import io.github.syntaxpresso.core.command.dto.GetCursorPositionInfoResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.JavaCommandService;
+import io.github.syntaxpresso.core.service.java.command.GetCursorPositionInfoCommandService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,7 @@ import picocli.CommandLine.Option;
 @Command(name = "get-info", description = "Get info of an specific node based on cursor position.")
 public class GetCursorPositionInfo
     implements Callable<DataTransferObject<GetCursorPositionInfoResponse>> {
-  private final JavaCommandService javaCommandService;
+  private final GetCursorPositionInfoCommandService getCursorPositionInfoCommandService;
 
   @Option(
       names = {"--file-path"},
@@ -50,7 +50,7 @@ public class GetCursorPositionInfo
   @Override
   public DataTransferObject<GetCursorPositionInfoResponse> call() {
     if (this.language.equals(SupportedLanguage.JAVA)) {
-      return this.javaCommandService.getTextFromCursorPosition(
+      return this.getCursorPositionInfoCommandService.run(
           this.filePath, this.language, this.ide, this.line, this.column);
     }
     return DataTransferObject.error("Language not supported.");

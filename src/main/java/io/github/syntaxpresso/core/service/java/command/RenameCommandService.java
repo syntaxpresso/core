@@ -576,7 +576,7 @@ public class RenameCommandService {
     return DataTransferObject.success();
   }
 
-  public DataTransferObject<RenameResponse> rename(
+  public DataTransferObject<RenameResponse> run(
       final Path cwd,
       final Path filePath,
       final SupportedIDE ide,

@@ -4,7 +4,7 @@ import io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.JavaCommandService;
+import io.github.syntaxpresso.core.service.java.command.ParseSourceCodeCommandService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import picocli.CommandLine.Option;
     description = "Parse source code. Usefull to provide external library files to the code.")
 public class ParseSourceCodeCommand
     implements Callable<DataTransferObject<ParseSourceCodeResponse>> {
-  private final JavaCommandService javaCommandService;
+  private final ParseSourceCodeCommandService parseSourceCodeCommandService;
 
   @Option(
       names = {"--source-code"},
@@ -47,7 +47,7 @@ public class ParseSourceCodeCommand
   public DataTransferObject<ParseSourceCodeResponse> call() {
     if (this.language != null && this.language.equals(SupportedLanguage.JAVA)) {
       DataTransferObject<ParseSourceCodeResponse> response =
-          this.javaCommandService.parseSourceCommand(
+          this.parseSourceCodeCommandService.run(
               this.sourceCode, this.filePath, this.language, this.ide);
       if (this.ide.equals(SupportedIDE.NONE)) {
         if (response.getSucceed() && response.getData() != null) {
