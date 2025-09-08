@@ -71,6 +71,29 @@ public class RenameCommandService {
     if (sourceFilePublicClass.isEmpty()) {
       return DataTransferObject.error("Couldn't find source file's public class.");
     }
+    String newNameCamelCase = StringHelper.toCamelCase(newName);
+    List<TSNode> allMethodDeclarationNodes =
+        this.javaLanguageService
+            .getClassDeclarationService()
+            .getMethodDeclarationService()
+            .getAllMethodDeclarationNodes(
+                sourceFileData.getSourceFile(), sourceFileData.getPublicClassNode());
+    for (TSNode methodDeclarationNode : allMethodDeclarationNodes) {
+      Optional<TSNode> methodDeclarationNameNode =
+          this.javaLanguageService
+              .getClassDeclarationService()
+              .getMethodDeclarationService()
+              .getMethodDeclarationNameNode(sourceFileData.getSourceFile(), methodDeclarationNode);
+      if (methodDeclarationNameNode.isEmpty()) {
+        continue;
+      }
+      String methodDeclarationName =
+          sourceFileData.getSourceFile().getTextFromNode(methodDeclarationNameNode.get());
+      if (methodDeclarationName.equals(sourceFileData.getSourceCursorPositionText())) {
+        this.addRenameOperation(
+            sourceFileData.getSourceFile(), methodDeclarationNameNode.get(), newNameCamelCase);
+      }
+    }
     List<TSNode> allLocalMethodInvocationNodes =
         this.getJavaLanguageService()
             .getClassDeclarationService()
@@ -88,7 +111,7 @@ public class RenameCommandService {
             sourceFileData.getSourceFile().getTextFromNode(methodInvocationNameNode.get());
         if (methodInvocationName.equals(sourceFileData.getSourceCursorPositionText())) {
           this.addRenameOperation(
-              sourceFileData.getSourceFile(), methodInvocationNameNode.get(), newName);
+              sourceFileData.getSourceFile(), methodInvocationNameNode.get(), newNameCamelCase);
         }
       }
     }
@@ -508,6 +531,7 @@ public class RenameCommandService {
     if (!sourceFileMethodsRenamed.getSucceed()) {
       return sourceFileMethodsRenamed;
     }
+    String newNameCamelCase = StringHelper.toCamelCase(newName);
     List<TSFile> allJavaFiles =
         this.javaLanguageService.getAllJavaFilesFromCwd(sourceFileData.getCwd());
     for (TSFile tsFile : allJavaFiles) {
@@ -544,7 +568,7 @@ public class RenameCommandService {
                   .getMethodDeclarationService()
                   .getMethodInvocationNameNode(tsFile, invocation);
           if (methodNameNode.isPresent()) {
-            this.addRenameOperation(tsFile, methodNameNode.get(), newName);
+            this.addRenameOperation(tsFile, methodNameNode.get(), newNameCamelCase);
           }
         }
       }
