@@ -6,7 +6,7 @@ import lombok.Data;
 public class ImportInsertionPoint {
 
   /** Defines the possible insertion points for an import statement. */
-  public enum ImprtInsertionPosition {
+  public enum ImportInsertionPosition {
     /** At the very beginning of the file. */
     BEGINNING,
 
@@ -18,5 +18,5 @@ public class ImportInsertionPoint {
   }
 
   int insertByte;
-  ImprtInsertionPosition position;
+  ImportInsertionPosition position;
 }

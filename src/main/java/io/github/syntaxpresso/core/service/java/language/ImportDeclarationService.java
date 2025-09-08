@@ -4,7 +4,7 @@ import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.service.java.language.extra.ImportCapture;
 import io.github.syntaxpresso.core.service.java.language.extra.ImportInsertionPoint;
-import io.github.syntaxpresso.core.service.java.language.extra.ImportInsertionPoint.ImprtInsertionPosition;
+import io.github.syntaxpresso.core.service.java.language.extra.ImportInsertionPoint.ImportInsertionPosition;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -418,14 +418,14 @@ public class ImportDeclarationService {
     if (!existingImports.isEmpty()) {
       TSNode lastImportNode = existingImports.get(existingImports.size() - 1);
       insertPoint.setInsertByte(lastImportNode.getEndByte());
-      insertPoint.setPosition(ImprtInsertionPosition.AFTER_LAST_IMPORT);
+      insertPoint.setPosition(ImportInsertionPosition.AFTER_LAST_IMPORT);
     } else { // No existing imports
       if (packageDeclarationNode != null) {
         insertPoint.setInsertByte(packageDeclarationNode.getEndByte());
-        insertPoint.setPosition(ImprtInsertionPosition.AFTER_PACKAGE_DECLARATION);
+        insertPoint.setPosition(ImportInsertionPosition.AFTER_PACKAGE_DECLARATION);
       } else {
         insertPoint.setInsertByte(0);
-        insertPoint.setPosition(ImprtInsertionPosition.BEGINNING);
+        insertPoint.setPosition(ImportInsertionPosition.BEGINNING);
       }
     }
     return insertPoint;
@@ -476,12 +476,12 @@ public class ImportDeclarationService {
     }
     String fullImportStatement = packageScope + "." + className;
     String importStatement;
-    if (insertionPoint.getPosition().equals(ImprtInsertionPosition.BEGINNING)) {
+    if (insertionPoint.getPosition().equals(ImportInsertionPosition.BEGINNING)) {
       // No package, no imports - insert at start
       importStatement = "import " + fullImportStatement + ";\n\n";
     } else if (insertionPoint
         .getPosition()
-        .equals(ImprtInsertionPosition.AFTER_PACKAGE_DECLARATION)) {
+        .equals(ImportInsertionPosition.AFTER_PACKAGE_DECLARATION)) {
       importStatement = "\n\nimport " + fullImportStatement + ";";
     } else {
       // After existing imports
