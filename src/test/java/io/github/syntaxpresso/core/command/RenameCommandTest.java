@@ -8,9 +8,7 @@ import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.command.RenameCommandService;
-import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -143,9 +141,11 @@ class RenameCommandTest {
       setupRenameCommand(testFile, null, "NewName", 1, 1);
 
       // When & Then
-      assertThrows(NullPointerException.class, () -> {
-        renameCommand.call();
-      });
+      assertThrows(
+          NullPointerException.class,
+          () -> {
+            renameCommand.call();
+          });
 
       // Verify service was NOT called for null language
       assertFalse(testService.wasServiceCalled());
@@ -155,11 +155,12 @@ class RenameCommandTest {
     @DisplayName("Should return error message for non-Java language simulation")
     void shouldReturnErrorMessageForNonJavaLanguageSimulation() throws Exception {
       // Given - Create command that simulates non-Java language scenario
-      Path testFile = tempDir.resolve("test.txt");
-      
+      tempDir.resolve("test.txt");
+
       // Create a simple test that demonstrates the error handling
       // without using anonymous class that has field access issues
-      DataTransferObject<RenameResponse> result = DataTransferObject.error("Language not supported.");
+      DataTransferObject<RenameResponse> result =
+          DataTransferObject.error("Language not supported.");
 
       // Then
       assertFalse(result.getSucceed());
@@ -184,7 +185,8 @@ class RenameCommandTest {
       picocli.CommandLine.Command commandAnnotation =
           RenameCommand.class.getAnnotation(picocli.CommandLine.Command.class);
       assertEquals("rename", commandAnnotation.name());
-      assertEquals("Rename a Java class/interface/enum and its file.", commandAnnotation.description()[0]);
+      assertEquals(
+          "Rename a Java class/interface/enum and its file.", commandAnnotation.description()[0]);
       assertTrue(commandAnnotation.mixinStandardHelpOptions());
     }
 
@@ -395,3 +397,4 @@ class RenameCommandTest {
     }
   }
 }
+

@@ -3,7 +3,6 @@ package io.github.syntaxpresso.core.common.extra;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.github.syntaxpresso.core.common.TSFile;
-import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,21 +18,22 @@ class TSQueryResultTest {
   private List<TSNode> testNodes;
   private List<Map<String, TSNode>> testCaptures;
 
-  private static final String JAVA_CODE = """
+  private static final String JAVA_CODE =
+      """
       package com.example;
-      
+
       public class TestClass {
           private String name;
           private int age;
-          
+
           public String getName() {
               return this.name;
           }
-          
+
           public void setName(String name) {
               this.name = name;
           }
-          
+
           public int getAge() {
               return this.age;
           }
@@ -48,27 +48,27 @@ class TSQueryResultTest {
 
   private void setupTestData() {
     TSNode rootNode = tsFile.getTree().getRootNode();
-    
+
     // Setup test nodes
     testNodes = new ArrayList<>();
     TSNode classNode = findNodeByType(rootNode, "class_declaration");
     TSNode getNameMethod = findMethodByName("getName");
     TSNode setNameMethod = findMethodByName("setName");
-    
+
     testNodes.add(classNode);
     testNodes.add(getNameMethod);
     testNodes.add(setNameMethod);
-    
+
     // Setup test captures
     testCaptures = new ArrayList<>();
     Map<String, TSNode> capture1 = new HashMap<>();
     capture1.put("method", getNameMethod);
     capture1.put("name", findNodeByType(getNameMethod, "identifier"));
-    
+
     Map<String, TSNode> capture2 = new HashMap<>();
     capture2.put("method", setNameMethod);
     capture2.put("name", findNodeByType(setNameMethod, "identifier"));
-    
+
     testCaptures.add(capture1);
     testCaptures.add(capture2);
   }
@@ -81,7 +81,7 @@ class TSQueryResultTest {
     @DisplayName("Should create result from capture maps")
     void shouldCreateResultFromCaptureMaps() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
+
       assertNotNull(result);
       assertEquals(2, result.size());
       assertFalse(result.isEmpty());
@@ -92,7 +92,7 @@ class TSQueryResultTest {
     @DisplayName("Should create result from nodes list")
     void shouldCreateResultFromNodesList() {
       TSQueryResult result = new TSQueryResult(testNodes, "method");
-      
+
       assertNotNull(result);
       assertEquals(3, result.size());
       assertFalse(result.isEmpty());
@@ -102,7 +102,7 @@ class TSQueryResultTest {
     @DisplayName("Should handle null captures list")
     void shouldHandleNullCapturesList() {
       TSQueryResult result = new TSQueryResult((List<Map<String, TSNode>>) null);
-      
+
       assertNotNull(result);
       assertEquals(0, result.size());
       assertTrue(result.isEmpty());
@@ -114,7 +114,7 @@ class TSQueryResultTest {
     void shouldHandleEmptyCollections() {
       TSQueryResult emptyCaptures = new TSQueryResult(new ArrayList<>());
       TSQueryResult emptyNodes = new TSQueryResult(new ArrayList<>(), "test");
-      
+
       assertTrue(emptyCaptures.isEmpty());
       assertTrue(emptyNodes.isEmpty());
       assertEquals(0, emptyCaptures.size());
@@ -130,9 +130,9 @@ class TSQueryResultTest {
     @DisplayName("Should get all nodes from single capture result")
     void shouldGetAllNodesFromSingleCaptureResult() {
       TSQueryResult result = new TSQueryResult(testNodes, "method");
-      
+
       List<TSNode> nodes = result.nodes();
-      
+
       assertEquals(3, nodes.size());
       assertTrue(nodes.containsAll(testNodes));
     }
@@ -141,9 +141,9 @@ class TSQueryResultTest {
     @DisplayName("Should get all unique nodes from multi-capture result")
     void shouldGetAllUniqueNodesFromMultiCaptureResult() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
+
       List<TSNode> nodes = result.nodes();
-      
+
       assertFalse(nodes.isEmpty());
       // Should be sorted by start byte
       for (int i = 1; i < nodes.size(); i++) {
@@ -155,9 +155,9 @@ class TSQueryResultTest {
     @DisplayName("Should get first node")
     void shouldGetFirstNode() {
       TSQueryResult result = new TSQueryResult(testNodes, "method");
-      
+
       TSNode firstNode = result.firstNode();
-      
+
       assertNotNull(firstNode);
       assertEquals(testNodes.get(0), firstNode);
     }
@@ -166,9 +166,9 @@ class TSQueryResultTest {
     @DisplayName("Should return null for first node when empty")
     void shouldReturnNullForFirstNodeWhenEmpty() {
       TSQueryResult result = new TSQueryResult(new ArrayList<>(), "test");
-      
+
       TSNode firstNode = result.firstNode();
-      
+
       assertNull(firstNode);
     }
 
@@ -176,9 +176,9 @@ class TSQueryResultTest {
     @DisplayName("Should get first node as Optional")
     void shouldGetFirstNodeAsOptional() {
       TSQueryResult result = new TSQueryResult(testNodes, "method");
-      
+
       Optional<TSNode> firstNode = result.firstNodeOptional();
-      
+
       assertTrue(firstNode.isPresent());
       assertEquals(testNodes.get(0), firstNode.get());
     }
@@ -187,9 +187,9 @@ class TSQueryResultTest {
     @DisplayName("Should return empty Optional when no nodes")
     void shouldReturnEmptyOptionalWhenNoNodes() {
       TSQueryResult result = new TSQueryResult(new ArrayList<>(), "test");
-      
+
       Optional<TSNode> firstNode = result.firstNodeOptional();
-      
+
       assertFalse(firstNode.isPresent());
     }
 
@@ -198,9 +198,9 @@ class TSQueryResultTest {
     void shouldGetSingleNode() {
       List<TSNode> singleNode = Arrays.asList(testNodes.get(0));
       TSQueryResult result = new TSQueryResult(singleNode, "method");
-      
+
       TSNode node = result.singleNode();
-      
+
       assertEquals(testNodes.get(0), node);
     }
 
@@ -208,7 +208,7 @@ class TSQueryResultTest {
     @DisplayName("Should throw exception for single node when empty")
     void shouldThrowExceptionForSingleNodeWhenEmpty() {
       TSQueryResult result = new TSQueryResult(new ArrayList<>(), "test");
-      
+
       assertThrows(IllegalStateException.class, result::singleNode);
     }
 
@@ -216,8 +216,9 @@ class TSQueryResultTest {
     @DisplayName("Should throw exception for single node when multiple")
     void shouldThrowExceptionForSingleNodeWhenMultiple() {
       TSQueryResult result = new TSQueryResult(testNodes, "method");
-      
-      IllegalStateException exception = assertThrows(IllegalStateException.class, result::singleNode);
+
+      IllegalStateException exception =
+          assertThrows(IllegalStateException.class, result::singleNode);
       assertTrue(exception.getMessage().contains("3 results"));
     }
   }
@@ -230,9 +231,9 @@ class TSQueryResultTest {
     @DisplayName("Should get all captures")
     void shouldGetAllCaptures() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
+
       List<Map<String, TSNode>> captures = result.captures();
-      
+
       assertEquals(2, captures.size());
       assertEquals(testCaptures, captures);
     }
@@ -241,9 +242,9 @@ class TSQueryResultTest {
     @DisplayName("Should get first capture")
     void shouldGetFirstCapture() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
+
       Map<String, TSNode> firstCapture = result.firstCapture();
-      
+
       assertNotNull(firstCapture);
       assertEquals(testCaptures.get(0), firstCapture);
     }
@@ -252,9 +253,9 @@ class TSQueryResultTest {
     @DisplayName("Should return empty map for first capture when empty")
     void shouldReturnEmptyMapForFirstCaptureWhenEmpty() {
       TSQueryResult result = new TSQueryResult(new ArrayList<>());
-      
+
       Map<String, TSNode> firstCapture = result.firstCapture();
-      
+
       assertTrue(firstCapture.isEmpty());
     }
 
@@ -262,9 +263,9 @@ class TSQueryResultTest {
     @DisplayName("Should get first capture as Optional")
     void shouldGetFirstCaptureAsOptional() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
+
       Optional<Map<String, TSNode>> firstCapture = result.firstCaptureOptional();
-      
+
       assertTrue(firstCapture.isPresent());
       assertEquals(testCaptures.get(0), firstCapture.get());
     }
@@ -274,9 +275,9 @@ class TSQueryResultTest {
     void shouldGetSingleCapture() {
       List<Map<String, TSNode>> singleCapture = Arrays.asList(testCaptures.get(0));
       TSQueryResult result = new TSQueryResult(singleCapture);
-      
+
       Map<String, TSNode> capture = result.singleCapture();
-      
+
       assertEquals(testCaptures.get(0), capture);
     }
 
@@ -284,7 +285,7 @@ class TSQueryResultTest {
     @DisplayName("Should throw exception for single capture when empty")
     void shouldThrowExceptionForSingleCaptureWhenEmpty() {
       TSQueryResult result = new TSQueryResult(new ArrayList<>());
-      
+
       assertThrows(IllegalStateException.class, result::singleCapture);
     }
 
@@ -292,8 +293,9 @@ class TSQueryResultTest {
     @DisplayName("Should throw exception for single capture when multiple")
     void shouldThrowExceptionForSingleCaptureWhenMultiple() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
-      IllegalStateException exception = assertThrows(IllegalStateException.class, result::singleCapture);
+
+      IllegalStateException exception =
+          assertThrows(IllegalStateException.class, result::singleCapture);
       assertTrue(exception.getMessage().contains("2 results"));
     }
   }
@@ -306,9 +308,9 @@ class TSQueryResultTest {
     @DisplayName("Should get nodes from specific capture")
     void shouldGetNodesFromSpecificCapture() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
+
       List<TSNode> nameNodes = result.nodesFrom("name");
-      
+
       assertEquals(2, nameNodes.size());
       assertNotNull(nameNodes.get(0));
       assertNotNull(nameNodes.get(1));
@@ -318,9 +320,9 @@ class TSQueryResultTest {
     @DisplayName("Should return empty list for non-existent capture")
     void shouldReturnEmptyListForNonExistentCapture() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
+
       List<TSNode> nodes = result.nodesFrom("nonexistent");
-      
+
       assertTrue(nodes.isEmpty());
     }
 
@@ -328,9 +330,9 @@ class TSQueryResultTest {
     @DisplayName("Should get first node from specific capture")
     void shouldGetFirstNodeFromSpecificCapture() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
+
       TSNode firstNameNode = result.firstNodeFrom("name");
-      
+
       assertNotNull(firstNameNode);
       assertEquals(testCaptures.get(0).get("name"), firstNameNode);
     }
@@ -339,9 +341,9 @@ class TSQueryResultTest {
     @DisplayName("Should return null for first node from non-existent capture")
     void shouldReturnNullForFirstNodeFromNonExistentCapture() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
+
       TSNode node = result.firstNodeFrom("nonexistent");
-      
+
       assertNull(node);
     }
   }
@@ -354,10 +356,9 @@ class TSQueryResultTest {
     @DisplayName("Should create stream of nodes")
     void shouldCreateStreamOfNodes() {
       TSQueryResult result = new TSQueryResult(testNodes, "method");
-      
-      List<TSNode> streamedNodes = result.streamNodes()
-          .collect(Collectors.toList());
-      
+
+      List<TSNode> streamedNodes = result.streamNodes().collect(Collectors.toList());
+
       assertEquals(testNodes.size(), streamedNodes.size());
       assertTrue(streamedNodes.containsAll(testNodes));
     }
@@ -366,10 +367,10 @@ class TSQueryResultTest {
     @DisplayName("Should create stream of captures")
     void shouldCreateStreamOfCaptures() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
-      List<Map<String, TSNode>> streamedCaptures = result.streamCaptures()
-          .collect(Collectors.toList());
-      
+
+      List<Map<String, TSNode>> streamedCaptures =
+          result.streamCaptures().collect(Collectors.toList());
+
       assertEquals(testCaptures.size(), streamedCaptures.size());
       assertEquals(testCaptures, streamedCaptures);
     }
@@ -379,9 +380,9 @@ class TSQueryResultTest {
     void shouldApplyForEachToCaptures() {
       TSQueryResult result = new TSQueryResult(testCaptures);
       List<String> captureKeys = new ArrayList<>();
-      
+
       result.forEachCapture(capture -> captureKeys.addAll(capture.keySet()));
-      
+
       assertFalse(captureKeys.isEmpty());
       assertTrue(captureKeys.contains("method"));
       assertTrue(captureKeys.contains("name"));
@@ -392,9 +393,9 @@ class TSQueryResultTest {
     void shouldApplyForEachToNodes() {
       TSQueryResult result = new TSQueryResult(testNodes, "method");
       List<TSNode> processedNodes = new ArrayList<>();
-      
+
       result.forEachNode(processedNodes::add);
-      
+
       assertEquals(testNodes.size(), processedNodes.size());
       assertTrue(processedNodes.containsAll(testNodes));
     }
@@ -408,11 +409,13 @@ class TSQueryResultTest {
     @DisplayName("Should filter matches by predicate")
     void shouldFilterMatchesByPredicate() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
-      TSQueryResult filtered = result.filter(capture -> 
-          capture.containsKey("method") && 
-          tsFile.getTextFromNode(capture.get("name")).startsWith("get"));
-      
+
+      TSQueryResult filtered =
+          result.filter(
+              capture ->
+                  capture.containsKey("method")
+                      && tsFile.getTextFromNode(capture.get("name")).startsWith("get"));
+
       assertEquals(1, filtered.size());
     }
 
@@ -420,10 +423,10 @@ class TSQueryResultTest {
     @DisplayName("Should filter by specific capture")
     void shouldFilterBySpecificCapture() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
-      TSQueryResult filtered = result.filterByCapture("name", node ->
-          tsFile.getTextFromNode(node).equals("getName"));
-      
+
+      TSQueryResult filtered =
+          result.filterByCapture("name", node -> tsFile.getTextFromNode(node).equals("getName"));
+
       assertEquals(1, filtered.size());
     }
 
@@ -431,9 +434,9 @@ class TSQueryResultTest {
     @DisplayName("Should handle filter with no matches")
     void shouldHandleFilterWithNoMatches() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
-      TSQueryResult filtered = result.filter(capture -> false);
-      
+
+      TSQueryResult filtered = result.filter(_ -> false);
+
       assertTrue(filtered.isEmpty());
     }
   }
@@ -446,12 +449,14 @@ class TSQueryResultTest {
     @DisplayName("Should map captures to string list")
     void shouldMapCapturesToStringList() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
-      List<String> methodNames = result.map(capture -> {
-        TSNode nameNode = capture.get("name");
-        return nameNode != null ? tsFile.getTextFromNode(nameNode) : "";
-      });
-      
+
+      List<String> methodNames =
+          result.map(
+              capture -> {
+                TSNode nameNode = capture.get("name");
+                return nameNode != null ? tsFile.getTextFromNode(nameNode) : "";
+              });
+
       assertEquals(2, methodNames.size());
       assertTrue(methodNames.contains("getName"));
       assertTrue(methodNames.contains("setName"));
@@ -463,10 +468,9 @@ class TSQueryResultTest {
       TSQueryResult result = new TSQueryResult(testCaptures);
       List<TSNode> nameNodes = result.nodesFrom("name");
       TSQueryResult nameResult = new TSQueryResult(nameNodes, "name");
-      
-      List<String> nodeTexts = nameResult.mapNodes(node -> 
-          tsFile.getTextFromNode(node));
-      
+
+      List<String> nodeTexts = nameResult.mapNodes(node -> tsFile.getTextFromNode(node));
+
       assertEquals(2, nodeTexts.size());
       assertTrue(nodeTexts.contains("getName"));
       assertTrue(nodeTexts.contains("setName"));
@@ -476,11 +480,11 @@ class TSQueryResultTest {
     @DisplayName("Should collect nodes with custom collector")
     void shouldCollectNodesWithCustomCollector() {
       TSQueryResult result = new TSQueryResult(testNodes, "method");
-      
-      String concatenated = result.mapNodes(node -> node.getType())
-          .stream()
-          .collect(Collectors.joining(", ", "[", "]"));
-      
+
+      String concatenated =
+          result.mapNodes(node -> node.getType()).stream()
+              .collect(Collectors.joining(", ", "[", "]"));
+
       assertNotNull(concatenated);
       assertTrue(concatenated.startsWith("["));
       assertTrue(concatenated.endsWith("]"));
@@ -490,12 +494,13 @@ class TSQueryResultTest {
     @DisplayName("Should collect captures with custom collector")
     void shouldCollectCapturesWithCustomCollector() {
       TSQueryResult result = new TSQueryResult(testCaptures);
-      
-      Map<String, Long> captureCount = result.collectCaptures(
-          Collectors.groupingBy(
-              capture -> capture.containsKey("method") ? "has_method" : "no_method",
-              Collectors.counting()));
-      
+
+      Map<String, Long> captureCount =
+          result.collectCaptures(
+              Collectors.groupingBy(
+                  capture -> capture.containsKey("method") ? "has_method" : "no_method",
+                  Collectors.counting()));
+
       assertEquals(1, captureCount.size());
       assertEquals(2L, captureCount.get("has_method"));
     }
@@ -511,13 +516,13 @@ class TSQueryResultTest {
       Map<String, TSNode> captureWithNull = new HashMap<>();
       captureWithNull.put("method", testNodes.get(0));
       captureWithNull.put("name", null);
-      
+
       List<Map<String, TSNode>> capturesWithNull = Arrays.asList(captureWithNull);
       TSQueryResult result = new TSQueryResult(capturesWithNull);
-      
+
       List<TSNode> nameNodes = result.nodesFrom("name");
       assertTrue(nameNodes.isEmpty());
-      
+
       List<TSNode> methodNodes = result.nodesFrom("method");
       assertEquals(1, methodNodes.size());
     }
@@ -527,7 +532,7 @@ class TSQueryResultTest {
     void shouldHandleEmptyCaptureMap() {
       List<Map<String, TSNode>> emptyCaptures = Arrays.asList(new HashMap<>());
       TSQueryResult result = new TSQueryResult(emptyCaptures);
-      
+
       assertEquals(1, result.size());
       assertTrue(result.firstCapture().isEmpty());
       assertTrue(result.nodes().isEmpty());
@@ -537,11 +542,11 @@ class TSQueryResultTest {
     @DisplayName("Should maintain consistency between different access methods")
     void shouldMaintainConsistencyBetweenDifferentAccessMethods() {
       TSQueryResult result = new TSQueryResult(testNodes, "method");
-      
+
       assertEquals(result.size(), result.nodes().size());
       assertEquals(result.isEmpty(), result.nodes().isEmpty());
       assertEquals(result.hasResults(), !result.nodes().isEmpty());
-      
+
       if (!result.isEmpty()) {
         assertEquals(result.firstNode(), result.nodes().get(0));
       }
@@ -571,14 +576,14 @@ class TSQueryResultTest {
 
   private TSNode findMethodByNameRecursive(TSNode node, String methodName) {
     if (node == null) return null;
-    
+
     if ("method_declaration".equals(node.getType())) {
       TSNode nameNode = findNodeByType(node, "identifier");
       if (nameNode != null && methodName.equals(tsFile.getTextFromNode(nameNode))) {
         return node;
       }
     }
-    
+
     for (int i = 0; i < node.getNamedChildCount(); i++) {
       TSNode child = node.getNamedChild(i);
       TSNode result = findMethodByNameRecursive(child, methodName);

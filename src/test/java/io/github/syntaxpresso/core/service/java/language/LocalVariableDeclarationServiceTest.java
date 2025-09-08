@@ -31,13 +31,13 @@ class LocalVariableDeclarationServiceTest {
           int local2 = 10;
           List<String> local3 = new ArrayList<String>();
           Test[] local4 = new Test[5];
-          
+
           local1 = "world";
           System.out.println(local1);
           System.out.println(param1);
           field1 = "updated";
         }
-        
+
         public TestClass(String constructorParam) {
           this.field1 = constructorParam;
         }
@@ -62,9 +62,14 @@ class LocalVariableDeclarationServiceTest {
       assertNotNull(nodes);
       assertFalse(nodes.isEmpty());
 
-      long fieldCount = nodes.stream().filter(node -> node.getType().equals("field_declaration")).count();
-      long paramCount = nodes.stream().filter(node -> node.getType().equals("formal_parameter")).count();
-      long localCount = nodes.stream().filter(node -> node.getType().equals("local_variable_declaration")).count();
+      long fieldCount =
+          nodes.stream().filter(node -> node.getType().equals("field_declaration")).count();
+      long paramCount =
+          nodes.stream().filter(node -> node.getType().equals("formal_parameter")).count();
+      long localCount =
+          nodes.stream()
+              .filter(node -> node.getType().equals("local_variable_declaration"))
+              .count();
 
       assertTrue(fieldCount > 0, "Should find at least one field declaration");
       assertTrue(paramCount > 0, "Should find at least one parameter");
@@ -89,21 +94,22 @@ class LocalVariableDeclarationServiceTest {
     void shouldExtractInfoFromSimpleFieldDeclaration() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
       List<TSNode> allNodes = service.getAllMethodParameterNodes(tsFile);
-      
-      Optional<TSNode> fieldNodeOpt = allNodes.stream()
-          .filter(node -> node.getType().equals("field_declaration"))
-          .findFirst();
-      
+
+      Optional<TSNode> fieldNodeOpt =
+          allNodes.stream().filter(node -> node.getType().equals("field_declaration")).findFirst();
+
       assertTrue(fieldNodeOpt.isPresent(), "Should find at least one field declaration");
       TSNode fieldNode = fieldNodeOpt.get();
 
-      List<Map<String, TSNode>> info = service.getLocalVariableDeclarationNodeInfo(tsFile, fieldNode);
+      List<Map<String, TSNode>> info =
+          service.getLocalVariableDeclarationNodeInfo(tsFile, fieldNode);
 
       assertNotNull(info);
       if (!info.isEmpty()) {
         Map<String, TSNode> infoMap = info.get(0);
-        assertTrue(infoMap.containsKey("variableName") || infoMap.containsKey("variable"), 
-          "Should contain at least variable name or variable node");
+        assertTrue(
+            infoMap.containsKey("variableName") || infoMap.containsKey("variable"),
+            "Should contain at least variable name or variable node");
       }
     }
 
@@ -129,11 +135,10 @@ class LocalVariableDeclarationServiceTest {
     void shouldGetVariableNameNode() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
       List<TSNode> allNodes = service.getAllMethodParameterNodes(tsFile);
-      
-      Optional<TSNode> fieldNodeOpt = allNodes.stream()
-          .filter(node -> node.getType().equals("field_declaration"))
-          .findFirst();
-      
+
+      Optional<TSNode> fieldNodeOpt =
+          allNodes.stream().filter(node -> node.getType().equals("field_declaration")).findFirst();
+
       assertTrue(fieldNodeOpt.isPresent());
       TSNode fieldNode = fieldNodeOpt.get();
 
@@ -151,8 +156,9 @@ class LocalVariableDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
       TSNode invalidNode = tsFile.getTree().getRootNode();
 
-      Optional<TSNode> result = service.getLocalVariableDeclarationChildNodeByCaptureName(
-          tsFile, invalidNode, VariableCapture.VARIABLE_NAME);
+      Optional<TSNode> result =
+          service.getLocalVariableDeclarationChildNodeByCaptureName(
+              tsFile, invalidNode, VariableCapture.VARIABLE_NAME);
 
       assertTrue(result.isEmpty());
     }
@@ -202,10 +208,11 @@ class LocalVariableDeclarationServiceTest {
     void shouldFindVariableUsages() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
       List<TSNode> allNodes = service.getAllMethodParameterNodes(tsFile);
-      
-      Optional<TSNode> localNodeOpt = allNodes.stream()
-          .filter(node -> node.getType().equals("local_variable_declaration"))
-          .findFirst();
+
+      Optional<TSNode> localNodeOpt =
+          allNodes.stream()
+              .filter(node -> node.getType().equals("local_variable_declaration"))
+              .findFirst();
 
       if (localNodeOpt.isPresent()) {
         List<TSNode> usages = service.findVariableUsagesInScope(tsFile, localNodeOpt.get());
@@ -219,13 +226,14 @@ class LocalVariableDeclarationServiceTest {
     void shouldDetermineScopeForVariable() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
       List<TSNode> allNodes = service.getAllMethodParameterNodes(tsFile);
-      
-      Optional<TSNode> localNodeOpt = allNodes.stream()
-          .filter(node -> node.getType().equals("local_variable_declaration"))
-          .findFirst();
+
+      Optional<TSNode> localNodeOpt =
+          allNodes.stream()
+              .filter(node -> node.getType().equals("local_variable_declaration"))
+              .findFirst();
 
       if (localNodeOpt.isPresent()) {
-        TSNode scope = service.determineScopeForVariable(localNodeOpt.get());
+        service.determineScopeForVariable(localNodeOpt.get());
         // Scope might be null if the variable structure doesn't match expected patterns
         // This is acceptable for now
       }
@@ -236,7 +244,7 @@ class LocalVariableDeclarationServiceTest {
     void shouldReturnEmptyUsagesForNullInputs() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
       List<TSNode> allNodes = service.getAllMethodParameterNodes(tsFile);
-      
+
       if (!allNodes.isEmpty()) {
         TSNode node = allNodes.get(0);
 
@@ -286,3 +294,4 @@ class LocalVariableDeclarationServiceTest {
     }
   }
 }
+

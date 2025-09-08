@@ -109,16 +109,16 @@ class ParseSourceCodeCommandTest {
           package com.example;
           import java.util.List;
           import java.util.Map;
-          
+
           public class ComplexClass<T> extends BaseClass implements InterfaceA, InterfaceB {
               private final List<String> items;
               private Map<String, T> cache;
-              
+
               public ComplexClass(List<String> items) {
                   this.items = items;
                   this.cache = new HashMap<>();
               }
-              
+
               public void processItems() {
                   items.forEach(item -> {
                       if (item != null && !item.isEmpty()) {
@@ -137,7 +137,8 @@ class ParseSourceCodeCommandTest {
               .parseSuccess(true)
               .build();
       testService.setSuccessResponse(complexResponse);
-      setupParseSourceCodeCommand(complexSourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
+      setupParseSourceCodeCommand(
+          complexSourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
 
       // When
       DataTransferObject<ParseSourceCodeResponse> result = parseSourceCodeCommand.call();
@@ -176,11 +177,12 @@ class ParseSourceCodeCommandTest {
     @DisplayName("Should return error for unsupported language when extended")
     void shouldReturnErrorForUnsupportedLanguageWhenExtended() throws Exception {
       // Given - Create command that simulates non-Java language scenario
-      Path testFile = createTestJavaFile("test.java", "public class Test {}");
-      
+      createTestJavaFile("test.java", "public class Test {}");
+
       // Create a test that demonstrates the error handling for non-Java languages
       // Since only JAVA is supported, we test the else condition
-      DataTransferObject<ParseSourceCodeResponse> result = DataTransferObject.error("Unable to parse source code.");
+      DataTransferObject<ParseSourceCodeResponse> result =
+          DataTransferObject.error("Unable to parse source code.");
 
       // Then
       assertFalse(result.getSucceed());
@@ -240,7 +242,7 @@ class ParseSourceCodeCommandTest {
       // Then
       assertTrue(result.getSucceed());
       assertEquals(sourceCode, result.getData().getSourceCode());
-      
+
       // Verify stdout output
       String consoleOutput = outContent.toString().trim();
       assertEquals(sourceCode, consoleOutput);
@@ -261,7 +263,8 @@ class ParseSourceCodeCommandTest {
               .parseSuccess(true)
               .build();
       testService.setSuccessResponse(response);
-      setupParseSourceCodeCommand(sourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
+      setupParseSourceCodeCommand(
+          sourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
 
       // When
       DataTransferObject<ParseSourceCodeResponse> result = parseSourceCodeCommand.call();
@@ -269,7 +272,7 @@ class ParseSourceCodeCommandTest {
       // Then
       assertTrue(result.getSucceed());
       assertNull(result.getData()); // Should return success() without data for non-NONE IDE
-      
+
       // Verify no stdout output
       String consoleOutput = outContent.toString().trim();
       assertEquals("", consoleOutput);
@@ -281,7 +284,7 @@ class ParseSourceCodeCommandTest {
       // Given
       Path testFile = createTestJavaFile("TestClass.java", "public class TestClass {}");
       String sourceCode = "public class IDETest { }";
-      
+
       // Test NEOVIM IDE
       ParseSourceCodeResponse response =
           ParseSourceCodeResponse.builder()
@@ -292,7 +295,8 @@ class ParseSourceCodeCommandTest {
               .parseSuccess(true)
               .build();
       testService.setSuccessResponse(response);
-      setupParseSourceCodeCommand(sourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.NEOVIM);
+      setupParseSourceCodeCommand(
+          sourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.NEOVIM);
 
       // When
       DataTransferObject<ParseSourceCodeResponse> result = parseSourceCodeCommand.call();
@@ -310,7 +314,8 @@ class ParseSourceCodeCommandTest {
       Path testFile = createTestJavaFile("TestClass.java", "public class TestClass {}");
       String sourceCode = "invalid code";
       testService.setErrorResponse("Parsing failed");
-      setupParseSourceCodeCommand(sourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
+      setupParseSourceCodeCommand(
+          sourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
 
       // When
       DataTransferObject<ParseSourceCodeResponse> result = parseSourceCodeCommand.call();
@@ -332,13 +337,16 @@ class ParseSourceCodeCommandTest {
       assertTrue(Callable.class.isAssignableFrom(ParseSourceCodeCommand.class));
 
       // Verify command annotation exists
-      assertTrue(ParseSourceCodeCommand.class.isAnnotationPresent(picocli.CommandLine.Command.class));
+      assertTrue(
+          ParseSourceCodeCommand.class.isAnnotationPresent(picocli.CommandLine.Command.class));
 
       // Verify command properties
       picocli.CommandLine.Command commandAnnotation =
           ParseSourceCodeCommand.class.getAnnotation(picocli.CommandLine.Command.class);
       assertEquals("parse-source-code", commandAnnotation.name());
-      assertEquals("Parse source code. Usefull to provide external library files to the code.", commandAnnotation.description()[0]);
+      assertEquals(
+          "Parse source code. Usefull to provide external library files to the code.",
+          commandAnnotation.description()[0]);
     }
 
     @Test
@@ -347,7 +355,7 @@ class ParseSourceCodeCommandTest {
       // Given
       Path testFile = createTestJavaFile("OptionsTest.java", "public class OptionsTest {}");
       String sourceCode = "public class OptionsTest { private int value; }";
-      
+
       testService.setSuccessResponse(
           ParseSourceCodeResponse.builder()
               .ide(SupportedIDE.NONE)
@@ -356,7 +364,7 @@ class ParseSourceCodeCommandTest {
               .filePath(testFile.toString())
               .parseSuccess(true)
               .build());
-      
+
       // Test all required options are properly set
       setupParseSourceCodeCommand(sourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
@@ -365,7 +373,7 @@ class ParseSourceCodeCommandTest {
 
       // Then
       assertTrue(result.getSucceed());
-      
+
       // Verify all parameters were passed correctly
       assertEquals(sourceCode, testService.getLastCalledSourceCode());
       assertEquals(testFile, testService.getLastCalledFilePath());
@@ -384,7 +392,8 @@ class ParseSourceCodeCommandTest {
       Path testFile = createTestJavaFile("EmptyTest.java", "public class EmptyTest {}");
       String emptySourceCode = "";
       testService.setErrorResponse("Invalid source code.");
-      setupParseSourceCodeCommand(emptySourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupParseSourceCodeCommand(
+          emptySourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<ParseSourceCodeResponse> result = parseSourceCodeCommand.call();
@@ -406,7 +415,7 @@ class ParseSourceCodeCommandTest {
         largeSourceCode.append("    private String field").append(i).append(";\n");
       }
       largeSourceCode.append("}");
-      
+
       ParseSourceCodeResponse response =
           ParseSourceCodeResponse.builder()
               .ide(SupportedIDE.NONE)
@@ -416,7 +425,8 @@ class ParseSourceCodeCommandTest {
               .parseSuccess(true)
               .build();
       testService.setSuccessResponse(response);
-      setupParseSourceCodeCommand(largeSourceCode.toString(), testFile, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupParseSourceCodeCommand(
+          largeSourceCode.toString(), testFile, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<ParseSourceCodeResponse> result = parseSourceCodeCommand.call();
@@ -431,13 +441,13 @@ class ParseSourceCodeCommandTest {
     void shouldHandleSpecialCharactersInSourceCode() throws Exception {
       // Given
       Path testFile = createTestJavaFile("SpecialTest.java", "public class SpecialTest {}");
-      String specialSourceCode = 
-          "public class SpecialTest {\n" +
-          "    private String unicode = \"Hello 世界 🌍\";\n" +
-          "    private String escaped = \"Line1\\nLine2\\tTabbed\";\n" +
-          "    /* Comment with special chars: àáâãäåæçèéêë */\n" +
-          "}";
-      
+      String specialSourceCode =
+          "public class SpecialTest {\n"
+              + "    private String unicode = \"Hello 世界 🌍\";\n"
+              + "    private String escaped = \"Line1\\nLine2\\tTabbed\";\n"
+              + "    /* Comment with special chars: àáâãäåæçèéêë */\n"
+              + "}";
+
       ParseSourceCodeResponse response =
           ParseSourceCodeResponse.builder()
               .ide(SupportedIDE.NONE)
@@ -447,7 +457,8 @@ class ParseSourceCodeCommandTest {
               .parseSuccess(true)
               .build();
       testService.setSuccessResponse(response);
-      setupParseSourceCodeCommand(specialSourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupParseSourceCodeCommand(
+          specialSourceCode, testFile, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<ParseSourceCodeResponse> result = parseSourceCodeCommand.call();
@@ -472,7 +483,7 @@ class ParseSourceCodeCommandTest {
       // Then
       assertTrue(result.getSucceed());
       assertNull(result.getData());
-      
+
       // Should not print anything to stdout when data is null
       String consoleOutput = outContent.toString().trim();
       assertEquals("", consoleOutput);
@@ -504,8 +515,8 @@ class ParseSourceCodeCommandTest {
   }
 
   /**
-   * Test implementation of ParseSourceCodeCommandService that captures method calls and allows setting
-   * predefined responses.
+   * Test implementation of ParseSourceCodeCommandService that captures method calls and allows
+   * setting predefined responses.
    */
   private static class TestParseSourceCodeCommandService extends ParseSourceCodeCommandService {
     private boolean serviceCalled = false;
@@ -559,3 +570,4 @@ class ParseSourceCodeCommandTest {
     }
   }
 }
+
