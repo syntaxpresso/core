@@ -35,9 +35,11 @@ public class JavaLanguageService {
    */
   public List<TSFile> getAllJavaFilesFromCwd(Path cwd) {
     try {
+      if (cwd == null) {
+        return List.of();
+      }
       return this.pathHelper.findFilesByExtention(cwd, SupportedLanguage.JAVA);
     } catch (Exception e) {
-      e.printStackTrace();
       return List.of();
     }
   }
