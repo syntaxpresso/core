@@ -13,7 +13,7 @@ import picocli.CommandLine.Option;
 
 @RequiredArgsConstructor
 @Command(name = "get-info", description = "Get info of an specific node based on cursor position.")
-public class GetCursorPositionInfo
+public class GetCursorPositionInfoCommand
     implements Callable<DataTransferObject<GetCursorPositionInfoResponse>> {
   private final GetCursorPositionInfoCommandService getCursorPositionInfoCommandService;
 

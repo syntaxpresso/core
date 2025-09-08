@@ -1,7 +1,7 @@
 package io.github.syntaxpresso.core.common;
 
 import io.github.syntaxpresso.core.command.CreateNewFileCommand;
-import io.github.syntaxpresso.core.command.GetCursorPositionInfo;
+import io.github.syntaxpresso.core.command.GetCursorPositionInfoCommand;
 import io.github.syntaxpresso.core.command.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.ParseSourceCodeCommand;
 import io.github.syntaxpresso.core.command.RenameCommand;
@@ -27,8 +27,8 @@ public class CommandFactory implements IFactory {
     if (cls == ParseSourceCodeCommand.class) {
       return (K) new ParseSourceCodeCommand(parseSourceCodeCommandService);
     }
-    if (cls == GetCursorPositionInfo.class) {
-      return (K) new GetCursorPositionInfo(getCursorPositionInfoCommandService);
+    if (cls == GetCursorPositionInfoCommand.class) {
+      return (K) new GetCursorPositionInfoCommand(getCursorPositionInfoCommandService);
     }
     if (cls == CreateNewFileCommand.class) {
       return (K) new CreateNewFileCommand(createNewFileCommandService);

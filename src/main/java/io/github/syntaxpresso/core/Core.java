@@ -2,7 +2,7 @@ package io.github.syntaxpresso.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.syntaxpresso.core.command.CreateNewFileCommand;
-import io.github.syntaxpresso.core.command.GetCursorPositionInfo;
+import io.github.syntaxpresso.core.command.GetCursorPositionInfoCommand;
 import io.github.syntaxpresso.core.command.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.ParseSourceCodeCommand;
 import io.github.syntaxpresso.core.command.RenameCommand;
@@ -31,7 +31,7 @@ import picocli.CommandLine.Command;
       RenameCommand.class,
       GetMainClassCommand.class,
       CreateNewFileCommand.class,
-      GetCursorPositionInfo.class,
+      GetCursorPositionInfoCommand.class,
       ParseSourceCodeCommand.class
     })
 public class Core {
