@@ -2,199 +2,525 @@ package io.github.syntaxpresso.core.service.java.language;
 
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
-import java.util.ArrayList;
+import io.github.syntaxpresso.core.service.java.language.extra.MethodCapture;
+import io.github.syntaxpresso.core.service.java.language.extra.MethodInvocationCapture;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
-@RequiredArgsConstructor
+/**
+ * Service for analyzing and manipulating method declarations and invocations in Java source code
+ * using tree-sitter.
+ *
+ * <p>This service provides comprehensive functionality for working with method declarations and
+ * method invocations within Java source files, including extraction of method information, finding
+ * method usages, and performing method-related transformations. It leverages tree-sitter queries to
+ * accurately parse and analyze method declarations and invocations at the AST level.
+ *
+ * <p>Key capabilities include:
+ *
+ * <ul>
+ *   <li>Extracting method name, return type, parameters, and modifiers
+ *   <li>Finding all method declarations within a class
+ *   <li>Locating method invocations and their components
+ *   <li>Identifying special methods like main method
+ *   <li>Analyzing method signatures and parameter lists
+ *   <li>Finding method usages across different contexts
+ * </ul>
+ *
+ * <p>Usage example:
+ *
+ * <pre>
+ * MethodDeclarationService methodService = new MethodDeclarationService(parameterService);
+ *
+ * // Find all methods in a class
+ * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
+ * List&lt;TSNode&gt; methods = methodService.getAllMethodDeclarationNodes(tsFile, classNode);
+ *
+ * // Analyze each method
+ * for (TSNode methodNode : methods) {
+ *   List&lt;Map&lt;String, TSNode&gt;&gt; methodInfo = methodService.getMethodDeclarationNodeInfo(tsFile, methodNode);
+ *   for (Map&lt;String, TSNode&gt; info : methodInfo) {
+ *     String methodName = tsFile.getTextFromNode(info.get("method_name"));
+ *     String returnType = tsFile.getTextFromNode(info.get("method_return_type"));
+ *     System.out.println("Method: " + returnType + " " + methodName);
+ *   }
+ * }
+ *
+ * // Find method invocations
+ * List&lt;TSNode&gt; invocations = methodService.getAllMethodInvocationNodes(tsFile, classNode);
+ * for (TSNode invocation : invocations) {
+ *   Optional&lt;TSNode&gt; nameNode = methodService.getMethodInvocationNameNode(tsFile, invocation);
+ *   if (nameNode.isPresent()) {
+ *     String methodName = tsFile.getTextFromNode(nameNode.get());
+ *     System.out.println("Method called: " + methodName);
+ *   }
+ * }
+ * </pre>
+ *
+ * @see TSFile
+ * @see MethodCapture
+ * @see MethodInvocationCapture
+ * @see FormalParameterService
+ */
 @Getter
+@RequiredArgsConstructor
 public class MethodDeclarationService {
-  private static final String METHOD_DECLARATION_QUERY = "(method_declaration) @method";
-  private static final String METHOD_INVOCATION_QUERY = "(method_invocation) @invocation";
   private final FormalParameterService formalParameterService;
-  private final LocalVariableDeclarationService localVariableDeclarationService;
-  private final TypeResolutionService typeResolutionService;
 
   /**
-   * Finds all method declaration nodes in the given TSFile.
+   * Retrieves all method declaration nodes within a given class declaration node.
    *
-   * @param file The TSFile containing the source code.
-   * @return A list of all method declaration nodes.
+   * <p>This method finds all method declarations within the specified class scope, regardless of
+   * their visibility modifiers, return types, or parameters. It excludes constructors, which are
+   * handled separately.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
+   * List&lt;TSNode&gt; methods = service.getAllMethodDeclarationNodes(tsFile, classNode);
+   * for (TSNode methodNode : methods) {
+   *   String methodText = tsFile.getTextFromNode(methodNode);
+   *   // methodText = "public String getName() { return name; }"
+   * }
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param classDeclarationNode The class declaration {@link TSNode} to search within
+   * @return List of method declaration nodes, empty if none found or invalid input
    */
-  public List<TSNode> findAllMethodDeclarations(TSFile file) {
-    if (file == null || file.getTree() == null) {
+  public List<TSNode> getAllMethodDeclarationNodes(TSFile tsFile, TSNode classDeclarationNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || !classDeclarationNode.getType().equals("class_declaration")) {
       return Collections.emptyList();
     }
-    return file.query(METHOD_DECLARATION_QUERY);
+    String queryString =
+        """
+        (class_declaration
+          body: (class_body
+            (method_declaration) @method
+          )
+        )
+        """;
+    return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
   }
 
-  /**
-   * Finds all method invocation nodes in the given TSFile.
-   *
-   * @param file The TSFile containing the source code.
-   * @return A list of all method invocation nodes.
-   */
-  public List<TSNode> findAllMethodInvocations(TSFile file) {
-    if (file == null || file.getTree() == null) {
+  public List<TSNode> getAllLocalMethodInvocationNodes(TSFile tsFile, TSNode classDeclarationNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || !classDeclarationNode.getType().equals("class_declaration")) {
       return Collections.emptyList();
     }
-    return file.query(METHOD_INVOCATION_QUERY).reversed();
+    String queryString =
+        """
+        [
+          (method_invocation
+            object: (this))
+          (
+            (method_invocation) @invocation
+            (#not-match? @invocation "\\.")
+          )
+        ] @local_invocation
+        """;
+    return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
   }
 
   /**
-   * Gets the name identifier from a method invocation node.
+   * Extracts detailed information from a method declaration node, such as modifiers, return type,
+   * name, parameters, and body.
    *
-   * @param methodInvocationNode The method invocation node.
-   * @return An optional containing the name identifier node, or empty if not found.
+   * @param tsFile The parsed source file wrapper.
+   * @param methodDeclarationNode The {@link TSNode} for the method declaration.
+   * @return A list containing a map of capture names to their corresponding {@link TSNode}. The
+   *     list is typically of size one for a valid method declaration.
+   *     <p><b>Capture Names:</b>
+   *     <ul>
+   *       <li>{@code method.modifiers}: The node for the method's modifiers (e.g., public static).
+   *       <li>{@code method.type}: The node for the method's return type.
+   *       <li>{@code method.name}: The node for the method's identifier (name).
+   *       <li>{@code method.parameters}: The node for the formal parameter list.
+   *       <li>{@code method.body}: The node for the method's body block.
+   *       <li>{@code method}: The entire method_declaration node.
+   *     </ul>
+   *     <pre>{@code
+   * // Assuming 'file' is a parsed TSFile and 'methodNode' is a method_declaration node
+   * MethodDeclarationService service = new MethodDeclarationService();
+   * List<Map<String, TSNode>> methodInfoList = service.getMethodDeclarationNodeInfo(file, methodNode);
+   * if (!methodInfoList.isEmpty()) {
+   * Map<String, TSNode> methodInfo = methodInfoList.get(0);
+   * TSNode nameNode = methodInfo.get("method.name");
+   * System.out.println("Method name: " + file.getTextFromNode(nameNode));
+   * }
+   * }</pre>
    */
-  public Optional<TSNode> getMethodInvocationName(TSNode methodInvocationNode) {
-    if (methodInvocationNode == null
-        || !"method_invocation".equals(methodInvocationNode.getType())) {
-      return Optional.empty();
+  public List<Map<String, TSNode>> getMethodDeclarationNodeInfo(
+      TSFile tsFile, TSNode methodDeclarationNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || !methodDeclarationNode.getType().equals("method_declaration")) {
+      return Collections.emptyList();
     }
-    return Optional.ofNullable(methodInvocationNode.getChildByFieldName("name"));
+    String queryString =
+        String.format(
+            """
+            (method_declaration
+              (modifiers) %s
+              type: (_) %s
+              name: (_) %s
+              parameters: (_) %s
+              body: (_) %s
+            ) %s
+            """,
+            MethodCapture.METHOD_MODIFIERS.getCaptureWithAt(),
+            MethodCapture.METHOD_TYPE.getCaptureWithAt(),
+            MethodCapture.METHOD_NAME.getCaptureWithAt(),
+            MethodCapture.METHOD_PARAMETERS.getCaptureWithAt(),
+            MethodCapture.METHOD_BODY.getCaptureWithAt(),
+            MethodCapture.METHOD.getCaptureWithAt());
+    return tsFile
+        .query(queryString)
+        .within(methodDeclarationNode)
+        .returningAllCaptures()
+        .execute()
+        .captures();
   }
 
   /**
-   * Gets the object identifier from a method invocation node.
+   * Extracts detailed information from a method invocation node, such as the object, method name,
+   * and arguments. It handles various invocation patterns including simple calls, field access, and
+   * chained calls.
    *
-   * @param methodInvocationNode The method invocation node.
-   * @return An optional containing the object identifier node, or empty if not found.
+   * @param tsFile The parsed source file wrapper.
+   * @param methodInvocationNode The {@link TSNode} for the method invocation.
+   * @return A list containing a map of capture names to their corresponding {@link TSNode}.
+   *     <p><b>Capture Names:</b>
+   *     <ul>
+   *       <li>{@code object}: The identifier of the object on which the method is called.
+   *       <li>{@code this}: The 'this' keyword, if used as the object.
+   *       <li>{@code super}: The 'super' keyword, if used as the object.
+   *       <li>{@code parent.object}: The object in a field access (e.g., {@code myObj} in {@code
+   *           myObj.field}).
+   *       <li>{@code field}: The field being accessed (e.g., {@code field} in {@code myObj.field}).
+   *       <li>{@code chained.object}: The preceding method_invocation node in a chain.
+   *       <li>{@code method}: The identifier of the method being called.
+   *       <li>{@code type.arguments}: The node for generic type arguments.
+   *       <li>{@code argument.list}: The node for the argument list.
+   *       <li>{@code invocation}: The entire method_invocation node.
+   *     </ul>
+   *     <pre>{@code
+   * // Assuming 'file' is a parsed TSFile and 'invocationNode' is a method_invocation node
+   * MethodDeclarationService service = new MethodDeclarationService();
+   * List<Map<String, TSNode>> invocationInfoList = service.getMethodInvocationNodeInfo(file, invocationNode);
+   * if (!invocationInfoList.isEmpty()) {
+   * Map<String, TSNode> invocationInfo = invocationInfoList.get(0);
+   * TSNode methodIdentifier = invocationInfo.get("method");
+   * System.out.println("Invoked method: " + file.getTextFromNode(methodIdentifier));
+   * }
+   * }</pre>
    */
-  public Optional<TSNode> getMethodInvocationObject(TSNode methodInvocationNode) {
-    if (methodInvocationNode == null
+  public List<Map<String, TSNode>> getMethodInvocationNodeInfo(
+      TSFile tsFile, TSNode methodInvocationNode) {
+    if (tsFile == null
+        || methodInvocationNode == null
+        || methodInvocationNode.isNull()
         || !"method_invocation".equals(methodInvocationNode.getType())) {
+      return Collections.emptyList();
+    }
+    String queryString =
+        String.format(
+            """
+            (method_invocation
+              object: [
+                (identifier) @%s
+                (this) @%s
+                (super) @%s
+                (field_access
+                  object: (_) @%s
+                  field: (identifier) @%s)
+                (method_invocation) @%s
+              ]?
+              name: (identifier) @%s
+              type_arguments: (type_arguments) @%s?
+              arguments: (argument_list) @%s?) @%s
+            """,
+            MethodInvocationCapture.OBJECT.getCaptureName(),
+            MethodInvocationCapture.THIS.getCaptureName(),
+            MethodInvocationCapture.SUPER.getCaptureName(),
+            MethodInvocationCapture.PARENT_OBJECT.getCaptureName(),
+            MethodInvocationCapture.FIELD.getCaptureName(),
+            MethodInvocationCapture.CHAINED_OBJECT.getCaptureName(),
+            MethodInvocationCapture.METHOD.getCaptureName(),
+            MethodInvocationCapture.TYPE_ARGUMENTS.getCaptureName(),
+            MethodInvocationCapture.ARGUMENT_LIST.getCaptureName(),
+            MethodInvocationCapture.INVOCATION.getCaptureName());
+    return tsFile
+        .query(queryString)
+        .within(methodInvocationNode)
+        .returningAllCaptures()
+        .execute()
+        .captures();
+  }
+
+  private Optional<TSNode> getMethodDeclarationChildByCapture(
+      TSFile tsFile, TSNode methodDeclarationNode, MethodCapture capture) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || methodDeclarationNode == null
+        || !methodDeclarationNode.getType().equals("method_declaration")) {
       return Optional.empty();
     }
-    TSNode objectNode = methodInvocationNode.getChildByFieldName("object");
-    if (objectNode == null) {
+    List<Map<String, TSNode>> nodeInfo =
+        this.getMethodDeclarationNodeInfo(tsFile, methodDeclarationNode);
+    for (Map<String, TSNode> map : nodeInfo) {
+      TSNode node = map.get(capture.getCaptureName());
+      if (node != null) {
+        return Optional.of(node);
+      }
+    }
+    return Optional.empty();
+  }
+
+  private Optional<TSNode> getMethodInvocationChildByCapture(
+      TSFile tsFile, TSNode methodInvocationNode, MethodInvocationCapture capture) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || methodInvocationNode == null
+        || !methodInvocationNode.getType().equals("method_invocation")) {
       return Optional.empty();
     }
-    String nodeType = objectNode.getType();
-    if ("identifier".equals(nodeType) || "this".equals(nodeType)) {
-      return Optional.of(objectNode);
-    }
-    if ("field_access".equals(nodeType)) {
-      return Optional.ofNullable(objectNode.getChildByFieldName("field"));
+    List<Map<String, TSNode>> nodeInfo =
+        this.getMethodInvocationNodeInfo(tsFile, methodInvocationNode);
+    for (Map<String, TSNode> map : nodeInfo) {
+      TSNode node = map.get(capture.getCaptureName());
+      if (node != null) {
+        return Optional.of(node);
+      }
     }
     return Optional.empty();
   }
 
   /**
-   * Renames a specific method in a file.
+   * Gets the return type node of a method declaration.
    *
-   * @param file The file containing the source code.
-   * @param methodDeclarationNode The method declaration node to be changed.
-   * @param newName The new name for the method.
+   * @param tsFile The parsed source file wrapper.
+   * @param methodDeclarationNode The method declaration node.
+   * @return An {@link Optional} containing the type {@link TSNode}, or empty if not found.
+   *     <pre>{@code
+   * // Assuming 'file' and 'methodNode' are available
+   * service.getMethodDeclarationTypeNode(file, methodNode).ifPresent(typeNode -> {
+   * System.out.println("Return type: " + file.getTextFromNode(typeNode));
+   * });
+   * }</pre>
    */
-  public void renameMethod(TSFile file, TSNode methodDeclarationNode, String newName) {
-    if (file == null
-        || methodDeclarationNode == null
-        || !"method_declaration".equals(methodDeclarationNode.getType())
-        || Strings.isNullOrEmpty(newName)) {
-      return;
-    }
-    TSNode nameNode = methodDeclarationNode.getChildByFieldName("name");
-    if (nameNode == null) {
-      return;
-    }
-    file.updateSourceCode(nameNode, newName);
+  public Optional<TSNode> getMethodDeclarationTypeNode(
+      TSFile tsFile, TSNode methodDeclarationNode) {
+    return this.getMethodDeclarationChildByCapture(
+        tsFile, methodDeclarationNode, MethodCapture.METHOD_TYPE);
   }
 
   /**
-   * Checks if a method declaration node represents a main method.
+   * Gets the name (identifier) node of a method declaration.
    *
-   * @param file The TSFile containing the source code.
-   * @param methodNode The method declaration node to check.
-   * @return True if the method is a main method, false otherwise.
+   * @param tsFile The parsed source file wrapper.
+   * @param methodDeclarationNode The method declaration node.
+   * @return An {@link Optional} containing the name {@link TSNode}, or empty if not found.
+   *     <pre>{@code
+   * // Assuming 'file' and 'methodNode' are available
+   * service.getMethodDeclarationNameNode(file, methodNode).ifPresent(nameNode -> {
+   * System.out.println("Method name: " + file.getTextFromNode(nameNode));
+   * });
+   * }</pre>
    */
-  public boolean isMainMethod(TSFile file, TSNode methodNode) {
-    if (file == null || methodNode == null || !"method_declaration".equals(methodNode.getType())) {
+  public Optional<TSNode> getMethodDeclarationNameNode(
+      TSFile tsFile, TSNode methodDeclarationNode) {
+    return this.getMethodDeclarationChildByCapture(
+        tsFile, methodDeclarationNode, MethodCapture.METHOD_NAME);
+  }
+
+  /**
+   * Gets the object node from which a method is invoked (e.g., {@code myVar} in {@code
+   * myVar.doSomething()}).
+   *
+   * @param tsFile The parsed source file wrapper.
+   * @param methodInvocationNode The method invocation node.
+   * @return An {@link Optional} containing the object {@link TSNode}, or empty if not found.
+   *     <pre>{@code
+   * // Assuming 'file' and 'invocationNode' are available
+   * service.getMethodInvocationObjectNode(file, invocationNode).ifPresent(objectNode -> {
+   * System.out.println("Called on object: " + file.getTextFromNode(objectNode));
+   * });
+   * }</pre>
+   */
+  public Optional<TSNode> getMethodInvocationObjectNode(
+      TSFile tsFile, TSNode methodInvocationNode) {
+    return this.getMethodInvocationChildByCapture(
+        tsFile, methodInvocationNode, MethodInvocationCapture.OBJECT);
+  }
+
+  public Optional<TSNode> getMethodInvocationNameNode(TSFile tsFile, TSNode methodInvocationNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || methodInvocationNode == null
+        || methodInvocationNode.isNull()
+        || !"method_invocation".equals(methodInvocationNode.getType())) {
+      return Optional.empty();
+    }
+
+    String queryString =
+        """
+         (method_invocation
+            name: (_) @name)
+        """;
+    return tsFile.query(queryString).within(methodInvocationNode).execute().firstNodeOptional();
+  }
+
+  /**
+   * Finds all method invocation nodes within a given scope that match a specific variable and
+   * method name.
+   *
+   * @param tsFile The parsed source file wrapper.
+   * @param variableName The name of the variable on which the method is called.
+   * @param methodName The name of the method being called.
+   * @param scopeNode The {@link TSNode} representing the scope to search within (e.g., a method
+   *     body or class body).
+   * @return A list of {@link TSNode} objects, each representing a matching method invocation.
+   *     <pre>{@code
+   * // Find all calls to "myList.add(...)" inside a method body
+   * // Assuming 'file' and 'methodBodyNode' are available
+   * List<TSNode> invocations = service.findMethodInvocationsByVariableNameAndMethodName(
+   * file, "myList", "add", methodBodyNode);
+   * System.out.println("Found " + invocations.size() + " calls to myList.add()");
+   * }</pre>
+   */
+  public List<TSNode> findMethodInvocationsByVariableNameAndMethodName(
+      TSFile tsFile, String variableName, String methodName, TSNode scopeNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || scopeNode.isNull()
+        || Strings.isNullOrEmpty(variableName)
+        || Strings.isNullOrEmpty(methodName)) {
+      return Collections.emptyList();
+    }
+    String queryString =
+        String.format(
+            """
+            [
+              ;; Basic method invocation pattern
+              (method_invocation
+                object: (identifier) %s
+                name: (identifier) %s
+                (#eq? %s "%s")
+                (#eq? %s "%s")) %s
+              ;; Method invocation with 'this' prefix
+              (method_invocation
+                object: (field_access
+                  object: (this)
+                  field: (identifier) %s)
+                name: (identifier) %s
+                (#eq? %s "%s")
+                (#eq? %s "%s")) %s
+              ;; Method invocation on field access (nested objects)
+              (method_invocation
+                object: (field_access
+                  object: (identifier) %s
+                  field: (identifier) %s)
+                name: (identifier) %s
+                (#eq? %s "%s")
+                (#eq? %s "%s")) %s
+              ;; Method invocation with chained calls
+              (method_invocation
+                object: (method_invocation
+                  object: (identifier) %s
+                  name: (identifier) %s)
+                name: (identifier) %s
+                (#eq? %s "%s")
+                (#eq? %s "%s")) %s
+              ;; Method invocation with 'this' and chained calls
+              (method_invocation
+                object: (method_invocation
+                  object: (field_access
+                    object: (this)
+                    field: (identifier) %s)
+                  name: (identifier) %s)
+                name: (identifier) %s
+                (#eq? %s "%s")
+                (#eq? %s "%s")) %s
+            ]
+            """,
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            variableName,
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            methodName,
+            MethodInvocationCapture.INVOCATION.getCaptureWithAt(),
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            variableName,
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            methodName,
+            MethodInvocationCapture.INVOCATION.getCaptureWithAt(),
+            MethodInvocationCapture.PARENT_OBJECT.getCaptureWithAt(),
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            variableName,
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            methodName,
+            MethodInvocationCapture.INVOCATION.getCaptureWithAt(),
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            MethodInvocationCapture.FIRST_METHOD.getCaptureWithAt(),
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            variableName,
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            methodName,
+            MethodInvocationCapture.INVOCATION.getCaptureWithAt(),
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            MethodInvocationCapture.FIRST_METHOD.getCaptureWithAt(),
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            MethodInvocationCapture.OBJECT.getCaptureWithAt(),
+            variableName,
+            MethodInvocationCapture.METHOD.getCaptureWithAt(),
+            methodName,
+            MethodInvocationCapture.INVOCATION.getCaptureWithAt());
+    return tsFile.query(queryString).within(scopeNode).returning("invocation").execute().nodes();
+  }
+
+  /**
+   * Checks if a method declaration node represents a standard Java main method.
+   *
+   * @param tsFile The {@link TSFile} containing the source code.
+   * @param methodDeclarationNode The method declaration node to check.
+   * @return {@code true} if the method is a main method (i.e., {@code public static void
+   *     main(String[] args)} or with varargs), {@code false} otherwise.
+   *     <pre>{@code
+   * // Assuming 'file' and 'methodNode' are available
+   * boolean isMain = service.isMainMethod(file, methodNode);
+   * if (isMain) {
+   * System.out.println("This is the main method.");
+   * }
+   * }</pre>
+   */
+  public boolean isMainMethod(TSFile tsFile, TSNode methodDeclarationNode) {
+    if (tsFile == null
+        || methodDeclarationNode == null
+        || !"method_declaration".equals(methodDeclarationNode.getType())) {
       return false;
     }
-    // Get the full method text and check if it matches main method patterns
-    String methodText = file.getTextFromNode(methodNode);
-    // Check if it's a main method by looking for the common patterns:
-    // 1. public static void main(String[] args)
-    // 2. public static void main(String... args)
-    // Allow for different parameter names and spacing
+    String methodText = tsFile.getTextFromNode(methodDeclarationNode);
+    // Check for "public static void main(String[] args)" or "public static void main(String...
+    // args)"
     return methodText.matches(
             "(?s).*public\\s+static\\s+void\\s+main\\s*\\(\\s*String\\s*\\[\\s*\\]\\s+\\w+\\s*\\).*")
         || methodText.matches(
             "(?s).*public\\s+static\\s+void\\s+main\\s*\\(\\s*String\\s*\\.\\s*\\.\\s*\\.\\s+\\w+\\s*\\).*");
-  }
-
-  /**
-   * Renames a method declaration node.
-   *
-   * @param file The file containing the method declaration.
-   * @param methodDeclarationNode The method declaration node to rename.
-   * @param newName The new name for the method.
-   * @return True if the method was successfully renamed, false otherwise.
-   */
-  public boolean renameMethodDeclaration(
-      TSFile file, TSNode methodDeclarationNode, String newName) {
-    if (file == null
-        || methodDeclarationNode == null
-        || !"method_declaration".equals(methodDeclarationNode.getType())
-        || Strings.isNullOrEmpty(newName)) {
-      return false;
-    }
-    TSNode nameNode = methodDeclarationNode.getChildByFieldName("name");
-    if (nameNode != null) {
-      file.updateSourceCode(nameNode, newName);
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Finds method usage nodes in a file that match the given method name and belong to the specified
-   * class.
-   *
-   * @param file The file to search in.
-   * @param methodName The name of the method to find usages for.
-   * @param className The class name that the method belongs to.
-   * @return A list of method invocation name nodes that should be renamed.
-   */
-  public List<TSNode> findMethodUsagesInFile(TSFile file, String methodName, String className) {
-    if (file == null || Strings.isNullOrEmpty(methodName) || Strings.isNullOrEmpty(className)) {
-      return Collections.emptyList();
-    }
-
-    List<TSNode> usagesToRename = new ArrayList<>();
-    List<TSNode> allMethodInvocations = this.findAllMethodInvocations(file);
-
-    for (TSNode methodInvocation : allMethodInvocations) {
-      Optional<TSNode> methodInvocationObjectNode =
-          this.getMethodInvocationObject(methodInvocation);
-      Optional<TSNode> methodInvocationNameNode = this.getMethodInvocationName(methodInvocation);
-
-      if (methodInvocationNameNode.isEmpty() || methodInvocationObjectNode.isEmpty()) {
-        continue;
-      }
-
-      // Check if the method name matches
-      String invocationName = file.getTextFromNode(methodInvocationNameNode.get());
-      if (!methodName.equals(invocationName)) {
-        continue;
-      }
-
-      // Resolve the type of the object on which the method is called
-      String objectType =
-          this.typeResolutionService.resolveObjectType(
-              file, methodInvocationObjectNode.get(), methodInvocation);
-
-      // Only include if the object type matches our class
-      if (className.equals(objectType)) {
-        usagesToRename.add(methodInvocationNameNode.get());
-      }
-    }
-
-    return usagesToRename;
   }
 }

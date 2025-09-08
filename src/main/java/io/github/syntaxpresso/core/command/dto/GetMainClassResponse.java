@@ -10,4 +10,5 @@ import lombok.*;
 public class GetMainClassResponse implements Serializable {
   private String filePath;
   private String packageName;
+  private String className;
 }

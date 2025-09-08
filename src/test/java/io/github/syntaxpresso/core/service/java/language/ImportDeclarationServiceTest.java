@@ -2,470 +2,245 @@ package io.github.syntaxpresso.core.service.java.language;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
+import io.github.syntaxpresso.core.service.java.language.extra.ImportCapture;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.treesitter.TSNode;
 
-@DisplayName("ImportDeclarationService Tests")
 class ImportDeclarationServiceTest {
-  private ImportDeclarationService importService;
+
+  private static final String JAVA_WITH_IMPORTS =
+      """
+package com.example;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+""";
+  private static final String JAVA_WITH_WILDCARD_IMPORTS =
+      """
+package com.example;
+
+import java.util.*;
+""";
+  private static final String JAVA_NO_IMPORTS = "package com.example;";
+  private static final String JAVA_NO_PACKAGE_NO_IMPORTS = "class Test {}";
+  private static final String JAVA_NO_PACKAGE_WITH_IMPORTS =
+      """
+import java.util.List;
+class Test {}""";
+
+  @TempDir Path tempDir;
+  private ImportDeclarationService service;
+  private TSFile tsFile;
 
   @BeforeEach
   void setUp() {
-    importService = new ImportDeclarationService();
+    this.service = new ImportDeclarationService();
+  }
+
+  private TSFile createTempTSFile(String content) throws IOException {
+    Path file = Files.createFile(tempDir.resolve("test.java"));
+    Files.writeString(file, content);
+    return new TSFile(SupportedLanguage.JAVA, file);
   }
 
   @Nested
-  @DisplayName("addImport(TSFile, String, String)")
-  class AddImportWithPackageAndClassTests {
+  @DisplayName("getAllImportDeclarationNodes()")
+  class GetAllImportDeclarationNodes {
     @Test
-    @DisplayName("should add import to file with package declaration")
-    void addImport_withPackageDeclaration_shouldAddImportAfterPackage() {
-      String sourceCode =
-          """
-          package com.example;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImport(file, "java.util", "List");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
+    @DisplayName("should return all import nodes when imports exist")
+    void shouldReturnAllImportNodesWhenImportsExist() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      List<TSNode> imports = service.getAllImportDeclarationNodes(tsFile);
+      assertEquals(3, imports.size());
     }
 
     @Test
-    @DisplayName("should add import to file without package declaration")
-    void addImport_withoutPackageDeclaration_shouldAddImportAtStart() {
-      String sourceCode =
-          """
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImport(file, "java.util", "List");
-      String expectedCode =
-          """
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
+    @DisplayName("should return empty list when no imports exist")
+    void shouldReturnEmptyListWhenNoImportsExist() throws IOException {
+      tsFile = createTempTSFile(JAVA_NO_IMPORTS);
+      List<TSNode> imports = service.getAllImportDeclarationNodes(tsFile);
+      assertTrue(imports.isEmpty());
+    }
+  }
+
+  @Nested
+  @DisplayName("getImportDeclarationNodeInfo()")
+  class GetImportDeclarationNodeInfo {
+    @Test
+    @DisplayName("should return info for a regular import")
+    void shouldReturnInfoForRegularImport() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      TSNode importNode = service.getAllImportDeclarationNodes(tsFile).get(0);
+      List<Map<String, TSNode>> info = service.getImportDeclarationNodeInfo(tsFile, importNode);
+      assertFalse(info.isEmpty());
+      assertEquals(
+          "java.util.List",
+          tsFile.getTextFromNode(info.get(0).get(ImportCapture.FULL_IMPORT_SCOPE.getCaptureName())));
+      assertEquals(
+          "java.util",
+          tsFile.getTextFromNode(
+              info.get(1).get(ImportCapture.RELATIVE_IMPORT_SCOPE.getCaptureName())));
+      assertEquals(
+          "List", tsFile.getTextFromNode(info.get(1).get(ImportCapture.CLASS_NAME.getCaptureName())));
+    }
+
+    @Test
+    @DisplayName("should return info for a wildcard import")
+    void shouldReturnInfoForWildcardImport() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_WILDCARD_IMPORTS);
+      TSNode importNode = service.getAllImportDeclarationNodes(tsFile).get(0);
+      List<Map<String, TSNode>> info = service.getImportDeclarationNodeInfo(tsFile, importNode);
+      assertFalse(info.isEmpty());
+      assertEquals(
+          "java.util",
+          tsFile.getTextFromNode(info.get(0).get(ImportCapture.FULL_IMPORT_SCOPE.getCaptureName())));
+      assertTrue(info.get(1).containsKey(ImportCapture.ASTERISK.getCaptureName()));
+    }
+  }
+
+  @Nested
+  @DisplayName("findImportDeclarationNode()")
+  class FindImportDeclarationNode {
+    @Test
+    @DisplayName("should find an existing specific import")
+    void shouldFindAnExistingSpecificImport() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      Optional<TSNode> node = service.findImportDeclarationNode(tsFile, "java.util", "List");
+      assertTrue(node.isPresent());
+    }
+
+    @Test
+    @DisplayName("should find an import covered by a wildcard")
+    void shouldFindAnImportCoveredByAWildcard() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_WILDCARD_IMPORTS);
+      Optional<TSNode> node = service.findImportDeclarationNode(tsFile, "java.util", "List");
+      assertTrue(node.isPresent());
+    }
+
+    @Test
+    @DisplayName("should not find a non-existent import")
+    void shouldNotFindANonExistentImport() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      Optional<TSNode> node = service.findImportDeclarationNode(tsFile, "java.awt", "Button");
+      assertFalse(node.isPresent());
+    }
+  }
+
+  @Nested
+  @DisplayName("isClassImported()")
+  class IsClassImported {
+    @Test
+    @DisplayName("should return true if class is specifically imported")
+    void shouldReturnTrueIfClassIsSpecificallyImported() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      assertTrue(service.isClassImported(tsFile, "java.util", "List"));
+    }
+
+    @Test
+    @DisplayName("should return true if class is covered by wildcard import")
+    void shouldReturnTrueIfClassIsCoveredByWildcardImport() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_WILDCARD_IMPORTS);
+      assertTrue(service.isClassImported(tsFile, "java.util", "List"));
+    }
+
+    @Test
+    @DisplayName("should return false if class is not imported")
+    void shouldReturnFalseIfClassIsNotImported() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      assertFalse(service.isClassImported(tsFile, "java.awt", "Button"));
+    }
+  }
+
+  @Nested
+  @DisplayName("addImport()")
+  class AddImport {
+    @Test
+    @DisplayName("should add import after package when no imports exist")
+    void shouldAddImportAfterPackageWhenNoImportsExist() throws IOException {
+      tsFile = createTempTSFile(JAVA_NO_IMPORTS);
+      TSNode packageNode =
+          new PackageDeclarationService().getPackageDeclarationNode(tsFile).orElse(null);
+      service.addImport(tsFile, "java.util", "List", packageNode);
+      String expected = "package com.example;\n\nimport java.util.List;";
+      assertEquals(expected, tsFile.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should add import at beginning when no package or imports exist")
+    void shouldAddImportAtBeginningWhenNoPackageOrImportsExist() throws IOException {
+      tsFile = createTempTSFile(JAVA_NO_PACKAGE_NO_IMPORTS);
+      service.addImport(tsFile, "java.util", "List", null);
+      String expected = "import java.util.List;\n\nclass Test {}";
+      assertEquals(expected, tsFile.getSourceCode());
     }
 
     @Test
     @DisplayName("should add import after existing imports")
-    void addImport_withExistingImports_shouldAddAfterLastImport() {
-      String sourceCode =
-          """
-          package com.example;
-          import java.util.Map;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImport(file, "java.util", "List");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.Map;
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
+    void shouldAddImportAfterExistingImports() throws IOException {
+      tsFile = createTempTSFile(JAVA_NO_PACKAGE_WITH_IMPORTS);
+      TSNode packageNode =
+          new PackageDeclarationService().getPackageDeclarationNode(tsFile).orElse(null);
+      service.addImport(tsFile, "java.util", "Map", packageNode);
+      String expected = "import java.util.List;\nimport java.util.Map;";
+      assertTrue(tsFile.getSourceCode().contains(expected));
     }
 
     @Test
-    @DisplayName("should not add duplicate import")
-    void addImport_withDuplicateImport_shouldNotAddDuplicate() {
-      String sourceCode =
-          """
-          package com.example;
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImport(file, "java.util", "List");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-
-    @Test
-    @DisplayName("should not add specific import when wildcard exists")
-    void addImport_whenWildcardExists_shouldNotAddSpecificImport() {
-      String sourceCode =
-          """
-          package com.example;
-          import java.util.*;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImport(file, "java.util", "List");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.*;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
+    @DisplayName("should not add import if it already exists")
+    void shouldNotAddImportIfItAlreadyExists() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      String originalSource = tsFile.getSourceCode();
+      TSNode packageNode =
+          new PackageDeclarationService().getPackageDeclarationNode(tsFile).orElse(null);
+      service.addImport(tsFile, "java.util", "List", packageNode);
+      assertEquals(originalSource, tsFile.getSourceCode());
     }
   }
 
   @Nested
-  @DisplayName("addImport(TSFile, String)")
-  class AddImportWithFullPackageNameTests {
+  @DisplayName("updateImport()")
+  class UpdateImport {
     @Test
-    @DisplayName("should add import using full package name")
-    void addImport_withFullPackageName_shouldAddImport() {
-      String sourceCode =
-          """
-          package com.example;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImport(file, "java.util.List");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
+    @DisplayName("should update an existing import")
+    void shouldUpdateAnExistingImport() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      boolean updated =
+          service.updateImport(tsFile, "java.util", "java.awt", "List", "Button");
+      assertTrue(updated);
+      assertTrue(tsFile.getSourceCode().contains("import java.awt.Button;"));
+      assertFalse(tsFile.getSourceCode().contains("import java.util.List;"));
     }
 
     @Test
-    @DisplayName("should throw exception for invalid full package name")
-    void addImport_withInvalidFullPackageName_shouldThrowException() {
-      String sourceCode =
-          """
-          package com.example;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      assertThrows(
-          IllegalArgumentException.class,
-          () -> {
-            importService.addImport(file, "InvalidPackageName");
-          });
+    @DisplayName("should not update if new import already exists")
+    void shouldNotUpdateIfNewImportAlreadyExists() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      boolean updated = service.updateImport(tsFile, "java.util", "java.util", "Set", "Map");
+      assertFalse(updated);
     }
 
     @Test
-    @DisplayName("should not add duplicate using full package name")
-    void addImport_withDuplicateFullPackageName_shouldNotAddDuplicate() {
-      String sourceCode =
-          """
-          package com.example;
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImport(file, "java.util.List");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-  }
-
-  @Nested
-  @DisplayName("addImportWildcard(TSFile, String)")
-  class AddImportWildcardTests {
-    @Test
-    @DisplayName("should add wildcard import")
-    void addImportWildcard_shouldAddWildcardImport() {
-      String sourceCode =
-          """
-          package com.example;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImportWildcard(file, "java.util");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.*;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-
-    @Test
-    @DisplayName("should not add duplicate wildcard import")
-    void addImportWildcard_withDuplicateWildcard_shouldNotAddDuplicate() {
-      String sourceCode =
-          """
-          package com.example;
-          import java.util.*;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImportWildcard(file, "java.util");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.*;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-
-    @Test
-    @DisplayName("should add wildcard import to empty file")
-    void addImportWildcard_toEmptyFile_shouldAddAtStart() {
-      String sourceCode =
-          """
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImportWildcard(file, "java.util");
-      String expectedCode =
-          """
-          import java.util.*;
-          public class MyClass {
-          }
-          """;
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-  }
-
-  @Nested
-  @DisplayName("updateImport(TSFile, String, String)")
-  class UpdateImportTests {
-    @Test
-    @DisplayName("should update existing specific import")
-    void updateImport_withExistingSpecificImport_shouldUpdate() {
-      String sourceCode =
-          """
-          package com.example;
-          import org.example.Test;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      boolean result = importService.updateImport(file, "org.example.Test", "org.example.NewName");
-      String expectedCode =
-          """
-          package com.example;
-          import org.example.NewName;
-          public class MyClass {
-          }
-          """;
-      assertTrue(result);
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-
-    @Test
-    @DisplayName("should not update when wildcard import exists")
-    void updateImport_withWildcardImportExists_shouldNotUpdate() {
-      String sourceCode =
-          """
-          package com.example;
-          import org.example.*;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      boolean result = importService.updateImport(file, "org.example.Test", "org.example.NewName");
-      String expectedCode =
-          """
-          package com.example;
-          import org.example.*;
-          public class MyClass {
-          }
-          """;
-      assertFalse(result);
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-
-    @Test
-    @DisplayName("should return false when import does not exist")
-    void updateImport_withNonExistentImport_shouldReturnFalse() {
-      String sourceCode =
-          """
-          package com.example;
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      boolean result = importService.updateImport(file, "org.example.Test", "org.example.NewName");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.List;
-          public class MyClass {
-          }
-          """;
-      assertFalse(result);
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-
-    @Test
-    @DisplayName("should update import even when changing package")
-    void updateImport_changingPackage_shouldUpdate() {
-      String sourceCode =
-          """
-          package com.example;
-          import org.example.Test;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      boolean result = importService.updateImport(file, "org.example.Test", "com.newpackage.Test");
-      String expectedCode =
-          """
-          package com.example;
-          import com.newpackage.Test;
-          public class MyClass {
-          }
-          """;
-      assertTrue(result);
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-
-    @Test
-    @DisplayName("should throw exception for invalid old import")
-    void updateImport_withInvalidOldImport_shouldThrowException() {
-      String sourceCode =
-          """
-          package com.example;
-          import org.example.Test;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      assertThrows(
-          IllegalArgumentException.class,
-          () -> {
-            importService.updateImport(file, "InvalidImport", "org.example.NewName");
-          });
-    }
-
-    @Test
-    @DisplayName("should throw exception for invalid new import")
-    void updateImport_withInvalidNewImport_shouldThrowException() {
-      String sourceCode =
-          """
-          package com.example;
-          import org.example.Test;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      assertThrows(
-          IllegalArgumentException.class,
-          () -> {
-            importService.updateImport(file, "org.example.Test", "InvalidImport");
-          });
-    }
-
-    @Test
-    @DisplayName("should update import among multiple imports")
-    void updateImport_withMultipleImports_shouldUpdateCorrectOne() {
-      String sourceCode =
-          """
-          package com.example;
-          import java.util.List;
-          import org.example.Test;
-          import java.io.IOException;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      boolean result = importService.updateImport(file, "org.example.Test", "org.example.NewName");
-      String expectedCode =
-          """
-          package com.example;
-          import java.util.List;
-          import org.example.NewName;
-          import java.io.IOException;
-          public class MyClass {
-          }
-          """;
-      assertTrue(result);
-      assertEquals(expectedCode, file.getSourceCode());
-    }
-  }
-
-  @Nested
-  @DisplayName("Integration Tests")
-  class IntegrationTests {
-    @Test
-    @DisplayName("should handle complex file with multiple imports correctly")
-    void addImport_complexFileWithMultipleImports_shouldInsertCorrectly() {
-      String sourceCode =
-          """
-          package com.example.project;
-          import java.io.IOException;
-          import java.util.List;
-          import org.junit.jupiter.api.Test;
-          public class MyClass {
-              public void method() throws IOException {
-                  List<String> list = new ArrayList<>();
-              }
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImport(file, "java.util", "ArrayList");
-      assertTrue(file.getSourceCode().contains("import java.util.ArrayList;"));
-      assertTrue(file.getSourceCode().contains("import java.util.List;"));
-      assertTrue(file.getSourceCode().contains("import java.io.IOException;"));
-      assertTrue(file.getSourceCode().contains("import org.junit.jupiter.api.Test;"));
-    }
-
-    @Test
-    @DisplayName("should maintain proper ordering when adding imports")
-    void addImport_shouldMaintainProperOrdering() {
-      String sourceCode =
-          """
-          package com.example;
-          import java.util.Map;
-          public class MyClass {
-          }
-          """;
-      TSFile file = new TSFile(SupportedLanguage.JAVA, sourceCode);
-      importService.addImport(file, "java.util", "List");
-      importService.addImport(file, "java.io", "IOException");
-      String result = file.getSourceCode();
-      int mapIndex = result.indexOf("import java.util.Map;");
-      int listIndex = result.indexOf("import java.util.List;");
-      int ioIndex = result.indexOf("import java.io.IOException;");
-      assertTrue(mapIndex < listIndex);
-      assertTrue(listIndex < ioIndex);
+    @DisplayName("should not update if old import does not exist")
+    void shouldNotUpdateIfOldImportDoesNotExist() throws IOException {
+      tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
+      boolean updated =
+          service.updateImport(tsFile, "com.nonexistent", "com.new", "Class", "NewClass");
+      assertFalse(updated);
     }
   }
 }

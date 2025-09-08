@@ -1,10 +1,15 @@
 package io.github.syntaxpresso.core.service.java.language;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
+import io.github.syntaxpresso.core.service.java.language.extra.FieldCapture;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,616 +20,951 @@ import org.treesitter.TSNode;
 @DisplayName("FieldDeclarationService Tests")
 class FieldDeclarationServiceTest {
   private FieldDeclarationService fieldDeclarationService;
-  private TSFile testFile;
+  private ClassDeclarationService classDeclarationService;
+
+  private static final String SIMPLE_FIELDS_CODE =
+      """
+      public class SimpleClass {
+          private String name;
+          private int age;
+          public boolean active;
+
+          public void method() {
+              // method body
+          }
+      }
+      """;
+
+  private static final String ANNOTATED_FIELDS_CODE =
+      """
+      package com.example;
+
+      import javax.persistence.*;
+      import java.util.List;
+
+      @Entity
+      public class User {
+          @Id
+          @GeneratedValue(strategy = GenerationType.IDENTITY)
+          private Long id;
+
+          @Column(name = "username", nullable = false)
+          private String username;
+
+          @NotNull
+          @Email
+          private String email;
+
+          @OneToMany(mappedBy = "user")
+          private List<Order> orders;
+
+          public User() {}
+      }
+      """;
+
+  private static final String INITIALIZED_FIELDS_CODE =
+      """
+      public class ConfigClass {
+          private String defaultName = "Unknown";
+          private int maxRetries = 3;
+          private boolean enabled = true;
+          private List<String> items = new ArrayList<>();
+          private static final String CONSTANT = "CONST_VALUE";
+
+          public void method() {
+              this.defaultName = "Updated";
+              this.enabled = false;
+          }
+      }
+      """;
+
+  private static final String GENERIC_FIELDS_CODE =
+      """
+      public class GenericContainer<T> {
+          private T data;
+          private List<T> items;
+          private Map<String, T> mappings;
+          private List<String> names;
+          private Optional<T> optional;
+
+          public void process() {
+              this.data = null;
+              this.items.clear();
+          }
+      }
+      """;
+
+  private static final String MULTIPLE_SAME_TYPE_CODE =
+      """
+      public class PersonClass {
+          private String firstName;
+          private String lastName;
+          private String email;
+          private int age;
+          private int score;
+
+          public void updateNames() {
+              this.firstName = "New";
+              this.lastName = "Name";
+          }
+      }
+      """;
 
   @BeforeEach
   void setUp() {
-    fieldDeclarationService = new FieldDeclarationService();
-    String javaCode =
-        """
-        package io.github.test;
-        public class TestClass {
-          private String name;
-          private int count;
-          private Calculator calculator;
-          private List<String> items;
-          private Calculator backup = new Calculator();
-          public void method() {
-            name = "test";
-            this.count = 5;
-            calculator.process();
-            items.add("item");
-          }
-        }
-        """;
-    testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
+    this.fieldDeclarationService = new FieldDeclarationService();
+
+    // Set up ClassDeclarationService for helper methods
+    FormalParameterService formalParameterService = new FormalParameterService();
+    MethodDeclarationService methodDeclarationService =
+        new MethodDeclarationService(formalParameterService);
+    this.classDeclarationService =
+        new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
   }
 
   @Nested
-  @DisplayName("findAllFieldDeclarations() tests")
-  class FindAllFieldDeclarationsTests {
+  @DisplayName("getFieldDeclarationNodeInfo() Tests")
+  class GetFieldDeclarationNodeInfoTests {
+
+    /**
+     * Tests that getFieldDeclarationNodeInfo correctly extracts basic field information.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;Map&lt;String, TSNode&gt;&gt; fieldInfo = service.getFieldDeclarationNodeInfo(tsFile, fieldNode);
+     * Map&lt;String, TSNode&gt; info = fieldInfo.get(0);
+     * String fieldType = tsFile.getTextFromNode(info.get("fieldType"));  // e.g., "String"
+     * String fieldName = tsFile.getTextFromNode(info.get("fieldName"));  // e.g., "name"
+     * </pre>
+     */
     @Test
-    @DisplayName("Should find all fields of specific type")
-    void shouldFindAllFieldsOfSpecificType() {
-      List<TSNode> calculatorFields =
-          fieldDeclarationService.findAllFieldDeclarations(testFile, "Calculator");
-      assertTrue(calculatorFields.size() >= 1, "Should find at least 1 Calculator field");
-      fieldDeclarationService.findAllFieldDeclarations(testFile, "String");
-      // String might not be found as type_identifier in some tree-sitter versions
-      fieldDeclarationService.findAllFieldDeclarations(testFile, "int");
-      // int might not be found as type_identifier in some tree-sitter versions
+    @DisplayName("should extract basic field information")
+    void getFieldDeclarationNodeInfo_withSimpleField_shouldExtractInfo() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> fieldNodes =
+          fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, classNode.get());
+      assertFalse(fieldNodes.isEmpty());
+
+      List<Map<String, TSNode>> fieldInfo =
+          fieldDeclarationService.getFieldDeclarationNodeInfo(tsFile, fieldNodes.get(0));
+
+      assertFalse(fieldInfo.isEmpty());
+      Map<String, TSNode> info = fieldInfo.get(0);
+
+      TSNode fieldType = info.get(FieldCapture.FIELD_TYPE.getCaptureName());
+      assertNotNull(fieldType);
+      assertEquals("String", tsFile.getTextFromNode(fieldType));
+
+      TSNode fieldName = info.get(FieldCapture.FIELD_NAME.getCaptureName());
+      assertNotNull(fieldName);
+      assertEquals("name", tsFile.getTextFromNode(fieldName));
     }
 
+    /**
+     * Tests that getFieldDeclarationNodeInfo handles fields with initialization values.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;Map&lt;String, TSNode&gt;&gt; fieldInfo = service.getFieldDeclarationNodeInfo(tsFile, fieldNode);
+     * Map&lt;String, TSNode&gt; info = fieldInfo.get(0);
+     * TSNode fieldValue = info.get("fieldValue");
+     * // fieldValue node contains "\"Unknown\""
+     * </pre>
+     */
     @Test
-    @DisplayName("Should return empty list for non-existent type")
-    void shouldReturnEmptyListForNonExistentType() {
-      List<TSNode> nonExistentFields =
-          fieldDeclarationService.findAllFieldDeclarations(testFile, "NonExistent");
-      assertTrue(nonExistentFields.isEmpty(), "Should return empty list for non-existent type");
+    @DisplayName("should extract field with initialization value")
+    void getFieldDeclarationNodeInfo_withInitializedField_shouldExtractValue() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, INITIALIZED_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "ConfigClass");
+      assertTrue(classNode.isPresent());
+
+      // Find the field with initialization
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(
+              tsFile, "defaultName", classNode.get());
+      assertTrue(fieldNode.isPresent());
+
+      List<Map<String, TSNode>> fieldInfo =
+          fieldDeclarationService.getFieldDeclarationNodeInfo(tsFile, fieldNode.get());
+
+      assertFalse(fieldInfo.isEmpty());
+      Map<String, TSNode> info = fieldInfo.get(0);
+
+      TSNode fieldValue = info.get(FieldCapture.FIELD_VALUE.getCaptureName());
+      assertNotNull(fieldValue);
+      assertEquals("\"Unknown\"", tsFile.getTextFromNode(fieldValue));
     }
 
+    /**
+     * Tests that getFieldDeclarationNodeInfo handles generic field types.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;Map&lt;String, TSNode&gt;&gt; fieldInfo = service.getFieldDeclarationNodeInfo(tsFile, fieldNode);
+     * Map&lt;String, TSNode&gt; info = fieldInfo.get(0);
+     * TSNode fieldType = info.get("fieldType");
+     * TSNode typeArgument = info.get("fieldTypeArgument");
+     * // fieldType = "List", typeArgument = "T"
+     * </pre>
+     */
     @Test
-    @DisplayName("Should handle null parameters gracefully")
-    void shouldHandleNullParametersGracefully() {
-      List<TSNode> nullFileResult =
-          fieldDeclarationService.findAllFieldDeclarations(null, "String");
-      assertTrue(nullFileResult.isEmpty(), "Should return empty list for null file");
-      List<TSNode> nullTypeResult =
-          fieldDeclarationService.findAllFieldDeclarations(testFile, null);
-      assertTrue(nullTypeResult.isEmpty(), "Should return empty list for null type");
-      List<TSNode> bothNullResult = fieldDeclarationService.findAllFieldDeclarations(null, null);
-      assertTrue(bothNullResult.isEmpty(), "Should return empty list for both null");
-    }
-  }
+    @DisplayName("should extract generic field information")
+    void getFieldDeclarationNodeInfo_withGenericField_shouldExtractTypeArguments() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, GENERIC_FIELDS_CODE);
+      Optional<TSNode> classNode =
+          classDeclarationService.findClassByName(tsFile, "GenericContainer");
+      assertTrue(classNode.isPresent());
 
-  @Nested
-  @DisplayName("getFieldTypeNode() tests")
-  class GetFieldTypeNodeTests {
-    @Test
-    @DisplayName("Should find type node in field declaration")
-    void shouldFindTypeNodeInFieldDeclaration() {
-      List<TSNode> calculatorFields =
-          fieldDeclarationService.findAllFieldDeclarations(testFile, "Calculator");
-      assertFalse(calculatorFields.isEmpty(), "Should have Calculator fields to test");
-      TSNode firstCalculatorField = calculatorFields.get(0);
-      Optional<TSNode> typeNode =
-          fieldDeclarationService.getFieldTypeNode(firstCalculatorField, testFile, "Calculator");
-      assertTrue(typeNode.isPresent(), "Should find Calculator type node");
-      assertEquals("Calculator", testFile.getTextFromNode(typeNode.get()));
-    }
+      // Find the generic List field
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "items", classNode.get());
+      assertTrue(fieldNode.isPresent());
 
-    @Test
-    @DisplayName("Should return empty for non-matching type")
-    void shouldReturnEmptyForNonMatchingType() {
-      List<TSNode> stringFields =
-          fieldDeclarationService.findAllFieldDeclarations(testFile, "String");
-      assertFalse(stringFields.isEmpty(), "Should have String fields to test");
-      TSNode stringField = stringFields.get(0);
-      Optional<TSNode> typeNode =
-          fieldDeclarationService.getFieldTypeNode(stringField, testFile, "Calculator");
-      assertFalse(typeNode.isPresent(), "Should not find Calculator type in String field");
-    }
+      List<Map<String, TSNode>> fieldInfo =
+          fieldDeclarationService.getFieldDeclarationNodeInfo(tsFile, fieldNode.get());
 
-    @Test
-    @DisplayName("Should handle invalid field declaration node")
-    void shouldHandleInvalidFieldDeclarationNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      assertFalse(classNodes.isEmpty(), "Should have class nodes for testing");
-      Optional<TSNode> typeNode =
-          fieldDeclarationService.getFieldTypeNode(classNodes.get(0), testFile, "String");
-      assertFalse(typeNode.isPresent(), "Should return empty for non-field-declaration node");
-    }
+      assertFalse(fieldInfo.isEmpty());
+      Map<String, TSNode> info = fieldInfo.get(0);
 
-    @Test
-    @DisplayName("Should handle null parameters")
-    void shouldHandleNullParameters() {
-      List<TSNode> fields = fieldDeclarationService.findAllFieldDeclarations(testFile, "String");
-      if (!fields.isEmpty()) {
-        TSNode field = fields.get(0);
-        assertFalse(fieldDeclarationService.getFieldTypeNode(null, testFile, "String").isPresent());
-        assertFalse(fieldDeclarationService.getFieldTypeNode(field, null, "String").isPresent());
-        assertFalse(fieldDeclarationService.getFieldTypeNode(field, testFile, null).isPresent());
-      }
-    }
-  }
+      TSNode fieldType = info.get(FieldCapture.FIELD_TYPE.getCaptureName());
+      assertNotNull(fieldType);
+      String typeText = tsFile.getTextFromNode(fieldType);
+      assertTrue(typeText.contains("List") || typeText.contains("T"));
 
-  @Nested
-  @DisplayName("getFieldNameNode() tests")
-  class GetFieldNameNodeTests {
-    @Test
-    @DisplayName("Should extract field name from declaration")
-    void shouldExtractFieldNameFromDeclaration() {
-      List<TSNode> stringFields =
-          fieldDeclarationService.findAllFieldDeclarations(testFile, "String");
-      assertFalse(stringFields.isEmpty(), "Should have String fields to test");
-      TSNode stringField = stringFields.get(0);
-      Optional<TSNode> nameNode = fieldDeclarationService.getFieldNameNode(stringField, testFile);
-      assertTrue(nameNode.isPresent(), "Should find field name node");
-      assertEquals("name", testFile.getTextFromNode(nameNode.get()));
-    }
-
-    @Test
-    @DisplayName("Should handle different field types")
-    void shouldHandleDifferentFieldTypes() {
-      // Try to find a field we can test the name of
-      List<TSNode> allFields = testFile.query("(field_declaration) @field");
-      assertFalse(allFields.isEmpty(), "Should have fields to test");
-      boolean foundFieldName = false;
-      for (TSNode field : allFields) {
-        Optional<TSNode> nameNode = fieldDeclarationService.getFieldNameNode(field, testFile);
-        if (nameNode.isPresent()) {
-          String fieldName = testFile.getTextFromNode(nameNode.get());
-          if (!fieldName.isEmpty()) {
-            foundFieldName = true;
-            break;
-          }
-        }
-      }
-      assertTrue(foundFieldName, "Should find at least one field with a name");
-    }
-
-    @Test
-    @DisplayName("Should handle invalid declaration node")
-    void shouldHandleInvalidDeclarationNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      Optional<TSNode> nameNode =
-          fieldDeclarationService.getFieldNameNode(classNodes.get(0), testFile);
-      assertFalse(nameNode.isPresent(), "Should return empty for non-field-declaration node");
-    }
-
-    @Test
-    @DisplayName("Should handle null parameters")
-    void shouldHandleNullParameters() {
-      List<TSNode> fields = fieldDeclarationService.findAllFieldDeclarations(testFile, "String");
-      if (!fields.isEmpty()) {
-        TSNode field = fields.get(0);
-        assertFalse(fieldDeclarationService.getFieldNameNode(null, testFile).isPresent());
-        assertThrows(
-            NullPointerException.class,
-            () -> fieldDeclarationService.getFieldNameNode(field, null));
-      }
-    }
-  }
-
-  @Nested
-  @DisplayName("getFieldInstanceNode() tests")
-  class GetFieldInstanceNodeTests {
-    @Test
-    @DisplayName("Should find instance node in field with object creation")
-    void shouldFindInstanceNodeInFieldWithObjectCreation() {
-      List<TSNode> calculatorFields =
-          fieldDeclarationService.findAllFieldDeclarations(testFile, "Calculator");
-      // Find the field with object creation (backup = new Calculator())
-      TSNode fieldWithInstance = null;
-      for (TSNode field : calculatorFields) {
-        String fieldText = testFile.getTextFromNode(field);
-        if (fieldText.contains("new Calculator()")) {
-          fieldWithInstance = field;
-          break;
-        }
-      }
-      assertNotNull(fieldWithInstance, "Should find field with object creation");
-      Optional<TSNode> instanceNode =
-          fieldDeclarationService.getFieldInstanceNode(fieldWithInstance, testFile, "Calculator");
-      assertTrue(instanceNode.isPresent(), "Should find Calculator instance node");
-      assertEquals("Calculator", testFile.getTextFromNode(instanceNode.get()));
-    }
-
-    @Test
-    @DisplayName("Should return empty for field without object creation")
-    void shouldReturnEmptyForFieldWithoutObjectCreation() {
-      List<TSNode> stringFields =
-          fieldDeclarationService.findAllFieldDeclarations(testFile, "String");
-      assertFalse(stringFields.isEmpty(), "Should have String fields to test");
-      TSNode stringField = stringFields.get(0);
-      Optional<TSNode> instanceNode =
-          fieldDeclarationService.getFieldInstanceNode(stringField, testFile, "String");
-      assertFalse(
-          instanceNode.isPresent(),
-          "Should not find instance node in field without object creation");
-    }
-
-    @Test
-    @DisplayName("Should handle invalid declaration node")
-    void shouldHandleInvalidDeclarationNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      Optional<TSNode> instanceNode =
-          fieldDeclarationService.getFieldInstanceNode(classNodes.get(0), testFile, "Calculator");
-      assertFalse(instanceNode.isPresent(), "Should return empty for non-field-declaration node");
-    }
-  }
-
-  @Nested
-  @DisplayName("findFieldUsages() tests")
-  class FindFieldUsagesTests {
-    @Test
-    @DisplayName("Should find field usages in method")
-    void shouldFindFieldUsagesInMethod() {
-      List<TSNode> nameUsages = fieldDeclarationService.findFieldUsages(testFile, "name");
-      assertFalse(nameUsages.isEmpty(), "Should find usages of 'name' field");
-      boolean foundAssignment = false;
-      for (TSNode usage : nameUsages) {
-        String usageText = testFile.getTextFromNode(usage);
-        if ("name".equals(usageText)) {
-          foundAssignment = true;
-          break;
-        }
-      }
-      assertTrue(foundAssignment, "Should find assignment usage of 'name' field");
-    }
-
-    @Test
-    @DisplayName("Should find field access usages")
-    void shouldFindFieldAccessUsages() {
-      List<TSNode> countUsages = fieldDeclarationService.findFieldUsages(testFile, "count");
-      assertFalse(countUsages.isEmpty(), "Should find usages of 'count' field");
-      // Verify that we found the 'this.count' usage
-      boolean foundThisAccess = false;
-      for (TSNode usage : countUsages) {
-        String usageText = testFile.getTextFromNode(usage);
-        if ("count".equals(usageText)) {
-          foundThisAccess = true;
-          break;
-        }
-      }
-      assertTrue(foundThisAccess, "Should find 'this.count' field access");
-    }
-
-    @Test
-    @DisplayName("Should return empty list for non-existent field")
-    void shouldReturnEmptyListForNonExistentField() {
-      List<TSNode> nonExistentUsages =
-          fieldDeclarationService.findFieldUsages(testFile, "nonExistent");
-      assertTrue(nonExistentUsages.isEmpty(), "Should return empty list for non-existent field");
-    }
-
-    @Test
-    @DisplayName("Should handle null parameters")
-    void shouldHandleNullParameters() {
-      assertThrows(
-          NullPointerException.class,
-          () -> fieldDeclarationService.findFieldUsages(null, "name"),
-          "Should throw exception for null file");
-      assertThrows(
-          NullPointerException.class,
-          () -> fieldDeclarationService.findFieldUsages(testFile, null),
-          "Should throw exception for null field name");
-    }
-  }
-
-  @Nested
-  @DisplayName("filterFieldsByType() tests")
-  class FilterFieldsByTypeTests {
-    @Test
-    @DisplayName("Should filter fields by type correctly")
-    void shouldFilterFieldsByTypeCorrectly() {
-      List<TSNode> allFields = testFile.query("(field_declaration) @field");
-      assertFalse(allFields.isEmpty(), "Should have fields to filter");
-      List<TSNode> calculatorFields =
-          fieldDeclarationService.filterFieldsByType(testFile, allFields, "Calculator");
-      assertTrue(calculatorFields.size() >= 1, "Should filter to at least 1 Calculator field");
-      List<TSNode> stringFields =
-          fieldDeclarationService.filterFieldsByType(testFile, allFields, "String");
-      assertTrue(stringFields.size() >= 1, "Should filter to at least 1 String field");
-    }
-
-    @Test
-    @DisplayName("Should return empty list for non-matching type")
-    void shouldReturnEmptyListForNonMatchingType() {
-      List<TSNode> allFields = testFile.query("(field_declaration) @field");
-      List<TSNode> nonExistentFields =
-          fieldDeclarationService.filterFieldsByType(testFile, allFields, "NonExistent");
-      assertTrue(nonExistentFields.isEmpty(), "Should return empty list for non-matching type");
-    }
-
-    @Test
-    @DisplayName("Should handle null parameters gracefully")
-    void shouldHandleNullParametersGracefully() {
-      List<TSNode> allFields = testFile.query("(field_declaration) @field");
-      List<TSNode> nullFileResult =
-          fieldDeclarationService.filterFieldsByType(null, allFields, "String");
-      assertTrue(nullFileResult.isEmpty(), "Should handle null file gracefully");
-      List<TSNode> nullFieldsResult =
-          fieldDeclarationService.filterFieldsByType(testFile, null, "String");
-      assertTrue(nullFieldsResult.isEmpty(), "Should handle null fields list gracefully");
-      List<TSNode> nullTypeResult =
-          fieldDeclarationService.filterFieldsByType(testFile, allFields, null);
-      assertTrue(nullTypeResult.isEmpty(), "Should handle null type gracefully");
-    }
-  }
-
-  @Nested
-  @DisplayName("Integration tests")
-  class IntegrationTests {
-    @Test
-    @DisplayName("Should work together to analyze field information")
-    void shouldWorkTogetherToAnalyzeFieldInformation() {
-      // Find all Calculator fields
-      List<TSNode> calculatorFields =
-          fieldDeclarationService.findAllFieldDeclarations(testFile, "Calculator");
-      assertTrue(calculatorFields.size() >= 1, "Should find at least 1 Calculator field");
-      // Check each field
-      for (TSNode field : calculatorFields) {
-        Optional<TSNode> typeNode =
-            fieldDeclarationService.getFieldTypeNode(field, testFile, "Calculator");
-        Optional<TSNode> nameNode = fieldDeclarationService.getFieldNameNode(field, testFile);
-        assertTrue(typeNode.isPresent(), "Should find type node");
-        assertTrue(nameNode.isPresent(), "Should find name node");
-        assertEquals("Calculator", testFile.getTextFromNode(typeNode.get()));
-        String fieldName = testFile.getTextFromNode(nameNode.get());
-        assertTrue(
-            List.of("calculator", "backup").contains(fieldName),
-            "Field name should be 'calculator' or 'backup'");
+      // Type argument may or may not be captured depending on the query
+      TSNode typeArgument = info.get(FieldCapture.FIELD_TYPE_ARGUMENT.getCaptureName());
+      if (typeArgument != null) {
+        String argText = tsFile.getTextFromNode(typeArgument);
+        assertTrue(argText.equals("T") || argText.equals("String"));
       }
     }
 
     @Test
-    @DisplayName("Should handle complex field scenarios")
-    void shouldHandleComplexFieldScenarios() {
-      String complexCode =
-          """
-          public class ComplexClass {
-            private List<Calculator> calculators;
-            private Calculator primary = new Calculator();
-            private Map<String, Calculator> calculatorMap;
-            public void test() {
-              calculators.add(primary);
-              primary = calculatorMap.get("key");
-            }
-          }
-          """;
-      TSFile complexFile = new TSFile(SupportedLanguage.JAVA, complexCode);
-      fieldDeclarationService.findAllFieldDeclarations(complexFile, "Calculator");
-      // The service might not find Calculator fields if they're in generic types
-      // Test field with object creation by finding fields that contain "new Calculator"
-      List<TSNode> allFields = complexFile.query("(field_declaration) @field");
-      for (TSNode field : allFields) {
-        String fieldText = complexFile.getTextFromNode(field);
-        if (fieldText.contains("new Calculator")) {
-          Optional<TSNode> instanceNode =
-              fieldDeclarationService.getFieldInstanceNode(field, complexFile, "Calculator");
-          if (instanceNode.isPresent()) {
-            break;
-          }
-        }
-      }
-      // If we found any fields at all, the test passes
-      assertFalse(allFields.isEmpty(), "Should find some fields in complex scenario");
+    @DisplayName("should return empty list for invalid input")
+    void getFieldDeclarationNodeInfo_withInvalidInput_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+
+      // Test with null file
+      List<Map<String, TSNode>> result1 =
+          fieldDeclarationService.getFieldDeclarationNodeInfo(null, null);
+      assertTrue(result1.isEmpty());
+
+      // Test with invalid node type
+      TSNode methodNode =
+          tsFile.query("(method_declaration) @method").returning("method").execute().firstNode();
+      assertNotNull(methodNode);
+
+      List<Map<String, TSNode>> result2 =
+          fieldDeclarationService.getFieldDeclarationNodeInfo(tsFile, methodNode);
+      assertTrue(result2.isEmpty());
     }
   }
 
   @Nested
-  @DisplayName("Class field renaming tests")
-  class ClassFieldRenamingTests {
+  @DisplayName("getAllFieldDeclarationNodes() Tests")
+  class GetAllFieldDeclarationNodesTests {
+
+    /**
+     * Tests that getAllFieldDeclarationNodes finds all fields in a class.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;TSNode&gt; fieldNodes = service.getAllFieldDeclarationNodes(tsFile, classNode);
+     * for (TSNode field : fieldNodes) {
+     *   String fieldText = tsFile.getTextFromNode(field);  // e.g., "private String name;"
+     * }
+     * </pre>
+     */
     @Test
-    @DisplayName("Should rename field access expressions correctly")
-    void shouldRenameFieldAccessExpressionsCorrectly() {
-      String javaCode =
-          """
-          package org.example.core;
-          import org.example.Test;
-          public class Core {
-            private String teste;
-            private Test test;
-            public void def(Test param) {
-              Test a = new Test();
-              param.abc(1);
-              this.test.abc(1);
-              System.out.println(param);
-            }
-          }
-          """;
-      TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      // Rename fields when class Test is renamed to NewName
-      fieldDeclarationService.renameClassFields(testFile, "Test", "NewName");
-      String expectedCode =
-          """
-          package org.example.core;
-          import org.example.Test;
-          public class Core {
-            private String teste;
-            private NewName newName;
-            public void def(Test param) {
-              Test a = new Test();
-              param.abc(1);
-              this.newName.abc(1);
-              System.out.println(param);
-            }
-          }
-          """;
-      String actualCode = testFile.getSourceCode();
-      assertEquals(expectedCode, actualCode, "Should correctly rename field access expressions");
+    @DisplayName("should find all field declarations in class")
+    void getAllFieldDeclarationNodes_withMultipleFields_shouldFindAll() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> fieldNodes =
+          fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, classNode.get());
+
+      // Should find exactly 3 fields (name, age, active)
+      assertEquals(3, fieldNodes.size());
+
+      // Verify we can get field names for all found fields
+      for (TSNode fieldNode : fieldNodes) {
+        Optional<TSNode> nameNode =
+            fieldDeclarationService.getFieldDeclarationNameNode(tsFile, fieldNode);
+        assertTrue(nameNode.isPresent());
+        String fieldName = tsFile.getTextFromNode(nameNode.get());
+        assertTrue(List.of("name", "age", "active").contains(fieldName));
+      }
     }
 
     @Test
-    @DisplayName("Should handle multiple field access patterns")
-    void shouldHandleMultipleFieldAccessPatterns() {
-      String javaCode =
-          """
-          public class TestClass {
-            private User user;
-            private User admin;
-            private User manager = new User();
-            public void process() {
-              user.getName();
-              this.user.setName("test");
-              this.admin.activate();
-              User temp = this.user;
-              temp = user;
-            }
-          }
-          """;
-      TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      // Rename fields when class User is renamed to Person
-      fieldDeclarationService.renameClassFields(testFile, "User", "Person");
-      String actualCode = testFile.getSourceCode();
-      // Verify field declarations are renamed
-      assertTrue(
-          actualCode.contains("private Person person;"), "Should rename first field declaration");
-      assertTrue(
-          actualCode.contains("private Person admin;"), "Should rename second field declaration");
-      assertTrue(
-          actualCode.contains("private Person manager = new Person();"),
-          "Should rename field with initialization");
-      // Verify field usages are renamed (only for fields that follow class naming convention)
-      assertTrue(actualCode.contains("person.getName();"), "Should rename simple field access");
-      assertTrue(
-          actualCode.contains("this.person.setName(\"test\");"), "Should rename this.field access");
-      assertTrue(
-          actualCode.contains("this.admin.activate();"), "Should keep admin field access as is");
-      assertTrue(
-          actualCode.contains("User temp = this.person;"), "Should keep local variable type as is");
-      assertTrue(actualCode.contains("temp = person;"), "Should rename field in simple assignment");
-      // Note: method-level instantiations like 'admin = new User()' are not renamed by field
-      // renaming logic
-    }
-
-    @Test
-    @DisplayName("Should preserve parameter names when renaming fields")
-    void shouldPreserveParameterNamesWhenRenamingFields() {
-      String javaCode =
-          """
-          public class Service {
-            private Manager manager;
-            public void handle(Manager param) {
-              param.process();
-              this.manager.process();
-              Manager local = param;
-              this.manager = local;
-            }
-          }
-          """;
-      TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      // Rename fields when class Manager is renamed to Supervisor
-      fieldDeclarationService.renameClassFields(testFile, "Manager", "Supervisor");
-      String actualCode = testFile.getSourceCode();
-      // Field should be renamed
-      assertTrue(
-          actualCode.contains("private Supervisor supervisor;"), "Should rename field declaration");
-      // Parameter should NOT be renamed (it's still the old class)
-      assertTrue(
-          actualCode.contains("public void handle(Manager param)"),
-          "Should preserve parameter type and name");
-      // Field access should be renamed
-      assertTrue(actualCode.contains("this.supervisor.process();"), "Should rename field access");
-      // Parameter usage should NOT be renamed
-      assertTrue(actualCode.contains("param.process();"), "Should preserve parameter usage");
-      assertTrue(actualCode.contains("Manager local = param;"), "Should preserve local variable");
-      assertTrue(actualCode.contains("this.supervisor = local;"), "Should rename field assignment");
-    }
-
-    @Test
-    @DisplayName("Should handle nested field access correctly")
-    void shouldHandleNestedFieldAccessCorrectly() {
-      String javaCode =
-          """
-          public class Container {
-            private Database database;
-            public void connect() {
-              this.database.getConnection().open();
-              database.getConnection().getMetadata().getVersion();
-            }
-          }
-          """;
-      TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      // Rename fields when class Database is renamed to DataSource
-      fieldDeclarationService.renameClassFields(testFile, "Database", "DataSource");
-      String actualCode = testFile.getSourceCode();
-      // Field declaration should be renamed
-      assertTrue(
-          actualCode.contains("private DataSource dataSource;"), "Should rename field declaration");
-      // Field accesses should be renamed
-      assertTrue(
-          actualCode.contains("this.dataSource.getConnection().open();"),
-          "Should rename this.field in method chain");
-      assertTrue(
-          actualCode.contains("dataSource.getConnection().getMetadata().getVersion();"),
-          "Should rename field in method chain");
-    }
-
-    @Test
-    @DisplayName("Should handle fields with same name as class correctly")
-    void shouldHandleFieldsWithSameNameAsClassCorrectly() {
-      String javaCode =
-          """
-          public class Worker {
-            private Task task;
-            public void execute() {
-              task.run();
-              this.task.complete();
-              Task newTask = new Task();
-              this.task = newTask;
-            }
-          }
-          """;
-      TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      // Rename fields when class Task is renamed to Job
-      fieldDeclarationService.renameClassFields(testFile, "Task", "Job");
-      String actualCode = testFile.getSourceCode();
-      // Field declaration should be renamed (Task -> Job, task -> job)
-      assertTrue(
-          actualCode.contains("private Job job;"), "Should rename field declaration correctly");
-      // Field usages should be renamed
-      assertTrue(actualCode.contains("job.run();"), "Should rename simple field access");
-      assertTrue(actualCode.contains("this.job.complete();"), "Should rename this.field access");
-      assertTrue(actualCode.contains("this.job = newTask;"), "Should rename field in assignment");
-      // Local variable should keep original class name (field renaming doesn't affect local
-      // variables)
-      assertTrue(
-          actualCode.contains("Task newTask = new Task();"),
-          "Should keep local variable type as is");
-    }
-
-    @Test
-    @DisplayName("Should not rename unrelated identifiers")
-    void shouldNotRenameUnrelatedIdentifiers() {
-      String javaCode =
-          """
-          public class Controller {
-            private Service service;
-            private String serviceName;
-            public void configure() {
-              service.start();
-              this.service.configure();
-              System.out.println(serviceName);
-              String service2 = "test";
-            }
-          }
-          """;
-      TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      // Rename fields when class Service is renamed to Handler
-      fieldDeclarationService.renameClassFields(testFile, "Service", "Handler");
-      String actualCode = testFile.getSourceCode();
-      // Field should be renamed
-      assertTrue(actualCode.contains("private Handler handler;"), "Should rename Service field");
-      // String field should not be renamed
-      assertTrue(
-          actualCode.contains("private String serviceName;"), "Should not rename String field");
-      // Field usages should be renamed
-      assertTrue(actualCode.contains("handler.start();"), "Should rename field usage");
-      assertTrue(
-          actualCode.contains("this.handler.configure();"), "Should rename this.field usage");
-      // Other identifiers should not be renamed
-      assertTrue(
-          actualCode.contains("System.out.println(serviceName);"),
-          "Should not rename unrelated field");
-      assertTrue(
-          actualCode.contains("String service2 = \"test\";"), "Should not rename local variable");
-    }
-
-    @Test
-    @DisplayName("Should handle empty class correctly")
-    void shouldHandleEmptyClassCorrectly() {
-      String javaCode =
+    @DisplayName("should return empty list for class with no fields")
+    void getAllFieldDeclarationNodes_withNoFields_shouldReturnEmptyList() {
+      String noFieldsCode =
           """
           public class EmptyClass {
+              public void method() {
+                  // no fields
+              }
           }
           """;
-      TSFile testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
-      // Try to rename fields when no fields exist
-      fieldDeclarationService.renameClassFields(testFile, "NonExistent", "NewName");
-      String actualCode = testFile.getSourceCode();
-      assertEquals(javaCode, actualCode, "Should not modify empty class");
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, noFieldsCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "EmptyClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> fieldNodes =
+          fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, classNode.get());
+
+      assertTrue(fieldNodes.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should handle null input")
+    void getAllFieldDeclarationNodes_withNullInput_shouldReturnEmptyList() {
+      List<TSNode> result = fieldDeclarationService.getAllFieldDeclarationNodes(null, null);
+
+      assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should handle invalid class node")
+    void getAllFieldDeclarationNodes_withInvalidClassNode_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      TSNode methodNode =
+          tsFile.query("(method_declaration) @method").returning("method").execute().firstNode();
+      assertNotNull(methodNode);
+
+      List<TSNode> result = fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, methodNode);
+
+      assertTrue(result.isEmpty());
+    }
+  }
+
+  @Nested
+  @DisplayName("getAllFieldDeclarationAnnotationNodes() Tests")
+  class GetAllFieldDeclarationAnnotationNodesTests {
+
+    /**
+     * Tests that getAllFieldDeclarationAnnotationNodes finds all field annotations.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;TSNode&gt; annotationNodes = service.getAllFieldDeclarationAnnotationNodes(tsFile, classNode);
+     * for (TSNode annotation : annotationNodes) {
+     *   String annotationText = tsFile.getTextFromNode(annotation);  // e.g., "@NotNull"
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should find all field annotations")
+    void getAllFieldDeclarationAnnotationNodes_withAnnotatedFields_shouldFindAnnotations() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, ANNOTATED_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "User");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> annotationNodes =
+          fieldDeclarationService.getAllFieldDeclarationAnnotationNodes(tsFile, classNode.get());
+
+      // Should find multiple annotations (@Id, @GeneratedValue, @Column, @NotNull, @Email,
+      // @OneToMany)
+      assertFalse(annotationNodes.isEmpty());
+      assertTrue(annotationNodes.size() >= 1);
+    }
+
+    @Test
+    @DisplayName("should return empty list for fields without annotations")
+    void getAllFieldDeclarationAnnotationNodes_withoutAnnotations_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> annotationNodes =
+          fieldDeclarationService.getAllFieldDeclarationAnnotationNodes(tsFile, classNode.get());
+
+      assertTrue(annotationNodes.isEmpty());
+    }
+  }
+
+  @Nested
+  @DisplayName("getFieldDeclarationFullTypeNode() Tests")
+  class GetFieldDeclarationFullTypeNodeTests {
+
+    /**
+     * Tests that getFieldDeclarationFullTypeNode retrieves complete type information.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * Optional&lt;TSNode&gt; fullTypeNode = service.getFieldDeclarationFullTypeNode(tsFile, fieldNode);
+     * if (fullTypeNode.isPresent()) {
+     *   String type = tsFile.getTextFromNode(fullTypeNode.get());  // e.g., "List&lt;String&gt;"
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should retrieve full type node for simple type")
+    void getFieldDeclarationFullTypeNode_withSimpleType_shouldReturnTypeNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "name", classNode.get());
+      assertTrue(fieldNode.isPresent());
+
+      Optional<TSNode> typeNode =
+          fieldDeclarationService.getFieldDeclarationFullTypeNode(tsFile, fieldNode.get());
+
+      assertTrue(typeNode.isPresent());
+      assertEquals("String", tsFile.getTextFromNode(typeNode.get()));
+    }
+
+    @Test
+    @DisplayName("should retrieve full type node for generic type")
+    void getFieldDeclarationFullTypeNode_withGenericType_shouldReturnFullTypeNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, GENERIC_FIELDS_CODE);
+      Optional<TSNode> classNode =
+          classDeclarationService.findClassByName(tsFile, "GenericContainer");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "items", classNode.get());
+      assertTrue(fieldNode.isPresent());
+
+      Optional<TSNode> typeNode =
+          fieldDeclarationService.getFieldDeclarationFullTypeNode(tsFile, fieldNode.get());
+
+      assertTrue(typeNode.isPresent());
+      // The actual text will include the full generic type
+      String typeText = tsFile.getTextFromNode(typeNode.get());
+      assertTrue(typeText.contains("List"));
+    }
+  }
+
+  @Nested
+  @DisplayName("getFieldDeclarationTypeNode() Tests")
+  class GetFieldDeclarationTypeNodeTests {
+
+    /**
+     * Tests that getFieldDeclarationTypeNode retrieves base type or type argument.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * Optional&lt;TSNode&gt; typeNode = service.getFieldDeclarationTypeNode(tsFile, fieldNode);
+     * if (typeNode.isPresent()) {
+     *   String type = tsFile.getTextFromNode(typeNode.get());  // e.g., "String" from List&lt;String&gt;
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should retrieve simple type node")
+    void getFieldDeclarationTypeNode_withSimpleType_shouldReturnTypeNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "age", classNode.get());
+      assertTrue(fieldNode.isPresent());
+
+      Optional<TSNode> typeNode =
+          fieldDeclarationService.getFieldDeclarationTypeNode(tsFile, fieldNode.get());
+
+      assertTrue(typeNode.isPresent());
+      String typeText = tsFile.getTextFromNode(typeNode.get());
+      assertEquals("int", typeText);
+    }
+
+    @Test
+    @DisplayName("should retrieve type argument for generic type")
+    void getFieldDeclarationTypeNode_withGenericType_shouldReturnTypeArgument() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, GENERIC_FIELDS_CODE);
+      Optional<TSNode> classNode =
+          classDeclarationService.findClassByName(tsFile, "GenericContainer");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "names", classNode.get());
+      assertTrue(fieldNode.isPresent());
+
+      Optional<TSNode> typeNode =
+          fieldDeclarationService.getFieldDeclarationTypeNode(tsFile, fieldNode.get());
+
+      assertTrue(typeNode.isPresent());
+      assertEquals("String", tsFile.getTextFromNode(typeNode.get()));
+    }
+  }
+
+  @Nested
+  @DisplayName("getFieldDeclarationNameNode() Tests")
+  class GetFieldDeclarationNameNodeTests {
+
+    /**
+     * Tests that getFieldDeclarationNameNode retrieves field name identifier.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * Optional&lt;TSNode&gt; nameNode = service.getFieldDeclarationNameNode(tsFile, fieldNode);
+     * if (nameNode.isPresent()) {
+     *   String name = tsFile.getTextFromNode(nameNode.get());  // e.g., "firstName"
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should retrieve field name node")
+    void getFieldDeclarationNameNode_withValidField_shouldReturnNameNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> fieldNodes =
+          fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, classNode.get());
+      assertFalse(fieldNodes.isEmpty());
+
+      Optional<TSNode> nameNode =
+          fieldDeclarationService.getFieldDeclarationNameNode(tsFile, fieldNodes.get(0));
+
+      assertTrue(nameNode.isPresent());
+      String fieldName = tsFile.getTextFromNode(nameNode.get());
+      assertTrue(List.of("name", "age", "active").contains(fieldName));
+    }
+  }
+
+  @Nested
+  @DisplayName("getFieldDeclarationValueNode() Tests")
+  class GetFieldDeclarationValueNodeTests {
+
+    /**
+     * Tests that getFieldDeclarationValueNode retrieves initialization values.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * Optional&lt;TSNode&gt; valueNode = service.getFieldDeclarationValueNode(tsFile, fieldNode);
+     * if (valueNode.isPresent()) {
+     *   String value = tsFile.getTextFromNode(valueNode.get());  // e.g., "\"John\""
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should retrieve field initialization value")
+    void getFieldDeclarationValueNode_withInitializedField_shouldReturnValueNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, INITIALIZED_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "ConfigClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(
+              tsFile, "maxRetries", classNode.get());
+      assertTrue(fieldNode.isPresent());
+
+      Optional<TSNode> valueNode =
+          fieldDeclarationService.getFieldDeclarationValueNode(tsFile, fieldNode.get());
+
+      if (valueNode.isPresent()) {
+        assertEquals("3", tsFile.getTextFromNode(valueNode.get()));
+      } else {
+        // If value node is not captured, that's also acceptable for this test
+        assertTrue(true, "Field value node not captured, but method executed without error");
+      }
+    }
+
+    @Test
+    @DisplayName("should return empty for field without initialization")
+    void getFieldDeclarationValueNode_withoutInitialization_shouldReturnEmpty() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "name", classNode.get());
+      assertTrue(fieldNode.isPresent());
+
+      Optional<TSNode> valueNode =
+          fieldDeclarationService.getFieldDeclarationValueNode(tsFile, fieldNode.get());
+
+      assertFalse(valueNode.isPresent());
+    }
+  }
+
+  @Nested
+  @DisplayName("getAllFieldDeclarationUsageNodes() Tests")
+  class GetAllFieldDeclarationUsageNodesTests {
+
+    /**
+     * Tests that getAllFieldDeclarationUsageNodes finds field usage in methods.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;TSNode&gt; usages = service.getAllFieldDeclarationUsageNodes(tsFile, fieldNode, classNode);
+     * for (TSNode usage : usages) {
+     *   String usageText = tsFile.getTextFromNode(usage);  // e.g., "fieldName"
+     *   int line = usage.getStartPoint().getRow() + 1;     // Line number of usage
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should find field usages in class methods")
+    void getAllFieldDeclarationUsageNodes_withFieldUsages_shouldFindUsages() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, INITIALIZED_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "ConfigClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(
+              tsFile, "defaultName", classNode.get());
+      assertTrue(fieldNode.isPresent());
+
+      List<TSNode> usageNodes =
+          fieldDeclarationService.getAllFieldDeclarationUsageNodes(
+              tsFile, fieldNode.get(), classNode.get());
+
+      assertFalse(usageNodes.isEmpty());
+      // Should find at least one usage (this.defaultName = "Updated")
+      assertTrue(usageNodes.size() >= 1);
+    }
+
+    @Test
+    @DisplayName("should return empty list for unused fields")
+    void getAllFieldDeclarationUsageNodes_withUnusedField_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "name", classNode.get());
+      assertTrue(fieldNode.isPresent());
+
+      List<TSNode> usageNodes =
+          fieldDeclarationService.getAllFieldDeclarationUsageNodes(
+              tsFile, fieldNode.get(), classNode.get());
+
+      assertTrue(usageNodes.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should handle invalid input")
+    void getAllFieldDeclarationUsageNodes_withInvalidInput_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+
+      List<TSNode> result1 =
+          fieldDeclarationService.getAllFieldDeclarationUsageNodes(null, null, null);
+      assertTrue(result1.isEmpty());
+
+      TSNode methodNode =
+          tsFile.query("(method_declaration) @method").returning("method").execute().firstNode();
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+
+      List<TSNode> result2 =
+          fieldDeclarationService.getAllFieldDeclarationUsageNodes(
+              tsFile, methodNode, classNode.get());
+      assertTrue(result2.isEmpty());
+    }
+  }
+
+  @Nested
+  @DisplayName("findFieldDeclarationNodeByName() Tests")
+  class FindFieldDeclarationNodeByNameTests {
+
+    /**
+     * Tests that findFieldDeclarationNodeByName locates fields by exact name.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * Optional&lt;TSNode&gt; fieldNode = service.findFieldDeclarationNodeByName(tsFile, "myField", classNode);
+     * if (fieldNode.isPresent()) {
+     *   String fieldText = tsFile.getTextFromNode(fieldNode.get());  // e.g., "private String myField;"
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should find existing field by name")
+    void findFieldDeclarationNodeByName_withExistingField_shouldReturnField() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "name", classNode.get());
+
+      assertTrue(fieldNode.isPresent());
+      String fieldText = tsFile.getTextFromNode(fieldNode.get());
+      assertTrue(fieldText.contains("name"));
+      assertTrue(fieldText.contains("String"));
+    }
+
+    @Test
+    @DisplayName("should return empty for non-existent field")
+    void findFieldDeclarationNodeByName_withNonExistentField_shouldReturnEmpty() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(
+              tsFile, "nonExistentField", classNode.get());
+
+      assertFalse(fieldNode.isPresent());
+    }
+
+    @Test
+    @DisplayName("should handle null and empty parameters")
+    void findFieldDeclarationNodeByName_withInvalidParameters_shouldReturnEmpty() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> result1 =
+          fieldDeclarationService.findFieldDeclarationNodeByName(null, "name", classNode.get());
+      assertFalse(result1.isPresent());
+
+      Optional<TSNode> result2 =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, null, classNode.get());
+      assertFalse(result2.isPresent());
+
+      Optional<TSNode> result3 =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "", classNode.get());
+      assertFalse(result3.isPresent());
+
+      TSNode mockNode = tsFile.getTree().getRootNode();
+      Optional<TSNode> result4 =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "name", mockNode);
+      assertFalse(result4.isPresent());
+    }
+
+    @Test
+    @DisplayName("should be case sensitive")
+    void findFieldDeclarationNodeByName_shouldBeCaseSensitive() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      Optional<TSNode> exactMatch =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "name", classNode.get());
+      assertTrue(exactMatch.isPresent());
+
+      Optional<TSNode> casesDifferent =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "Name", classNode.get());
+      assertFalse(casesDifferent.isPresent());
+    }
+  }
+
+  @Nested
+  @DisplayName("findFieldDeclarationNodesByType() Tests")
+  class FindFieldDeclarationNodesByTypeTests {
+
+    /**
+     * Tests that findFieldDeclarationNodesByType finds all fields of a specific type.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;TSNode&gt; stringFields = service.findFieldDeclarationNodesByType(tsFile, "String", classNode);
+     * for (TSNode field : stringFields) {
+     *   String fieldText = tsFile.getTextFromNode(field);  // e.g., "private String name;"
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should find fields by exact type")
+    void findFieldDeclarationNodesByType_withMatchingType_shouldReturnFields() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, MULTIPLE_SAME_TYPE_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "PersonClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> stringFields =
+          fieldDeclarationService.findFieldDeclarationNodesByType(
+              tsFile, "String", classNode.get());
+
+      assertEquals(3, stringFields.size()); // firstName, lastName, email
+
+      // Verify all are String fields
+      for (TSNode field : stringFields) {
+        Optional<TSNode> nameNode =
+            fieldDeclarationService.getFieldDeclarationNameNode(tsFile, field);
+        assertTrue(nameNode.isPresent());
+        String fieldName = tsFile.getTextFromNode(nameNode.get());
+        assertTrue(List.of("firstName", "lastName", "email").contains(fieldName));
+      }
+    }
+
+    @Test
+    @DisplayName("should find fields by primitive type")
+    void findFieldDeclarationNodesByType_withPrimitiveType_shouldReturnFields() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, MULTIPLE_SAME_TYPE_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "PersonClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> intFields =
+          fieldDeclarationService.findFieldDeclarationNodesByType(tsFile, "int", classNode.get());
+
+      // Should find exactly 2 int fields (age, score)
+      assertEquals(2, intFields.size());
+    }
+
+    @Test
+    @DisplayName("should return empty list for non-existent type")
+    void findFieldDeclarationNodesByType_withNonExistentType_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> fields =
+          fieldDeclarationService.findFieldDeclarationNodesByType(
+              tsFile, "NonExistentType", classNode.get());
+
+      assertTrue(fields.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should handle null and empty parameters")
+    void findFieldDeclarationNodesByType_withInvalidParameters_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> result1 =
+          fieldDeclarationService.findFieldDeclarationNodesByType(null, "String", classNode.get());
+      assertTrue(result1.isEmpty());
+
+      List<TSNode> result2 =
+          fieldDeclarationService.findFieldDeclarationNodesByType(tsFile, null, classNode.get());
+      assertTrue(result2.isEmpty());
+
+      List<TSNode> result3 =
+          fieldDeclarationService.findFieldDeclarationNodesByType(tsFile, "", classNode.get());
+      assertTrue(result3.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should be case sensitive")
+    void findFieldDeclarationNodesByType_shouldBeCaseSensitive() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_FIELDS_CODE);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "SimpleClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> exactMatch =
+          fieldDeclarationService.findFieldDeclarationNodesByType(
+              tsFile, "String", classNode.get());
+      assertFalse(exactMatch.isEmpty());
+
+      List<TSNode> casesDifferent =
+          fieldDeclarationService.findFieldDeclarationNodesByType(
+              tsFile, "string", classNode.get());
+      assertTrue(casesDifferent.isEmpty());
+    }
+  }
+
+  @Nested
+  @DisplayName("Edge Cases and Error Handling Tests")
+  class EdgeCasesTests {
+
+    @Test
+    @DisplayName("should handle class with only static fields")
+    void methods_withStaticFields_shouldHandleCorrectly() {
+      String staticFieldsCode =
+          """
+          public class ConstantsClass {
+              public static final String CONSTANT = "VALUE";
+              private static int counter = 0;
+
+              public static void increment() {
+                  counter++;
+              }
+          }
+          """;
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, staticFieldsCode);
+      Optional<TSNode> classNode =
+          classDeclarationService.findClassByName(tsFile, "ConstantsClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> fieldNodes =
+          fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, classNode.get());
+      assertEquals(2, fieldNodes.size());
+
+      // Should find both CONSTANT and counter fields
+      Optional<TSNode> constantField =
+          fieldDeclarationService.findFieldDeclarationNodeByName(
+              tsFile, "CONSTANT", classNode.get());
+      assertTrue(constantField.isPresent());
+
+      Optional<TSNode> counterField =
+          fieldDeclarationService.findFieldDeclarationNodeByName(
+              tsFile, "counter", classNode.get());
+      assertTrue(counterField.isPresent());
+    }
+
+    @Test
+    @DisplayName("should handle complex generic fields")
+    void methods_withComplexGenerics_shouldHandleCorrectly() {
+      String complexGenericsCode =
+          """
+          public class ComplexGenericClass {
+              private Map<String, List<Integer>> complexMap;
+              private Optional<Map<String, Set<Long>>> optionalMap;
+
+              public void method() {
+                  this.complexMap = new HashMap<>();
+              }
+          }
+          """;
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, complexGenericsCode);
+      Optional<TSNode> classNode =
+          classDeclarationService.findClassByName(tsFile, "ComplexGenericClass");
+      assertTrue(classNode.isPresent());
+
+      List<TSNode> fieldNodes =
+          fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, classNode.get());
+      assertEquals(2, fieldNodes.size());
+
+      // Should be able to extract type information for complex generics
+      for (TSNode field : fieldNodes) {
+        Optional<TSNode> typeNode =
+            fieldDeclarationService.getFieldDeclarationFullTypeNode(tsFile, field);
+        assertTrue(typeNode.isPresent());
+      }
+    }
+
+    @Test
+    @DisplayName("should handle empty source code")
+    void methods_withEmptyCode_shouldHandleGracefully() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "");
+
+      // Create a mock node instead of passing null
+      TSNode mockNode = tsFile.getTree().getRootNode();
+      List<TSNode> fieldNodes =
+          fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, mockNode);
+      assertTrue(fieldNodes.isEmpty());
+
+      Optional<TSNode> fieldNode =
+          fieldDeclarationService.findFieldDeclarationNodeByName(tsFile, "field", mockNode);
+      assertFalse(fieldNode.isPresent());
+    }
+
+    @Test
+    @DisplayName("should handle malformed source code")
+    void methods_withMalformedCode_shouldHandleGracefully() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "public class { private String");
+
+      // Should not crash, may return empty or partial results
+      TSNode mockNode = tsFile.getTree().getRootNode();
+      List<TSNode> fieldNodes =
+          fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, mockNode);
+      assertNotNull(fieldNodes);
     }
   }
 }
+

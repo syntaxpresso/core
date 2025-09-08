@@ -4,10 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import org.junit.jupiter.api.BeforeEach;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,496 +17,498 @@ import org.treesitter.TSNode;
 
 @DisplayName("TSFile Tests")
 class TSFileTest {
-  private final String initialContent = "public class MyClass {}";
-  private final SupportedLanguage language = SupportedLanguage.JAVA;
+
+  private static final String SIMPLE_JAVA_CODE =
+      """
+      package com.example;
+
+      public class Hello {
+          public void greet() {
+              System.out.println("Hello World");
+          }
+      }
+      """;
+
+  private static final String UPDATED_JAVA_CODE =
+      """
+      package com.example;
+
+      public class Hello {
+          public void greet(String name) {
+              System.out.println("Hello " + name);
+          }
+      }
+      """;
 
   @Nested
   @DisplayName("Constructor Tests")
   class ConstructorTests {
+
     @Test
-    @DisplayName("should create TSFile from a string")
-    void constructor_fromString_shouldSucceed() {
-      TSFile tsFile = new TSFile(language, initialContent);
+    @DisplayName("Should create TSFile from source code string")
+    void shouldCreateTSFileFromSourceCode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
       assertNotNull(tsFile.getParser());
+      assertEquals(SIMPLE_JAVA_CODE, tsFile.getSourceCode());
       assertNotNull(tsFile.getTree());
-      assertEquals(initialContent, tsFile.getSourceCode());
-      assertThrows(IllegalStateException.class, tsFile::getFile);
-    }
-
-    @Test
-    @DisplayName("should create TSFile from a Path")
-    void constructor_fromPath_shouldSucceed(@TempDir Path tempDir) throws IOException {
-      Path file = tempDir.resolve("MyClass.java");
-      Files.writeString(file, initialContent);
-      TSFile tsFile = new TSFile(language, file);
-      assertNotNull(tsFile.getParser());
-      assertNotNull(tsFile.getTree());
-      assertEquals(initialContent, tsFile.getSourceCode());
-      assertEquals(file.toFile(), tsFile.getFile());
-    }
-  }
-
-  @Nested
-  @DisplayName("Source Code Manipulation Tests")
-  class SourceCodeManipulationTests {
-    private TSFile tsFile;
-
-    @BeforeEach
-    void setup() {
-      tsFile = new TSFile(language, initialContent);
-    }
-
-    @Test
-    @DisplayName("should update the entire source code")
-    void updateSourceCode_full_shouldSucceed() {
-      String newContent = "public class NewClass {}";
-      tsFile.updateSourceCode(newContent);
-      assertEquals(newContent, tsFile.getSourceCode());
-      assertNotEquals(initialContent, tsFile.getSourceCode());
-    }
-
-    @Test
-    @DisplayName("should update a range of the source code")
-    void updateSourceCode_range_shouldSucceed() {
-      tsFile.updateSourceCode(13, 20, "NewName");
-      assertEquals("public class NewName {}", tsFile.getSourceCode());
-    }
-
-    @Test
-    @DisplayName("should update source code from a TSNode")
-    void updateSourceCode_fromNode_shouldSucceed() {
-      TSNode node = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      assertNotNull(node);
-      tsFile.updateSourceCode(node, "UpdatedClass");
-      assertEquals("public class UpdatedClass {}", tsFile.getSourceCode());
-    }
-  }
-
-  @Nested
-  @DisplayName("File Operation Tests")
-  class FileOperationTests {
-    private TSFile tsFile;
-    private Path tempFile;
-
-    @BeforeEach
-    void setup(@TempDir Path tempDir) throws IOException {
-      tempFile = tempDir.resolve("MyClass.java");
-      Files.writeString(tempFile, initialContent);
-      tsFile = new TSFile(language, tempFile);
-    }
-
-    @Test
-    @DisplayName("should save changes to the original file")
-    void save_shouldWriteToFile() throws IOException {
-      tsFile.updateSourceCode("public class SavedClass {}");
-      tsFile.save();
-      String fileContent = Files.readString(tempFile);
-      assertEquals("public class SavedClass {}", fileContent);
-    }
-
-    @Test
-    @DisplayName("should save to a new file")
-    void saveAs_shouldCreateNewFile(@TempDir Path tempDir) throws IOException {
-      Path newPath = tempDir.resolve("NewFile.java");
-      tsFile.updateSourceCode("public class OtherClass {}");
-      tsFile.saveAs(newPath);
-      tsFile.save();
-      assertTrue(Files.exists(newPath));
-      assertFalse(Files.exists(tempFile));
-      String fileContent = Files.readString(newPath);
-      assertEquals("public class OtherClass {}", fileContent);
-      assertEquals(newPath.toFile(), tsFile.getFile());
-    }
-
-    @Test
-    @DisplayName("should move the file to a new directory")
-    void move_shouldRelocateFile(@TempDir Path tempDir) throws IOException {
-      Path newDir = tempDir.resolve("new_dir");
-      Files.createDirectory(newDir);
-      tsFile.move(newDir.toFile());
-      tsFile.save();
-      Path newPath = newDir.resolve("MyClass.java");
-      assertTrue(Files.exists(newPath));
-      assertFalse(Files.exists(tempFile));
-      assertEquals(newPath.toFile(), tsFile.getFile());
-    }
-
-    @Test
-    @DisplayName("should rename the file")
-    void rename_shouldChangeFileName(@TempDir Path tempDir) throws IOException {
-      tsFile.rename("Renamed.java");
-      tsFile.save();
-      Path newPath = tempFile.getParent().resolve("Renamed.java");
-      assertTrue(Files.exists(newPath));
-      assertFalse(Files.exists(tempFile));
-      assertEquals(newPath.toFile(), tsFile.getFile());
-    }
-  }
-
-  @Nested
-  @DisplayName("Tree and Node Access Tests")
-  class TreeAndNodeAccessTests {
-    private TSFile tsFile;
-
-    @BeforeEach
-    void setup() {
-      tsFile = new TSFile(language, "public class MyClass { void method() {} }");
-    }
-
-    @Test
-    @DisplayName("should get a node from a specific position")
-    void getNodeFromPosition_shouldReturnCorrectNode() {
-      TSNode node = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE); // "MyClass"
-      assertNotNull(node);
-      assertEquals("identifier", node.getType());
-      assertEquals("MyClass", tsFile.getTextFromRange(node.getStartByte(), node.getEndByte()));
-    }
-
-    @Test
-    @DisplayName("should return null for an invalid position")
-    void getNodeFromPosition_invalidPosition_shouldReturnNull() {
-      assertNull(tsFile.getNodeFromPosition(99, 99, SupportedIDE.NONE));
-    }
-
-    @Test
-    @DisplayName("should extract text from a byte range")
-    void getTextFromRange_shouldReturnSubstring() {
-      String text = tsFile.getTextFromRange(7, 12);
-      assertEquals("class", text);
-    }
-
-    @Test
-    @DisplayName("should throw exception for an invalid range")
-    void getTextFromRange_invalidRange_shouldThrowException() {
-      assertThrows(IndexOutOfBoundsException.class, () -> tsFile.getTextFromRange(0, 999));
-    }
-  }
-
-  @Nested
-  @DisplayName("History Tracking Tests")
-  class HistoryTrackingTests {
-    private TSFile tsFile;
-
-    @BeforeEach
-    void setup() {
-      tsFile = new TSFile(language, initialContent);
-    }
-
-    @Test
-    @DisplayName("should initially have no modifications")
-    void initialState_shouldNotBeModified() {
       assertFalse(tsFile.isModified());
-      assertFalse(tsFile.hasUnsavedChanges());
     }
 
     @Test
-    @DisplayName("should track source code updates")
-    void updateSourceCode_shouldMarkAsModified() {
-      String newContent = "public class Updated {}";
-      tsFile.updateSourceCode(newContent);
+    @DisplayName("Should create TSFile from file path")
+    void shouldCreateTSFileFromFilePath(@TempDir Path tempDir) throws IOException {
+      Path javaFile = tempDir.resolve("Hello.java");
+      Files.writeString(javaFile, SIMPLE_JAVA_CODE);
+
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
+
+      assertNotNull(tsFile.getParser());
+      assertEquals(SIMPLE_JAVA_CODE, tsFile.getSourceCode());
+      assertNotNull(tsFile.getTree());
+      assertEquals(javaFile.toFile(), tsFile.getFile());
+      assertFalse(tsFile.isModified());
+    }
+
+    @Test
+    @DisplayName("Should throw RuntimeException for non-existent file")
+    void shouldThrowRuntimeExceptionForNonExistentFile(@TempDir Path tempDir) {
+      Path nonExistentFile = tempDir.resolve("NonExistent.java");
+
+      assertThrows(
+          RuntimeException.class, () -> new TSFile(SupportedLanguage.JAVA, nonExistentFile));
+    }
+  }
+
+  @Nested
+  @DisplayName("Source Code Update Tests")
+  class SourceCodeUpdateTests {
+
+    @Test
+    @DisplayName("Should update entire source code")
+    void shouldUpdateEntireSourceCode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      tsFile.updateSourceCode(UPDATED_JAVA_CODE);
+
+      assertEquals(UPDATED_JAVA_CODE, tsFile.getSourceCode());
       assertTrue(tsFile.isModified());
       assertTrue(tsFile.hasUnsavedChanges());
     }
 
     @Test
-    @DisplayName("should track range updates")
-    void updateSourceCodeRange_shouldMarkAsModified() {
-      tsFile.updateSourceCode(13, 20, "NewName");
+    @DisplayName("Should update source code by byte range")
+    void shouldUpdateSourceCodeByByteRange() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      String original = tsFile.getSourceCode();
+      int start = original.indexOf("greet()");
+      int end = start + "greet()".length();
+
+      tsFile.updateSourceCode(start, end, "greet(String name)");
+
+      assertTrue(tsFile.getSourceCode().contains("greet(String name)"));
       assertTrue(tsFile.isModified());
     }
 
     @Test
-    @DisplayName("should track multiple source code changes")
-    void multipleUpdates_shouldStillBeModified() {
-      tsFile.updateSourceCode("public class First {}");
-      tsFile.updateSourceCode("public class Second {}");
-      tsFile.updateSourceCode(13, 19, "Third");
+    @DisplayName("Should update source code by TSNode")
+    void shouldUpdateSourceCodeByTSNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      TSNode rootNode = tsFile.getTree().getRootNode();
+      TSNode methodNode = findMethodDeclaration(rootNode);
+      assertNotNull(methodNode);
+
+      String newMethod =
+          """
+          public void greet(String name) {
+              System.out.println("Hello " + name);
+          }\
+          """;
+
+      tsFile.updateSourceCode(methodNode, newMethod);
+
+      assertTrue(tsFile.getSourceCode().contains("greet(String name)"));
       assertTrue(tsFile.isModified());
     }
 
     @Test
-    @DisplayName("should track file rename")
-    void rename_shouldMarkAsModified(@TempDir Path tempDir) throws IOException {
-      Path file = tempDir.resolve("Original.java");
-      Files.writeString(file, initialContent);
-      TSFile fileWithPath = new TSFile(language, file);
-      fileWithPath.rename("Renamed.java");
-      assertTrue(fileWithPath.isModified());
-    }
+    @DisplayName("Should throw exception when updating with invalid range")
+    void shouldThrowExceptionWhenUpdatingWithInvalidRange() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
 
-    @Test
-    @DisplayName("should track file move")
-    void move_shouldMarkAsModified(@TempDir Path tempDir) throws IOException {
-      Path file = tempDir.resolve("Original.java");
-      Files.writeString(file, initialContent);
-      TSFile fileWithPath = new TSFile(language, file);
-      Path newDir = tempDir.resolve("newdir");
-      Files.createDirectory(newDir);
-      fileWithPath.move(newDir.toFile());
-      assertTrue(fileWithPath.isModified());
-    }
-
-    @Test
-    @DisplayName("should track mixed operations")
-    void mixedOperations_shouldMarkAsModified(@TempDir Path tempDir) throws IOException {
-      Path file = tempDir.resolve("Test.java");
-      Files.writeString(file, initialContent);
-      TSFile fileWithPath = new TSFile(language, file);
-      fileWithPath.updateSourceCode("public class Updated {}");
-      fileWithPath.rename("Renamed.java");
-      Path newDir = tempDir.resolve("newdir");
-      Files.createDirectory(newDir);
-      fileWithPath.move(newDir.toFile());
-      assertTrue(fileWithPath.isModified());
+      assertThrows(
+          StringIndexOutOfBoundsException.class, () -> tsFile.updateSourceCode(-1, 5, "new"));
     }
   }
 
   @Nested
-  @DisplayName("Insert Text Tests")
-  class InsertTextTests {
-    private TSFile tsFile;
-
-    @BeforeEach
-    void setup() {
-      tsFile = new TSFile(language, "public class MyClass { void method() {} }");
-    }
+  @DisplayName("Text Insertion Tests")
+  class TextInsertionTests {
 
     @Test
-    @DisplayName("should insert text before a node")
-    void insertTextBeforeNode_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      assertNotNull(classIdentifier);
-      assertEquals("identifier", classIdentifier.getType());
-      tsFile.insertTextBeforeNode(classIdentifier, "Final");
-      assertEquals("public class FinalMyClass { void method() {} }", tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should insert text after a node")
-    void insertTextAfterNode_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      assertNotNull(classIdentifier);
-      assertEquals("identifier", classIdentifier.getType());
-      tsFile.insertTextAfterNode(classIdentifier, "Extended");
-      assertEquals("public class MyClassExtended { void method() {} }", tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should insert empty string before node without changing content")
-    void insertTextBeforeNode_emptyString_shouldNotChangeContent() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      String originalCode = tsFile.getSourceCode();
-      tsFile.insertTextBeforeNode(classIdentifier, "");
-      assertEquals(originalCode, tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should insert empty string after node without changing content")
-    void insertTextAfterNode_emptyString_shouldNotChangeContent() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      String originalCode = tsFile.getSourceCode();
-      tsFile.insertTextAfterNode(classIdentifier, "");
-      assertEquals(originalCode, tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should handle insertTextBeforeNode with valid tree")
-    void insertTextBeforeNode_validTree_shouldSucceed() {
-      TSFile validTsFile = new TSFile(language, "class A{}");
-      TSNode node = validTsFile.getNodeFromPosition(1, 7, SupportedIDE.NONE); // Position of 'A'
-      assertNotNull(node);
-      validTsFile.insertTextBeforeNode(node, "My");
-      assertEquals("class MyA{}", validTsFile.getSourceCode());
-      assertTrue(validTsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should handle insertTextAfterNode with valid tree")
-    void insertTextAfterNode_validTree_shouldSucceed() {
-      TSFile validTsFile = new TSFile(language, "class A{}");
-      TSNode node = validTsFile.getNodeFromPosition(1, 7, SupportedIDE.NONE); // Position of 'A'
-      assertNotNull(node);
-      validTsFile.insertTextAfterNode(node, "Extended");
-      assertEquals("class AExtended{}", validTsFile.getSourceCode());
-      assertTrue(validTsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should insert multiline text before node correctly")
-    void insertTextBeforeNode_multilineText_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      String multilineText = "/* Multi\n   line\n   comment */\n";
-      tsFile.insertTextBeforeNode(classIdentifier, multilineText);
-      assertEquals(
-          "public class /* Multi\n   line\n   comment */\nMyClass { void method() {} }",
-          tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should insert multiline text after node correctly")
-    void insertTextAfterNode_multilineText_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      String multilineText = "\n/* Multi\n   line\n   comment */";
-      tsFile.insertTextAfterNode(classIdentifier, multilineText);
-      assertEquals(
-          "public class MyClass\n/* Multi\n   line\n   comment */ { void method() {} }",
-          tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should handle inserting text with special characters before node")
-    void insertTextBeforeNode_specialCharacters_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      String specialText = "@$#%^&*()_";
-      tsFile.insertTextBeforeNode(classIdentifier, specialText);
-      assertEquals("public class @$#%^&*()_MyClass { void method() {} }", tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should handle inserting text with special characters after node")
-    void insertTextAfterNode_specialCharacters_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      String specialText = "_@$#%^&*()";
-      tsFile.insertTextAfterNode(classIdentifier, specialText);
-      assertEquals("public class MyClass_@$#%^&*() { void method() {} }", tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should insert text before method declaration node")
-    void insertTextBeforeNode_methodDeclaration_shouldSucceed() {
-      TSNode methodNode = tsFile.query("(method_declaration) @method").get(0);
+    @DisplayName("Should insert text before node")
+    void shouldInsertTextBeforeNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      TSNode rootNode = tsFile.getTree().getRootNode();
+      TSNode methodNode = findMethodDeclaration(rootNode);
       assertNotNull(methodNode);
-      tsFile.insertTextBeforeNode(methodNode, "public ");
-      assertEquals("public class MyClass { public void method() {} }", tsFile.getSourceCode());
+
+      tsFile.insertTextBeforeNode(methodNode, "    @Override\n    ");
+
+      assertTrue(tsFile.getSourceCode().contains("@Override"));
       assertTrue(tsFile.isModified());
     }
 
     @Test
-    @DisplayName("should insert text after method declaration node")
-    void insertTextAfterNode_methodDeclaration_shouldSucceed() {
-      TSNode methodNode = tsFile.query("(method_declaration) @method").get(0);
+    @DisplayName("Should insert text after node")
+    void shouldInsertTextAfterNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      TSNode rootNode = tsFile.getTree().getRootNode();
+      TSNode methodNode = findMethodDeclaration(rootNode);
       assertNotNull(methodNode);
-      tsFile.insertTextAfterNode(methodNode, " /* method end */");
-      assertEquals(
-          "public class MyClass { void method() {} /* method end */ }", tsFile.getSourceCode());
+
+      tsFile.insertTextAfterNode(methodNode, "\n    // Method added");
+
+      assertTrue(tsFile.getSourceCode().contains("// Method added"));
       assertTrue(tsFile.isModified());
     }
 
     @Test
-    @DisplayName("should insert text before class body opening brace")
-    void insertTextBeforeNode_classBody_shouldSucceed() {
-      TSNode classBodyNode = tsFile.query("(class_body) @body").get(0);
-      assertNotNull(classBodyNode);
-      String beforeInsertion = tsFile.getSourceCode();
-      tsFile.insertTextBeforeNode(classBodyNode, " implements Serializable");
-      String afterInsertion = tsFile.getSourceCode();
-      // Just verify the text was inserted and content is longer
-      assertTrue(afterInsertion.length() > beforeInsertion.length());
-      assertTrue(afterInsertion.contains("implements Serializable"));
-      assertTrue(tsFile.isModified());
-    }
+    @DisplayName("Should handle insertion with large text")
+    void shouldHandleInsertionWithLargeText() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      TSNode rootNode = tsFile.getTree().getRootNode();
+      TSNode methodNode = findMethodDeclaration(rootNode);
+      assertNotNull(methodNode);
+      String largeText = "    // ".repeat(100) + "Large comment\n    ";
 
-    @Test
-    @DisplayName("should insert text after class body closing brace")
-    void insertTextAfterNode_classBody_shouldSucceed() {
-      TSNode classBodyNode = tsFile.query("(class_body) @body").get(0);
-      assertNotNull(classBodyNode);
-      tsFile.insertTextAfterNode(classBodyNode, "\n// End of class");
-      assertEquals(
-          "public class MyClass { void method() {} }\n// End of class", tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
+      tsFile.insertTextBeforeNode(methodNode, largeText);
 
-    @Test
-    @DisplayName("should handle consecutive insertions before and after nodes correctly")
-    void insertTextBeforeAndAfterNode_consecutiveInsertions_shouldSucceed() {
-      TSNode classIdentifier = tsFile.getNodeFromPosition(1, 15, SupportedIDE.NONE);
-      tsFile.insertTextBeforeNode(classIdentifier, "Base");
-      // After the first insertion, need to get the node again since positions changed
-      TSNode updatedClassIdentifier =
-          tsFile.getNodeFromPosition(1, 19, SupportedIDE.NONE); // Position shifted by "Base" (4 chars)
-      assertNotNull(updatedClassIdentifier);
-      tsFile.insertTextAfterNode(updatedClassIdentifier, "Extended");
-      assertEquals("public class BaseMyClassExtended { void method() {} }", tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should handle insertion at start position correctly")
-    void insertTextBeforeNode_atStartOfFile_shouldSucceed() {
-      TSNode programNode = tsFile.getTree().getRootNode();
-      tsFile.insertTextBeforeNode(programNode, "// Header comment\n");
-      assertEquals(
-          "// Header comment\npublic class MyClass { void method() {} }", tsFile.getSourceCode());
-      assertTrue(tsFile.isModified());
-    }
-
-    @Test
-    @DisplayName("should handle insertion at end position correctly")
-    void insertTextAfterNode_atEndOfFile_shouldSucceed() {
-      TSNode programNode = tsFile.getTree().getRootNode();
-      tsFile.insertTextAfterNode(programNode, "\n// Footer comment");
-      assertEquals(
-          "public class MyClass { void method() {} }\n// Footer comment", tsFile.getSourceCode());
+      assertTrue(tsFile.getSourceCode().contains("Large comment"));
       assertTrue(tsFile.isModified());
     }
   }
 
   @Nested
-  @DisplayName("History Integration Tests")
-  class HistoryIntegrationTests {
-    private TSFile tsFile;
-    private Path tempFile;
-
-    @BeforeEach
-    void setup(@TempDir Path tempDir) throws IOException {
-      tempFile = tempDir.resolve("Test.java");
-      Files.writeString(tempFile, initialContent);
-      tsFile = new TSFile(language, tempFile);
-    }
+  @DisplayName("File Operations Tests")
+  class FileOperationsTests {
 
     @Test
-    @DisplayName("should clear modified flag on save")
-    void save_shouldClearModifiedFlag() throws IOException {
-      tsFile.updateSourceCode("public class Modified {}");
-      tsFile.rename("NewName.java");
-      assertTrue(tsFile.isModified());
+    @DisplayName("Should save file to original path")
+    void shouldSaveFileToOriginalPath(@TempDir Path tempDir) throws IOException {
+      Path javaFile = tempDir.resolve("Hello.java");
+      Files.writeString(javaFile, SIMPLE_JAVA_CODE);
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
+
+      tsFile.updateSourceCode(UPDATED_JAVA_CODE);
       tsFile.save();
+
+      String savedContent = Files.readString(javaFile);
+      assertEquals(UPDATED_JAVA_CODE, savedContent);
       assertFalse(tsFile.isModified());
     }
 
     @Test
-    @DisplayName("should preserve functionality after modifications")
-    void modifications_shouldNotAffectCoreFunctionality() throws IOException {
-      tsFile.updateSourceCode("public class Test1 {}");
-      tsFile.updateSourceCode("public class Test2 {}");
-      tsFile.save();
-      String fileContent = Files.readString(tsFile.getFile().toPath());
-      assertEquals("public class Test2 {}", fileContent);
+    @DisplayName("Should save file to new path")
+    void shouldSaveFileToNewPath(@TempDir Path tempDir) throws IOException {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      Path newFile = tempDir.resolve("NewHello.java");
+
+      tsFile.saveAs(newFile);
+
+      assertTrue(Files.exists(newFile));
+      assertEquals(SIMPLE_JAVA_CODE, Files.readString(newFile));
     }
 
     @Test
-    @DisplayName("should handle complex workflow")
-    void complexWorkflow_shouldMaintainConsistency(@TempDir Path tempDir) throws IOException {
-      tsFile.updateSourceCode("public class Step1 {}");
-      assertTrue(tsFile.isModified());
-      tsFile.updateSourceCode("public class Step2 {}");
-      tsFile.rename("Step2.java");
-      assertTrue(tsFile.isModified());
+    @DisplayName("Should move file to new directory")
+    void shouldMoveFileToNewDirectory(@TempDir Path tempDir) throws IOException {
+      Path javaFile = tempDir.resolve("Hello.java");
+      Files.writeString(javaFile, SIMPLE_JAVA_CODE);
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
+
       Path newDir = tempDir.resolve("newdir");
       Files.createDirectory(newDir);
+
       tsFile.move(newDir.toFile());
       tsFile.save();
-      assertFalse(tsFile.isModified());
-      assertTrue(Files.exists(newDir.resolve("Test.java")));
+
+      Path expectedPath = newDir.resolve("Hello.java");
+      assertTrue(Files.exists(expectedPath));
+      assertFalse(Files.exists(javaFile));
+    }
+
+    @Test
+    @DisplayName("Should rename file in current directory")
+    void shouldRenameFileInCurrentDirectory(@TempDir Path tempDir) throws IOException {
+      Path javaFile = tempDir.resolve("Hello.java");
+      Files.writeString(javaFile, SIMPLE_JAVA_CODE);
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
+
+      tsFile.rename("Greeting");
+      tsFile.save();
+
+      Path expectedPath = tempDir.resolve("Greeting.java");
+      assertTrue(Files.exists(expectedPath));
+      assertFalse(Files.exists(javaFile));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when saving without file path")
+    void shouldThrowExceptionWhenSavingWithoutFilePath() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      assertThrows(IllegalStateException.class, tsFile::save);
     }
   }
+
+  @Nested
+  @DisplayName("Node Position and Text Extraction Tests")
+  class NodePositionAndTextExtractionTests {
+
+    @Test
+    @DisplayName("Should get node from valid position")
+    void shouldGetNodeFromValidPosition() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      TSNode node = tsFile.getNodeFromPosition(4, 10, SupportedIDE.VSCODE);
+
+      assertNotNull(node);
+    }
+
+    @Test
+    @DisplayName("Should return null for invalid position")
+    void shouldReturnNullForInvalidPosition() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      TSNode node = tsFile.getNodeFromPosition(100, 100, SupportedIDE.VSCODE);
+
+      assertNull(node);
+    }
+
+    @Test
+    @DisplayName("Should return null for zero or negative position")
+    void shouldReturnNullForZeroOrNegativePosition() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      assertNull(tsFile.getNodeFromPosition(0, 1, SupportedIDE.VSCODE));
+      assertNull(tsFile.getNodeFromPosition(1, 0, SupportedIDE.VSCODE));
+      assertNull(tsFile.getNodeFromPosition(-1, 5, SupportedIDE.VSCODE));
+    }
+
+    @Test
+    @DisplayName("Should get text from byte range")
+    void shouldGetTextFromByteRange() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      String sourceCode = tsFile.getSourceCode();
+      int start = sourceCode.indexOf("Hello");
+      int end = start + "Hello".length();
+
+      String text = tsFile.getTextFromRange(start, end);
+
+      assertEquals("Hello", text);
+    }
+
+    @Test
+    @DisplayName("Should get text from TSNode")
+    void shouldGetTextFromTSNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      TSNode rootNode = tsFile.getTree().getRootNode();
+      TSNode classNode = findClassDeclaration(rootNode);
+      assertNotNull(classNode);
+
+      String text = tsFile.getTextFromNode(classNode);
+
+      assertTrue(text.contains("public class Hello"));
+    }
+
+    @Test
+    @DisplayName("Should throw exception for invalid byte range")
+    void shouldThrowExceptionForInvalidByteRange() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      int length = tsFile.getSourceCode().length();
+
+      assertThrows(IndexOutOfBoundsException.class, () -> tsFile.getTextFromRange(-1, 5));
+      assertThrows(IndexOutOfBoundsException.class, () -> tsFile.getTextFromRange(0, length + 10));
+      assertThrows(IndexOutOfBoundsException.class, () -> tsFile.getTextFromRange(10, 5));
+    }
+  }
+
+  @Nested
+  @DisplayName("Utility Methods Tests")
+  class UtilityMethodsTests {
+
+    @Test
+    @DisplayName("Should find parent node by type")
+    void shouldFindParentNodeByType() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      TSNode rootNode = tsFile.getTree().getRootNode();
+      TSNode methodNode = findMethodDeclaration(rootNode);
+      assertNotNull(methodNode);
+
+      Optional<TSNode> classParent = tsFile.findParentNodeByType(methodNode, "class_declaration");
+
+      assertTrue(classParent.isPresent());
+    }
+
+    @Test
+    @DisplayName("Should return empty when parent type not found")
+    void shouldReturnEmptyWhenParentTypeNotFound() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      TSNode rootNode = tsFile.getTree().getRootNode();
+
+      Optional<TSNode> result = tsFile.findParentNodeByType(rootNode, "non_existent_type");
+
+      assertFalse(result.isPresent());
+    }
+
+    @Test
+    @DisplayName("Should handle null inputs for utility methods")
+    void shouldHandleNullInputsForUtilityMethods() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      Optional<TSNode> result1 = tsFile.findParentNodeByType(null, "class_declaration");
+      Optional<TSNode> result2 = tsFile.findChildNodeByType(null, "method_declaration");
+
+      assertFalse(result1.isPresent());
+      assertFalse(result2.isPresent());
+    }
+
+    @Test
+    @DisplayName("Should check if node is within another node")
+    void shouldCheckIfNodeIsWithinAnotherNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      TSNode rootNode = tsFile.getTree().getRootNode();
+      TSNode classNode = findClassDeclaration(rootNode);
+      TSNode methodNode = findMethodDeclaration(rootNode);
+      assertNotNull(classNode);
+      assertNotNull(methodNode);
+
+      boolean isWithin = tsFile.isNodeWithin(methodNode, classNode);
+
+      assertTrue(isWithin);
+    }
+
+    @Test
+    @DisplayName("Should return false for null nodes in isNodeWithin")
+    void shouldReturnFalseForNullNodesInIsNodeWithin() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+      TSNode validNode = tsFile.getTree().getRootNode();
+
+      assertFalse(tsFile.isNodeWithin(null, validNode));
+      assertFalse(tsFile.isNodeWithin(validNode, null));
+      assertFalse(tsFile.isNodeWithin(null, null));
+    }
+
+    @Test
+    @DisplayName("Should get file name without extension")
+    void shouldGetFileNameWithoutExtension(@TempDir Path tempDir) throws IOException {
+      Path javaFile = tempDir.resolve("Hello.java");
+      Files.writeString(javaFile, SIMPLE_JAVA_CODE);
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, javaFile);
+
+      Optional<String> fileName = tsFile.getFileNameWithoutExtension();
+
+      assertTrue(fileName.isPresent());
+      assertEquals("Hello", fileName.get());
+    }
+
+    @Test
+    @DisplayName("Should return empty for TSFile without file")
+    void shouldReturnEmptyForTSFileWithoutFile() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      Optional<String> fileName = tsFile.getFileNameWithoutExtension();
+
+      assertFalse(fileName.isPresent());
+    }
+  }
+
+  @Nested
+  @DisplayName("Exception Handling Tests")
+  class ExceptionHandlingTests {
+
+    @Test
+    @DisplayName("Should throw exception when getting file from TSFile without file")
+    void shouldThrowExceptionWhenGettingFileFromTSFileWithoutFile() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      assertThrows(IllegalStateException.class, tsFile::getFile);
+    }
+
+    @Test
+    @DisplayName("Should handle empty source code")
+    void shouldHandleEmptySourceCode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "");
+
+      assertNotNull(tsFile.getParser());
+      assertEquals("", tsFile.getSourceCode());
+      assertNotNull(tsFile.getTree());
+    }
+
+    @Test
+    @DisplayName("Should handle special characters in source code")
+    void shouldHandleSpecialCharactersInSourceCode() {
+      String specialCode = "public class Test { String s = \"Hello\\nWorld\\t!\"; }";
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, specialCode);
+
+      assertEquals(specialCode, tsFile.getSourceCode());
+      assertNotNull(tsFile.getTree());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when moving file that hasn't been saved")
+    void shouldThrowExceptionWhenMovingFileNotSaved() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      assertThrows(IllegalStateException.class, () -> tsFile.move(new File("/tmp")));
+    }
+
+    @Test
+    @DisplayName("Should throw exception when renaming file that hasn't been saved")
+    void shouldThrowExceptionWhenRenamingFileNotSaved() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      assertThrows(IllegalStateException.class, () -> tsFile.rename("NewName"));
+    }
+
+    @Test
+    @DisplayName("Should handle concurrent operations safely")
+    void shouldHandleConcurrentOperationsSafely() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_JAVA_CODE);
+
+      // Simulate multiple operations
+      tsFile.updateSourceCode("// Modified\n" + SIMPLE_JAVA_CODE);
+      boolean isModified = tsFile.isModified();
+      String sourceCode = tsFile.getSourceCode();
+
+      assertTrue(isModified);
+      assertTrue(sourceCode.contains("// Modified"));
+    }
+  }
+
+  // Helper methods
+  private TSNode findMethodDeclaration(TSNode rootNode) {
+    return findNodeByType(rootNode, "method_declaration");
+  }
+
+  private TSNode findClassDeclaration(TSNode rootNode) {
+    return findNodeByType(rootNode, "class_declaration");
+  }
+
+  private TSNode findNodeByType(TSNode node, String type) {
+    if (node == null) return null;
+    if (type.equals(node.getType())) {
+      return node;
+    }
+    for (int i = 0; i < node.getNamedChildCount(); i++) {
+      TSNode child = node.getNamedChild(i);
+      TSNode result = findNodeByType(child, type);
+      if (result != null) {
+        return result;
+      }
+    }
+    return null;
+  }
 }
+

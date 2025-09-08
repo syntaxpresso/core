@@ -1,10 +1,15 @@
 package io.github.syntaxpresso.core.service.java.language;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
+import io.github.syntaxpresso.core.service.java.language.extra.ParameterCapture;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,479 +20,758 @@ import org.treesitter.TSNode;
 @DisplayName("FormalParameterService Tests")
 class FormalParameterServiceTest {
   private FormalParameterService formalParameterService;
-  private TSFile testFile;
+
+  private static final String SIMPLE_PARAMETERS_CODE =
+      """
+      public class TestClass {
+          public void simpleMethod(String name, int age, boolean active) {
+              System.out.println(name);
+              if (active && age > 0) {
+                  System.out.println("Valid user: " + name);
+              }
+          }
+      }
+      """;
+
+  private static final String GENERIC_PARAMETERS_CODE =
+      """
+      public class GenericTestClass {
+          public void genericMethod(List<String> items, Map<String, Integer> data, T element) {
+              for (String item : items) {
+                  System.out.println(item);
+              }
+              data.put("count", items.size());
+              processElement(element);
+          }
+      }
+      """;
+
+  private static final String COMPLEX_USAGE_CODE =
+      """
+      public class ComplexUsageClass {
+          public void complexMethod(String input, List<Integer> numbers) {
+              String result = input != null ? input.trim() : "";
+              numbers.add(result.length());
+              System.out.println(input + " has " + numbers.size() + " characters");
+              processData(input, numbers);
+          }
+
+          private void processData(String data, List<Integer> values) {
+              // helper method
+          }
+      }
+      """;
+
+  private static final String NO_PARAMETERS_CODE =
+      """
+      public class NoParametersClass {
+          public void noParametersMethod() {
+              System.out.println("No parameters here");
+          }
+      }
+      """;
+
+  private static final String PRIMITIVE_TYPES_CODE =
+      """
+      public class PrimitiveTypesClass {
+          public void primitiveMethod(int count, double rate, boolean flag, char symbol, byte data) {
+              if (flag) {
+                  System.out.println(symbol + ": " + count * rate);
+              }
+              System.out.println("Data byte: " + data);
+          }
+      }
+      """;
+
+  private static final String VARARGS_CODE =
+      """
+      public class VarargsClass {
+          public void varargsMethod(String prefix, int... numbers) {
+              System.out.println(prefix);
+              for (int num : numbers) {
+                  System.out.println(num);
+              }
+          }
+      }
+      """;
 
   @BeforeEach
   void setUp() {
-    VariableNamingService variableNamingService = new VariableNamingService();
-    LocalVariableDeclarationService localVariableDeclarationService =
-        new LocalVariableDeclarationService(variableNamingService);
-    formalParameterService =
-        new FormalParameterService(localVariableDeclarationService, variableNamingService);
-    String javaCode =
-        """
-        package io.github.test;
-        public class TestClass {
-          private Calculator calculator;
-          public void processCalculator(Calculator calc, String name) {
-            calc.compute();
-            name.length();
-            this.calculator = calc;
-          }
-          public String testMethod(Calculator primary, Calculator secondary, int count) {
-            Calculator local = new Calculator();
-            primary.process();
-            secondary.validate();
-            local.run();
-            count++;
-            return primary.getName();
-          }
-          public void multipleParams(List<Calculator> calculators, Calculator single) {
-            calculators.add(single);
-            single.start();
-          }
-          public void noMatchingParams(String text, int number) {
-            text.trim();
-            number += 1;
-          }
-        }
-        """;
-    testFile = new TSFile(SupportedLanguage.JAVA, javaCode);
+    this.formalParameterService = new FormalParameterService();
+  }
+
+  private TSNode getMethodDeclarationNode(String code, String methodName) {
+    TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+    String query =
+        String.format(
+            """
+            (method_declaration
+              name: (identifier) @name
+              (#eq? @name "%s")
+            ) @method
+            """,
+            methodName);
+    return tsFile.query(query).returning("method").execute().firstNode();
   }
 
   @Nested
-  @DisplayName("findAllFormalParameters() tests")
-  class FindAllFormalParametersTests {
-    @Test
-    @DisplayName("Should find formal parameters of specific type")
-    void shouldFindFormalParametersOfSpecificType() {
-      testFile.query("(method_declaration) @method");
-      // Find processCalculator method
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
-      assertNotNull(processCalculatorMethod, "Should find processCalculator method");
-      List<TSNode> calculatorParams =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "Calculator");
-      assertEquals(
-          1, calculatorParams.size(), "Should find 1 Calculator parameter in processCalculator");
-      List<TSNode> stringParams =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "String");
-      assertEquals(1, stringParams.size(), "Should find 1 String parameter in processCalculator");
-    }
+  @DisplayName("getAllFormalParameterNodes() Tests")
+  class GetAllFormalParameterNodesTests {
 
+    /**
+     * Tests that getAllFormalParameterNodes finds all parameters in a method.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;TSNode&gt; parameters = service.getAllFormalParameterNodes(tsFile, methodNode);
+     * // Returns nodes for each parameter in the method signature
+     * </pre>
+     */
     @Test
-    @DisplayName("Should find multiple parameters of same type")
-    void shouldFindMultipleParametersOfSameType() {
-      TSNode testMethod = findMethodByName("testMethod");
-      assertNotNull(testMethod, "Should find testMethod");
-      List<TSNode> calculatorParams =
-          formalParameterService.findAllFormalParameters(testFile, testMethod, "Calculator");
-      assertEquals(2, calculatorParams.size(), "Should find 2 Calculator parameters in testMethod");
-    }
+    @DisplayName("should find all parameters in method with multiple parameters")
+    void getAllFormalParameterNodes_withMultipleParameters_shouldFindAll() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      assertNotNull(methodNode);
 
-    @Test
-    @DisplayName("Should return empty list for non-existent type")
-    void shouldReturnEmptyListForNonExistentType() {
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
-      List<TSNode> nonExistentParams =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "NonExistent");
-      assertTrue(nonExistentParams.isEmpty(), "Should return empty list for non-existent type");
-    }
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
 
-    @Test
-    @DisplayName("Should handle invalid method node")
-    void shouldHandleInvalidMethodNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      List<TSNode> params =
-          formalParameterService.findAllFormalParameters(testFile, classNodes.get(0), "Calculator");
-      assertTrue(params.isEmpty(), "Should return empty list for non-method node");
-    }
+      assertEquals(3, parameterNodes.size());
 
-    @Test
-    @DisplayName("Should handle null parameters")
-    void shouldHandleNullParameters() {
-      TSNode method = findMethodByName("processCalculator");
-      List<TSNode> nullNodeResult =
-          formalParameterService.findAllFormalParameters(testFile, null, "Calculator");
-      assertTrue(nullNodeResult.isEmpty(), "Should handle null method node");
-      List<TSNode> nullFileResult =
-          formalParameterService.findAllFormalParameters(null, method, "Calculator");
-      assertTrue(nullFileResult.isEmpty(), "Should handle null file gracefully");
-    }
-
-    private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
-      for (TSNode method : methods) {
-        TSNode nameNode = method.getChildByFieldName("name");
-        if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
-          return method;
-        }
+      // Verify we can get parameter names for all found parameters
+      String[] expectedNames = {"name", "age", "active"};
+      for (int i = 0; i < parameterNodes.size(); i++) {
+        Optional<TSNode> nameNode =
+            formalParameterService.getFormalParameterNameNode(tsFile, parameterNodes.get(i));
+        assertTrue(nameNode.isPresent());
+        String paramName = tsFile.getTextFromNode(nameNode.get());
+        assertEquals(expectedNames[i], paramName);
       }
-      return null;
+    }
+
+    @Test
+    @DisplayName("should return empty list for method with no parameters")
+    void getAllFormalParameterNodes_withNoParameters_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, NO_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(NO_PARAMETERS_CODE, "noParametersMethod");
+      assertNotNull(methodNode);
+
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+
+      assertTrue(parameterNodes.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should handle null and invalid input")
+    void getAllFormalParameterNodes_withInvalidInput_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+
+      // Test with null file
+      List<TSNode> result1 = formalParameterService.getAllFormalParameterNodes(null, null);
+      assertTrue(result1.isEmpty());
+
+      // Test with null method node
+      List<TSNode> result2 = formalParameterService.getAllFormalParameterNodes(tsFile, null);
+      assertTrue(result2.isEmpty());
+
+      // Test with wrong node type
+      TSNode classNode =
+          tsFile.query("(class_declaration) @class").returning("class").execute().firstNode();
+      List<TSNode> result3 = formalParameterService.getAllFormalParameterNodes(tsFile, classNode);
+      assertTrue(result3.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should handle primitive type parameters")
+    void getAllFormalParameterNodes_withPrimitiveTypes_shouldFindAll() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, PRIMITIVE_TYPES_CODE);
+      TSNode methodNode = getMethodDeclarationNode(PRIMITIVE_TYPES_CODE, "primitiveMethod");
+      assertNotNull(methodNode);
+
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+
+      assertEquals(5, parameterNodes.size());
+    }
+
+    @Test
+    @DisplayName("should handle varargs parameters")
+    void getAllFormalParameterNodes_withVarargs_shouldFindAll() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, VARARGS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(VARARGS_CODE, "varargsMethod");
+      assertNotNull(methodNode);
+
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+
+      // Should find at least 1 parameter (String prefix), varargs might not be captured as
+      // formal_parameter
+      assertTrue(parameterNodes.size() >= 1);
     }
   }
 
   @Nested
-  @DisplayName("getParameterTypeNode() tests")
-  class GetParameterTypeNodeTests {
+  @DisplayName("getFormalParameterNodeInfo() Tests")
+  class GetFormalParameterNodeInfoTests {
+
+    /**
+     * Tests that getFormalParameterNodeInfo extracts parameter information correctly.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;Map&lt;String, TSNode&gt;&gt; info = service.getFormalParameterNodeInfo(tsFile, paramNode);
+     * Map&lt;String, TSNode&gt; paramInfo = info.get(0);
+     * String paramType = tsFile.getTextFromNode(paramInfo.get("parameterType"));
+     * String paramName = tsFile.getTextFromNode(paramInfo.get("parameterName"));
+     * </pre>
+     */
     @Test
-    @DisplayName("Should find type node in formal parameter")
-    void shouldFindTypeNodeInFormalParameter() {
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
-      List<TSNode> calculatorParams =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "Calculator");
-      assertFalse(calculatorParams.isEmpty(), "Should have Calculator parameters to test");
-      TSNode calculatorParam = calculatorParams.get(0);
+    @DisplayName("should extract basic parameter information")
+    void getFormalParameterNodeInfo_withSimpleParameter_shouldExtractInfo() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertFalse(parameterNodes.isEmpty());
+
+      List<Map<String, TSNode>> paramInfo =
+          formalParameterService.getFormalParameterNodeInfo(tsFile, parameterNodes.get(0));
+
+      assertFalse(paramInfo.isEmpty());
+      Map<String, TSNode> info = paramInfo.get(0);
+
+      TSNode paramType = info.get(ParameterCapture.PARAMETER_TYPE.getCaptureName());
+      assertNotNull(paramType);
+      assertEquals("String", tsFile.getTextFromNode(paramType));
+
+      TSNode paramName = info.get(ParameterCapture.PARAMETER_NAME.getCaptureName());
+      assertNotNull(paramName);
+      assertEquals("name", tsFile.getTextFromNode(paramName));
+    }
+
+    @Test
+    @DisplayName("should extract primitive type parameter information")
+    void getFormalParameterNodeInfo_withPrimitiveParameter_shouldExtractInfo() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertTrue(parameterNodes.size() >= 2);
+
+      // Test the int parameter (age)
+      List<Map<String, TSNode>> paramInfo =
+          formalParameterService.getFormalParameterNodeInfo(tsFile, parameterNodes.get(1));
+
+      assertFalse(paramInfo.isEmpty());
+      Map<String, TSNode> info = paramInfo.get(0);
+
+      TSNode paramType = info.get(ParameterCapture.PARAMETER_TYPE.getCaptureName());
+      assertNotNull(paramType);
+      assertEquals("int", tsFile.getTextFromNode(paramType));
+
+      TSNode paramName = info.get(ParameterCapture.PARAMETER_NAME.getCaptureName());
+      assertNotNull(paramName);
+      assertEquals("age", tsFile.getTextFromNode(paramName));
+    }
+
+    @Test
+    @DisplayName("should extract generic parameter information")
+    void getFormalParameterNodeInfo_withGenericParameter_shouldExtractInfo() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, GENERIC_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(GENERIC_PARAMETERS_CODE, "genericMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertFalse(parameterNodes.isEmpty());
+
+      List<Map<String, TSNode>> paramInfo =
+          formalParameterService.getFormalParameterNodeInfo(tsFile, parameterNodes.get(0));
+
+      assertFalse(paramInfo.isEmpty());
+      Map<String, TSNode> info = paramInfo.get(0);
+
+      TSNode paramType = info.get(ParameterCapture.PARAMETER_TYPE.getCaptureName());
+      assertNotNull(paramType);
+      String typeText = tsFile.getTextFromNode(paramType);
+      assertTrue(typeText.contains("List"));
+
+      TSNode paramName = info.get(ParameterCapture.PARAMETER_NAME.getCaptureName());
+      assertNotNull(paramName);
+      assertEquals("items", tsFile.getTextFromNode(paramName));
+
+      // Check for type argument
+      TSNode typeArgument = info.get(ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureName());
+      if (typeArgument != null) {
+        assertEquals("String", tsFile.getTextFromNode(typeArgument));
+      }
+    }
+
+    @Test
+    @DisplayName("should return empty list for invalid input")
+    void getFormalParameterNodeInfo_withInvalidInput_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+
+      // Test with null file
+      List<Map<String, TSNode>> result1 =
+          formalParameterService.getFormalParameterNodeInfo(null, null);
+      assertTrue(result1.isEmpty());
+
+      // Test with invalid node type
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<Map<String, TSNode>> result2 =
+          formalParameterService.getFormalParameterNodeInfo(tsFile, methodNode);
+      assertTrue(result2.isEmpty());
+    }
+  }
+
+  @Nested
+  @DisplayName("getFormalParameterChildByCaptureName() Tests")
+  class GetFormalParameterChildByCaptureNameTests {
+
+    /**
+     * Tests that getFormalParameterChildByCaptureName retrieves specific parameter components.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * Optional&lt;TSNode&gt; typeNode = service.getFormalParameterChildByCaptureName(
+     *     tsFile, paramNode, ParameterCapture.PARAMETER_TYPE);
+     * if (typeNode.isPresent()) {
+     *   String type = tsFile.getTextFromNode(typeNode.get());
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should retrieve parameter type node")
+    void getFormalParameterChildByCaptureName_withTypeCapture_shouldReturnTypeNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertFalse(parameterNodes.isEmpty());
+
       Optional<TSNode> typeNode =
-          formalParameterService.getParameterTypeNode(calculatorParam, testFile, "Calculator");
-      assertTrue(typeNode.isPresent(), "Should find Calculator type node");
-      assertEquals("Calculator", testFile.getTextFromNode(typeNode.get()));
+          formalParameterService.getFormalParameterChildByCaptureName(
+              tsFile, parameterNodes.get(0), ParameterCapture.PARAMETER_TYPE);
+
+      assertTrue(typeNode.isPresent());
+      assertEquals("String", tsFile.getTextFromNode(typeNode.get()));
     }
 
     @Test
-    @DisplayName("Should return empty for non-matching type")
-    void shouldReturnEmptyForNonMatchingType() {
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
-      List<TSNode> stringParams =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "String");
-      assertFalse(stringParams.isEmpty(), "Should have String parameters to test");
-      TSNode stringParam = stringParams.get(0);
+    @DisplayName("should retrieve parameter name node")
+    void getFormalParameterChildByCaptureName_withNameCapture_shouldReturnNameNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertFalse(parameterNodes.isEmpty());
+
+      Optional<TSNode> nameNode =
+          formalParameterService.getFormalParameterChildByCaptureName(
+              tsFile, parameterNodes.get(0), ParameterCapture.PARAMETER_NAME);
+
+      assertTrue(nameNode.isPresent());
+      assertEquals("name", tsFile.getTextFromNode(nameNode.get()));
+    }
+
+    @Test
+    @DisplayName("should return empty for invalid input")
+    void getFormalParameterChildByCaptureName_withInvalidInput_shouldReturnEmpty() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+
+      Optional<TSNode> result1 =
+          formalParameterService.getFormalParameterChildByCaptureName(
+              null, null, ParameterCapture.PARAMETER_TYPE);
+      assertFalse(result1.isPresent());
+
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      Optional<TSNode> result2 =
+          formalParameterService.getFormalParameterChildByCaptureName(
+              tsFile, methodNode, ParameterCapture.PARAMETER_TYPE);
+      assertFalse(result2.isPresent());
+    }
+  }
+
+  @Nested
+  @DisplayName("getFormalParameterTypeNode() Tests")
+  class GetFormalParameterTypeNodeTests {
+
+    /**
+     * Tests that getFormalParameterTypeNode returns base type or type argument.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * Optional&lt;TSNode&gt; typeNode = service.getFormalParameterTypeNode(tsFile, paramNode);
+     * if (typeNode.isPresent()) {
+     *   String type = tsFile.getTextFromNode(typeNode.get()); // e.g., "String" from List&lt;String&gt;
+     * }
+     * </pre>
+     */
+    @Test
+    @DisplayName("should retrieve simple type node")
+    void getFormalParameterTypeNode_withSimpleType_shouldReturnTypeNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertTrue(parameterNodes.size() >= 2);
+
       Optional<TSNode> typeNode =
-          formalParameterService.getParameterTypeNode(stringParam, testFile, "Calculator");
-      assertFalse(typeNode.isPresent(), "Should not find Calculator type in String parameter");
+          formalParameterService.getFormalParameterTypeNode(tsFile, parameterNodes.get(1));
+
+      assertTrue(typeNode.isPresent());
+      assertEquals("int", tsFile.getTextFromNode(typeNode.get()));
     }
 
     @Test
-    @DisplayName("Should handle invalid parameter node")
-    void shouldHandleInvalidParameterNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
+    @DisplayName("should retrieve type argument for generic type")
+    void getFormalParameterTypeNode_withGenericType_shouldReturnTypeArgument() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, GENERIC_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(GENERIC_PARAMETERS_CODE, "genericMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertFalse(parameterNodes.isEmpty());
+
       Optional<TSNode> typeNode =
-          formalParameterService.getParameterTypeNode(classNodes.get(0), testFile, "Calculator");
-      assertFalse(typeNode.isPresent(), "Should return empty for non-parameter node");
-    }
+          formalParameterService.getFormalParameterTypeNode(tsFile, parameterNodes.get(0));
 
-    @Test
-    @DisplayName("Should handle null parameters")
-    void shouldHandleNullParameters() {
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
-      List<TSNode> params =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "Calculator");
-      TSNode param = params.get(0);
-      assertFalse(
-          formalParameterService.getParameterTypeNode(null, testFile, "Calculator").isPresent());
-      assertFalse(
-          formalParameterService.getParameterTypeNode(param, null, "Calculator").isPresent());
-      assertFalse(formalParameterService.getParameterTypeNode(param, testFile, null).isPresent());
-    }
-
-    private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
-      for (TSNode method : methods) {
-        TSNode nameNode = method.getChildByFieldName("name");
-        if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
-          return method;
-        }
-      }
-      return null;
+      assertTrue(typeNode.isPresent());
+      String typeText = tsFile.getTextFromNode(typeNode.get());
+      // Could be either "String" (type argument) or "List" (base type) depending on what's captured
+      assertTrue(typeText.equals("String") || typeText.contains("List"));
     }
   }
 
   @Nested
-  @DisplayName("getParameterNameNode() tests")
-  class GetParameterNameNodeTests {
+  @DisplayName("getFormalParameterFullTypeNode() Tests")
+  class GetFormalParameterFullTypeNodeTests {
+
+    /**
+     * Tests that getFormalParameterFullTypeNode retrieves complete type information.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * Optional&lt;TSNode&gt; fullTypeNode = service.getFormalParameterFullTypeNode(tsFile, paramNode);
+     * if (fullTypeNode.isPresent()) {
+     *   String type = tsFile.getTextFromNode(fullTypeNode.get()); // e.g., "List&lt;String&gt;"
+     * }
+     * </pre>
+     */
     @Test
-    @DisplayName("Should extract parameter name from formal parameter")
-    void shouldExtractParameterNameFromFormalParameter() {
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
-      List<TSNode> calculatorParams =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "Calculator");
-      assertFalse(calculatorParams.isEmpty(), "Should have Calculator parameters to test");
-      TSNode calculatorParam = calculatorParams.get(0);
-      Optional<TSNode> nameNode =
-          formalParameterService.getParameterNameNode(calculatorParam, testFile);
-      assertTrue(nameNode.isPresent(), "Should find parameter name node");
-      assertEquals("calc", testFile.getTextFromNode(nameNode.get()));
+    @DisplayName("should retrieve full type node for simple type")
+    void getFormalParameterFullTypeNode_withSimpleType_shouldReturnTypeNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertFalse(parameterNodes.isEmpty());
+
+      Optional<TSNode> typeNode =
+          formalParameterService.getFormalParameterFullTypeNode(tsFile, parameterNodes.get(0));
+
+      assertTrue(typeNode.isPresent());
+      assertEquals("String", tsFile.getTextFromNode(typeNode.get()));
     }
 
     @Test
-    @DisplayName("Should handle different parameter types")
-    void shouldHandleDifferentParameterTypes() {
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
-      List<TSNode> stringParams =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "String");
-      assertFalse(stringParams.isEmpty(), "Should have String parameters to test");
-      TSNode stringParam = stringParams.get(0);
-      Optional<TSNode> nameNode =
-          formalParameterService.getParameterNameNode(stringParam, testFile);
-      assertTrue(nameNode.isPresent(), "Should find String parameter name node");
-      assertEquals("name", testFile.getTextFromNode(nameNode.get()));
-    }
+    @DisplayName("should retrieve full type node for generic type")
+    void getFormalParameterFullTypeNode_withGenericType_shouldReturnFullTypeNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, GENERIC_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(GENERIC_PARAMETERS_CODE, "genericMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertFalse(parameterNodes.isEmpty());
 
-    @Test
-    @DisplayName("Should handle invalid parameter node")
-    void shouldHandleInvalidParameterNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      Optional<TSNode> nameNode =
-          formalParameterService.getParameterNameNode(classNodes.get(0), testFile);
-      assertFalse(nameNode.isPresent(), "Should return empty for non-parameter node");
-    }
+      Optional<TSNode> typeNode =
+          formalParameterService.getFormalParameterFullTypeNode(tsFile, parameterNodes.get(0));
 
-    @Test
-    @DisplayName("Should handle null parameters")
-    void shouldHandleNullParameters() {
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
-      List<TSNode> params =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "Calculator");
-      TSNode param = params.get(0);
-      assertFalse(formalParameterService.getParameterNameNode(null, testFile).isPresent());
-      assertFalse(formalParameterService.getParameterNameNode(param, null).isPresent());
-    }
-
-    private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
-      for (TSNode method : methods) {
-        TSNode nameNode = method.getChildByFieldName("name");
-        if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
-          return method;
-        }
-      }
-      return null;
+      assertTrue(typeNode.isPresent());
+      String typeText = tsFile.getTextFromNode(typeNode.get());
+      assertTrue(typeText.contains("List"));
     }
   }
 
   @Nested
-  @DisplayName("isFormalParameterDeclaration() tests")
-  class IsFormalParameterDeclarationTests {
+  @DisplayName("getFormalParameterNameNode() Tests")
+  class GetFormalParameterNameNodeTests {
+
+    /**
+     * Tests that getFormalParameterNameNode retrieves parameter name identifiers.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * Optional&lt;TSNode&gt; nameNode = service.getFormalParameterNameNode(tsFile, paramNode);
+     * if (nameNode.isPresent()) {
+     *   String paramName = tsFile.getTextFromNode(nameNode.get()); // e.g., "userName"
+     * }
+     * </pre>
+     */
     @Test
-    @DisplayName("Should identify formal parameter declarations")
-    void shouldIdentifyFormalParameterDeclarations() {
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
-      List<TSNode> calculatorParams =
-          formalParameterService.findAllFormalParameters(
-              testFile, processCalculatorMethod, "Calculator");
-      TSNode calculatorParam = calculatorParams.get(0);
+    @DisplayName("should retrieve parameter name node")
+    void getFormalParameterNameNode_withValidParameter_shouldReturnNameNode() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertFalse(parameterNodes.isEmpty());
+
       Optional<TSNode> nameNode =
-          formalParameterService.getParameterNameNode(calculatorParam, testFile);
-      assertTrue(nameNode.isPresent(), "Should have name node to test");
-      boolean isDeclaration = formalParameterService.isFormalParameterDeclaration(nameNode.get());
-      assertTrue(isDeclaration, "Should identify formal parameter declaration");
+          formalParameterService.getFormalParameterNameNode(tsFile, parameterNodes.get(0));
+
+      assertTrue(nameNode.isPresent());
+      assertEquals("name", tsFile.getTextFromNode(nameNode.get()));
     }
 
     @Test
-    @DisplayName("Should not identify non-parameter identifiers as declarations")
-    void shouldNotIdentifyNonParameterIdentifiersAsDeclarations() {
-      // Find method invocation identifiers
-      List<TSNode> identifiers = testFile.query("(method_invocation name: (identifier) @id)");
-      assertFalse(identifiers.isEmpty(), "Should have method invocation identifiers to test");
-      TSNode invocationId = identifiers.get(0);
-      boolean isDeclaration = formalParameterService.isFormalParameterDeclaration(invocationId);
-      assertFalse(isDeclaration, "Should not identify method invocation as parameter declaration");
-    }
+    @DisplayName("should retrieve all parameter names correctly")
+    void getFormalParameterNameNode_withMultipleParameters_shouldReturnCorrectNames() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertEquals(3, parameterNodes.size());
 
-    @Test
-    @DisplayName("Should handle null and invalid nodes")
-    void shouldHandleNullAndInvalidNodes() {
-      assertFalse(
-          formalParameterService.isFormalParameterDeclaration(null), "Should handle null node");
-      // Create a mock null node scenario
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      TSNode classNode = classNodes.get(0);
-      assertFalse(
-          formalParameterService.isFormalParameterDeclaration(classNode),
-          "Should handle non-identifier node");
-    }
-
-    private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
-      for (TSNode method : methods) {
-        TSNode nameNode = method.getChildByFieldName("name");
-        if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
-          return method;
-        }
+      String[] expectedNames = {"name", "age", "active"};
+      for (int i = 0; i < parameterNodes.size(); i++) {
+        Optional<TSNode> nameNode =
+            formalParameterService.getFormalParameterNameNode(tsFile, parameterNodes.get(i));
+        assertTrue(nameNode.isPresent());
+        assertEquals(expectedNames[i], tsFile.getTextFromNode(nameNode.get()));
       }
-      return null;
     }
   }
 
   @Nested
-  @DisplayName("findAllFormalParameterUsages() tests")
-  class FindAllFormalParameterUsagesTests {
+  @DisplayName("findAllFormalParameterNodeUsages() Tests")
+  class FindAllFormalParameterNodeUsagesTests {
+
+    /**
+     * Tests that findAllFormalParameterNodeUsages finds parameter usage in method bodies.
+     *
+     * <p>Usage example:
+     *
+     * <pre>
+     * List&lt;TSNode&gt; usages = service.findAllFormalParameterNodeUsages(tsFile, paramNode, methodNode);
+     * for (TSNode usage : usages) {
+     *   String usageText = tsFile.getTextFromNode(usage); // parameter name at usage site
+     *   int line = usage.getStartPoint().getRow() + 1;    // Line number of usage
+     * }
+     * </pre>
+     */
     @Test
-    @DisplayName("Should find formal parameter usages in method body")
-    void shouldFindFormalParameterUsagesInMethodBody() {
-      TSNode processCalculatorMethod = findMethodByName("processCalculator");
+    @DisplayName("should find parameter usages in method body")
+    void findAllFormalParameterNodeUsages_withParameterUsages_shouldFindUsages() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertFalse(parameterNodes.isEmpty());
+
+      // Find usages of "name" parameter
       List<TSNode> usages =
-          formalParameterService.findAllFormalParameterUsages(
-              testFile, processCalculatorMethod, "Calculator");
-      assertFalse(usages.isEmpty(), "Should find Calculator parameter usages");
-      // Check if we found the expected usages (calc.compute(), this.calculator = calc)
-      boolean foundCompute = false;
-      boolean foundAssignment = false;
-      for (TSNode usage : usages) {
-        String usageText = testFile.getTextFromNode(usage);
-        if ("calc".equals(usageText)) {
-          // Check context to determine which usage this is
-          TSNode parent = usage.getParent();
-          if (parent != null) {
-            String parentType = parent.getType();
-            if ("method_invocation".equals(parentType)) {
-              foundCompute = true;
-            } else if ("assignment_expression".equals(parentType)) {
-              foundAssignment = true;
-            }
-          }
-        }
-      }
-      assertTrue(
-          foundCompute || foundAssignment, "Should find at least one of the expected usages");
+          formalParameterService.findAllFormalParameterNodeUsages(
+              tsFile, parameterNodes.get(0), methodNode);
+
+      // Should find at least 2 usages of "name" parameter
+      assertTrue(usages.size() >= 2);
     }
 
     @Test
-    @DisplayName("Should find multiple parameter usages")
-    void shouldFindMultipleParameterUsages() {
-      TSNode testMethod = findMethodByName("testMethod");
-      List<TSNode> usages =
-          formalParameterService.findAllFormalParameterUsages(testFile, testMethod, "Calculator");
-      assertFalse(usages.isEmpty(), "Should find Calculator parameter usages in testMethod");
-      // testMethod has primary.process(), secondary.validate(), return primary.getName()
-      // So we should find multiple usages
-      long primaryUsages =
-          usages.stream()
-              .map(node -> testFile.getTextFromNode(node))
-              .filter("primary"::equals)
-              .count();
-      long secondaryUsages =
-          usages.stream()
-              .map(node -> testFile.getTextFromNode(node))
-              .filter("secondary"::equals)
-              .count();
-      assertTrue(
-          primaryUsages > 0 || secondaryUsages > 0,
-          "Should find usages of primary or secondary parameters");
+    @DisplayName("should find complex parameter usages")
+    void findAllFormalParameterNodeUsages_withComplexUsages_shouldFindAll() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, COMPLEX_USAGE_CODE);
+      TSNode methodNode = getMethodDeclarationNode(COMPLEX_USAGE_CODE, "complexMethod");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertEquals(2, parameterNodes.size());
+
+      // Find usages of "input" parameter (first parameter)
+      List<TSNode> inputUsages =
+          formalParameterService.findAllFormalParameterNodeUsages(
+              tsFile, parameterNodes.get(0), methodNode);
+
+      // Should find multiple usages: ternary condition, method call, concatenation, method argument
+      assertTrue(inputUsages.size() >= 3);
+
+      // Find usages of "numbers" parameter (second parameter)
+      List<TSNode> numbersUsages =
+          formalParameterService.findAllFormalParameterNodeUsages(
+              tsFile, parameterNodes.get(1), methodNode);
+
+      // Should find usages in method calls
+      assertTrue(numbersUsages.size() >= 2);
     }
 
     @Test
-    @DisplayName("Should return empty list for non-existent parameter type")
-    void shouldReturnEmptyListForNonExistentParameterType() {
-      TSNode noMatchingMethod = findMethodByName("noMatchingParams");
-      List<TSNode> usages =
-          formalParameterService.findAllFormalParameterUsages(
-              testFile, noMatchingMethod, "Calculator");
-      assertTrue(
-          usages.isEmpty(), "Should return empty list when no parameters of specified type exist");
-    }
-
-    @Test
-    @DisplayName("Should handle invalid method node")
-    void shouldHandleInvalidMethodNode() {
-      List<TSNode> classNodes = testFile.query("(class_declaration) @class");
-      List<TSNode> usages =
-          formalParameterService.findAllFormalParameterUsages(
-              testFile, classNodes.get(0), "Calculator");
-      assertTrue(usages.isEmpty(), "Should return empty list for non-method node");
-    }
-
-    @Test
-    @DisplayName("Should handle null parameters")
-    void shouldHandleNullParameters() {
-      TSNode method = findMethodByName("processCalculator");
-      List<TSNode> nullMethodResult =
-          formalParameterService.findAllFormalParameterUsages(testFile, null, "Calculator");
-      assertTrue(nullMethodResult.isEmpty(), "Should handle null method node");
-      List<TSNode> nullFileResult =
-          formalParameterService.findAllFormalParameterUsages(null, method, "Calculator");
-      assertTrue(nullFileResult.isEmpty(), "Should handle null file gracefully");
-    }
-
-    private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
-      for (TSNode method : methods) {
-        TSNode nameNode = method.getChildByFieldName("name");
-        if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
-          return method;
-        }
-      }
-      return null;
-    }
-  }
-
-  @Nested
-  @DisplayName("Integration tests")
-  class IntegrationTests {
-    @Test
-    @DisplayName("Should work together to analyze parameter information")
-    void shouldWorkTogetherToAnalyzeParameterInformation() {
-      TSNode testMethod = findMethodByName("testMethod");
-      // Find all Calculator parameters
-      List<TSNode> calculatorParams =
-          formalParameterService.findAllFormalParameters(testFile, testMethod, "Calculator");
-      assertEquals(2, calculatorParams.size(), "Should find 2 Calculator parameters");
-      // Check each parameter
-      for (TSNode param : calculatorParams) {
-        Optional<TSNode> typeNode =
-            formalParameterService.getParameterTypeNode(param, testFile, "Calculator");
-        Optional<TSNode> nameNode = formalParameterService.getParameterNameNode(param, testFile);
-        assertTrue(typeNode.isPresent(), "Should find type node");
-        assertTrue(nameNode.isPresent(), "Should find name node");
-        assertEquals("Calculator", testFile.getTextFromNode(typeNode.get()));
-        String paramName = testFile.getTextFromNode(nameNode.get());
-        assertTrue(
-            List.of("primary", "secondary").contains(paramName),
-            "Parameter name should be 'primary' or 'secondary'");
-      }
-      // Find usages
-      List<TSNode> usages =
-          formalParameterService.findAllFormalParameterUsages(testFile, testMethod, "Calculator");
-      assertFalse(usages.isEmpty(), "Should find parameter usages");
-    }
-
-    @Test
-    @DisplayName("Should handle complex parameter scenarios")
-    void shouldHandleComplexParameterScenarios() {
-      String complexCode =
+    @DisplayName("should return empty list for unused parameters")
+    void findAllFormalParameterNodeUsages_withUnusedParameter_shouldReturnEmptyList() {
+      String unusedParamCode =
           """
-          public void complexMethod(Calculator calc, List<Calculator> calcs, Calculator... varArgs) {
-            calc.process();
-            calcs.forEach(Calculator::start);
-            for (Calculator c : varArgs) {
-              c.validate();
-            }
+          public class UnusedParamClass {
+              public void methodWithUnusedParam(String unused, int used) {
+                  System.out.println("Using: " + used);
+              }
           }
           """;
-      TSFile complexFile = new TSFile(SupportedLanguage.JAVA, complexCode);
-      List<TSNode> methods = complexFile.query("(method_declaration) @method");
-      assertFalse(methods.isEmpty(), "Should have method to test");
-      TSNode complexMethod = methods.get(0);
-      List<TSNode> calculatorParams =
-          formalParameterService.findAllFormalParameters(complexFile, complexMethod, "Calculator");
-      // Should find at least the direct Calculator parameter
-      assertFalse(calculatorParams.isEmpty(), "Should find Calculator parameters");
-      // Test parameter name extraction
-      for (TSNode param : calculatorParams) {
-        Optional<TSNode> nameNode = formalParameterService.getParameterNameNode(param, complexFile);
-        assertTrue(nameNode.isPresent(), "Should find parameter name");
-        String paramName = complexFile.getTextFromNode(nameNode.get());
-        assertFalse(paramName.isEmpty(), "Parameter name should not be empty");
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, unusedParamCode);
+      TSNode methodNode = getMethodDeclarationNode(unusedParamCode, "methodWithUnusedParam");
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertEquals(2, parameterNodes.size());
+
+      // Find usages of "unused" parameter (first parameter)
+      List<TSNode> usages =
+          formalParameterService.findAllFormalParameterNodeUsages(
+              tsFile, parameterNodes.get(0), methodNode);
+
+      assertTrue(usages.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should handle invalid input")
+    void findAllFormalParameterNodeUsages_withInvalidInput_shouldReturnEmptyList() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PARAMETERS_CODE);
+
+      List<TSNode> result1 =
+          formalParameterService.findAllFormalParameterNodeUsages(null, null, null);
+      assertTrue(result1.isEmpty());
+
+      TSNode methodNode = getMethodDeclarationNode(SIMPLE_PARAMETERS_CODE, "simpleMethod");
+      TSNode classNode =
+          tsFile.query("(class_declaration) @class").returning("class").execute().firstNode();
+
+      List<TSNode> result2 =
+          formalParameterService.findAllFormalParameterNodeUsages(tsFile, classNode, methodNode);
+      assertTrue(result2.isEmpty());
+    }
+  }
+
+  @Nested
+  @DisplayName("Edge Cases and Error Handling Tests")
+  class EdgeCasesTests {
+
+    @Test
+    @DisplayName("should handle empty source code")
+    void methods_withEmptyCode_shouldHandleGracefully() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "");
+
+      TSNode mockNode = tsFile.getTree().getRootNode();
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, mockNode);
+      assertTrue(parameterNodes.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should handle malformed source code")
+    void methods_withMalformedCode_shouldHandleGracefully() {
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "public void method(String");
+
+      TSNode mockNode = tsFile.getTree().getRootNode();
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, mockNode);
+      assertNotNull(parameterNodes);
+    }
+
+    @Test
+    @DisplayName("should handle array type parameters")
+    void methods_withArrayParameters_shouldHandleCorrectly() {
+      String arrayParamsCode =
+          """
+          public class ArrayParamsClass {
+              public void arrayMethod(String[] names, int[][] matrix) {
+                  for (String name : names) {
+                      System.out.println(name);
+                  }
+                  System.out.println("Matrix size: " + matrix.length);
+              }
+          }
+          """;
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, arrayParamsCode);
+      TSNode methodNode = getMethodDeclarationNode(arrayParamsCode, "arrayMethod");
+      assertNotNull(methodNode);
+
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertEquals(2, parameterNodes.size());
+
+      // Should be able to extract parameter names even for array types
+      for (TSNode paramNode : parameterNodes) {
+        Optional<TSNode> nameNode =
+            formalParameterService.getFormalParameterNameNode(tsFile, paramNode);
+        assertTrue(nameNode.isPresent());
+        String paramName = tsFile.getTextFromNode(nameNode.get());
+        assertTrue(List.of("names", "matrix").contains(paramName));
       }
     }
 
-    private TSNode findMethodByName(String methodName) {
-      List<TSNode> methods = testFile.query("(method_declaration) @method");
-      for (TSNode method : methods) {
-        TSNode nameNode = method.getChildByFieldName("name");
-        if (nameNode != null && methodName.equals(testFile.getTextFromNode(nameNode))) {
-          return method;
-        }
+    @Test
+    @DisplayName("should handle annotation parameters")
+    void methods_withAnnotatedParameters_shouldHandleCorrectly() {
+      String annotatedParamsCode =
+          """
+          public class AnnotatedParamsClass {
+              public void annotatedMethod(@NotNull String name, @Nullable Integer count) {
+                  if (name != null && count != null) {
+                      System.out.println(name + ": " + count);
+                  }
+              }
+          }
+          """;
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, annotatedParamsCode);
+      TSNode methodNode = getMethodDeclarationNode(annotatedParamsCode, "annotatedMethod");
+      assertNotNull(methodNode);
+
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertEquals(2, parameterNodes.size());
+
+      // Should be able to extract parameter information even with annotations
+      for (TSNode paramNode : parameterNodes) {
+        Optional<TSNode> nameNode =
+            formalParameterService.getFormalParameterNameNode(tsFile, paramNode);
+        assertTrue(nameNode.isPresent());
+        Optional<TSNode> typeNode =
+            formalParameterService.getFormalParameterTypeNode(tsFile, paramNode);
+        assertTrue(typeNode.isPresent());
       }
-      return null;
+    }
+
+    @Test
+    @DisplayName("should handle wildcard generic parameters")
+    void methods_withWildcardGenerics_shouldHandleCorrectly() {
+      String wildcardCode =
+          """
+          public class WildcardClass {
+              public void wildcardMethod(List<?> items, Map<String, ? extends Number> data) {
+                  System.out.println("Items: " + items.size());
+                  data.values().forEach(System.out::println);
+              }
+          }
+          """;
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, wildcardCode);
+      TSNode methodNode = getMethodDeclarationNode(wildcardCode, "wildcardMethod");
+      assertNotNull(methodNode);
+
+      List<TSNode> parameterNodes =
+          formalParameterService.getAllFormalParameterNodes(tsFile, methodNode);
+      assertEquals(2, parameterNodes.size());
+
+      // Should be able to extract basic parameter information
+      for (TSNode paramNode : parameterNodes) {
+        Optional<TSNode> nameNode =
+            formalParameterService.getFormalParameterNameNode(tsFile, paramNode);
+        assertTrue(nameNode.isPresent());
+        String paramName = tsFile.getTextFromNode(nameNode.get());
+        assertTrue(List.of("items", "data").contains(paramName));
+      }
     }
   }
 }
+

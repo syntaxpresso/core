@@ -2,11 +2,11 @@ package io.github.syntaxpresso.core.command;
 
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
 import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
-import io.github.syntaxpresso.core.command.extra.SourceDirectoryType;
+import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
-import io.github.syntaxpresso.core.service.java.JavaCommandService;
+import io.github.syntaxpresso.core.service.java.command.CreateNewFileCommandService;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,7 @@ import picocli.CommandLine.Option;
 @RequiredArgsConstructor
 @Command(name = "create-new-file", description = "Create a new Java file")
 public class CreateNewFileCommand implements Callable<DataTransferObject<CreateNewFileResponse>> {
-  private final JavaCommandService javaService;
+  private final CreateNewFileCommandService createNewFileCommandService;
 
   @Option(names = "--cwd", description = "Current Working Directory", required = true)
   private Path cwd;
@@ -53,12 +53,12 @@ public class CreateNewFileCommand implements Callable<DataTransferObject<CreateN
       description =
           "Defines if the file should be created in the main or in the test directory (MAIN, TEST)",
       required = false)
-  private SourceDirectoryType sourceDirectoryType = SourceDirectoryType.MAIN;
+  private JavaSourceDirectoryType sourceDirectoryType = JavaSourceDirectoryType.MAIN;
 
   @Override
   public DataTransferObject<CreateNewFileResponse> call() {
-    if (this.language.equals(SupportedLanguage.JAVA)) {
-      return this.javaService.createNewFile(
+    if (this.language != null && this.language.equals(SupportedLanguage.JAVA)) {
+      return this.createNewFileCommandService.run(
           this.cwd, this.packageName, this.fileName, this.fileType, this.sourceDirectoryType);
     }
     return DataTransferObject.error("Language not supported.");

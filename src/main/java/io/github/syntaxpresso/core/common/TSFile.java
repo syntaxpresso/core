@@ -1,30 +1,22 @@
 package io.github.syntaxpresso.core.common;
 
 import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.common.extra.ParserFactory;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
+import io.github.syntaxpresso.core.common.extra.TSQueryBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import org.treesitter.TSException;
 import org.treesitter.TSNode;
 import org.treesitter.TSParser;
 import org.treesitter.TSPoint;
-import org.treesitter.TSQuery;
-import org.treesitter.TSQueryCapture;
-import org.treesitter.TSQueryCursor;
-import org.treesitter.TSQueryMatch;
 import org.treesitter.TSTree;
 
 @Getter
@@ -264,10 +256,10 @@ public class TSFile {
     TSNode rootNode = this.tree.getRootNode();
     TSPoint endPoint = rootNode.getEndPoint();
     int requestedLine = line - 1;
-    int requestedColumn = column - 1;
-    if (ide.equals(SupportedIDE.NEOVIM) || ide.equals(SupportedIDE.VSCODE)) {
-      requestedColumn++;
-    }
+    int requestedColumn = column;
+    // if (ide.equals(SupportedIDE.NEOVIM) || ide.equals(SupportedIDE.VSCODE)) {
+    //   requestedColumn++;
+    // }
     if (requestedLine > endPoint.getRow()
         || (requestedLine == endPoint.getRow() && requestedColumn > endPoint.getColumn())) {
       return null;
@@ -359,6 +351,9 @@ public class TSFile {
    * @return The optional of the file name without extension as String;
    */
   public Optional<String> getFileNameWithoutExtension() {
+    if (this.file == null) {
+      return Optional.empty();
+    }
     String fileName = com.google.common.io.Files.getNameWithoutExtension(this.file.getName());
     if (fileName == null) {
       return Optional.empty();
@@ -439,42 +434,6 @@ public class TSFile {
   }
 
   /**
-   * Executes a Tree-sitter query on a specific node and returns the captured nodes. Duplicates are
-   * automatically removed while preserving insertion order.
-   *
-   * @param node The node to run the query on.
-   * @param query The Tree-sitter query string.
-   * @return A list of unique {@link TSNode} objects captured by the query.
-   */
-  public List<TSNode> query(TSNode node, String query) {
-    Set<TSNode> foundNodes = new LinkedHashSet<>();
-    TSQuery queryObj = new TSQuery(this.getParser().getLanguage(), query);
-    TSQueryCursor cursor = new TSQueryCursor();
-    cursor.exec(queryObj, node);
-    TSQueryMatch match = new TSQueryMatch();
-    while (cursor.nextMatch(match)) {
-      for (TSQueryCapture capture : match.getCaptures()) {
-        foundNodes.add(capture.getNode());
-      }
-    }
-    return new ArrayList<>(foundNodes)
-        .stream()
-            .sorted(Comparator.comparingInt(TSNode::getStartByte))
-            .collect(Collectors.toList());
-  }
-
-  /**
-   * Executes a Tree-sitter query on the entire syntax tree and returns the captured nodes.
-   * Duplicates are automatically removed while preserving insertion order.
-   *
-   * @param query The Tree-sitter query string.
-   * @return A list of unique {@link TSNode} objects captured by the query.
-   */
-  public List<TSNode> query(String query) {
-    return this.query(this.getTree().getRootNode(), query);
-  }
-
-  /**
    * Checks if the file has been modified since the last save.
    *
    * @return True if the file has unsaved changes.
@@ -490,5 +449,44 @@ public class TSFile {
    */
   public boolean hasUnsavedChanges() {
     return this.modified;
+  }
+
+  /**
+   * Creates a query builder for executing Tree-sitter queries with optional predicates.
+   *
+   * <p>This is the primary entry point for all queries. The builder pattern allows flexible
+   * configuration of query options including scope, predicates, and return types.
+   *
+   * <p>Examples:
+   *
+   * <pre>{@code
+   * // Simple query returning nodes
+   * List<TSNode> methods = tsFile.query("(method_declaration) @method").execute();
+   *
+   * // Query with predicates
+   * List<TSNode> getters = tsFile.query("""
+   *     (method_declaration
+   *       name: (identifier) @name
+   *       (#match? @name "^get"))
+   *     """).returning("name").execute();
+   *
+   * // Query returning all captures
+   * List<Map<String, TSNode>> matches = tsFile.query("""
+   *     (method_declaration
+   *       name: (identifier) @name
+   *       parameters: (formal_parameters) @params)
+   *     """).returningAllCaptures().execute();
+   *
+   * // Scoped query
+   * List<TSNode> innerMethods = tsFile.query("(method_declaration) @method")
+   *     .within(classNode)
+   *     .execute();
+   * }</pre>
+   *
+   * @param queryString The Tree-sitter query string, optionally with predicates
+   * @return A TSQueryBuilder for further configuration
+   */
+  public TSQueryBuilder query(String queryString) {
+    return new TSQueryBuilder(this, queryString);
   }
 }
