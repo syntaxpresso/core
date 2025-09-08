@@ -40,8 +40,6 @@ dependencies {
     annotationProcessor("info.picocli:picocli-codegen:4.7.7")
 	
     compileOnly("org.projectlombok:lombok:1.18.38")
-    testImplementation("org.mockito:mockito-core:5.12.0")
-    testImplementation("org.mockito:mockito-junit-jupiter:5.12.0")
     testCompileOnly("org.projectlombok:lombok:1.18.38")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.38")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

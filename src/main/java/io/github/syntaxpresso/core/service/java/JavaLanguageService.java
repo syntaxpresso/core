@@ -4,48 +4,28 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
-import io.github.syntaxpresso.core.service.extra.ScopeType;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.FormalParameterService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.MethodDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.ProgramService;
-import io.github.syntaxpresso.core.service.java.language.TypeResolutionService;
 import io.github.syntaxpresso.core.service.java.language.VariableNamingService;
 import io.github.syntaxpresso.core.util.PathHelper;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
 @Getter
-@NoArgsConstructor
+@RequiredArgsConstructor
 public class JavaLanguageService {
-  private final PathHelper pathHelper = new PathHelper();
-  private final VariableNamingService variableNamingService = new VariableNamingService();
-  private final FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
-  private final ImportDeclarationService importDeclarationService = new ImportDeclarationService();
-  private final PackageDeclarationService packageDeclarationService = new PackageDeclarationService();
-  private final LocalVariableDeclarationService localVariableDeclarationService = 
-      new LocalVariableDeclarationService(variableNamingService);
-  private final FormalParameterService formalParameterService = 
-      new FormalParameterService(localVariableDeclarationService, variableNamingService);
-  private final ClassDeclarationService classDeclarationService = 
-      new ClassDeclarationService(fieldDeclarationService);
-  private final TypeResolutionService typeResolutionService = 
-      new TypeResolutionService(formalParameterService, localVariableDeclarationService, 
-                               fieldDeclarationService, classDeclarationService);
-  private final MethodDeclarationService methodDeclarationService = 
-      new MethodDeclarationService(formalParameterService, localVariableDeclarationService, typeResolutionService);
-  private final ProgramService programService = 
-      new ProgramService(variableNamingService, fieldDeclarationService, importDeclarationService,
-                        packageDeclarationService, localVariableDeclarationService, formalParameterService,
-                        methodDeclarationService, classDeclarationService, typeResolutionService);
+  private final PathHelper pathHelper;
+  private final VariableNamingService variableNamingService;
+  private final ClassDeclarationService classDeclarationService;
+  private final PackageDeclarationService packageDeclarationService;
+  private final ImportDeclarationService importDeclarationService;
+  private final LocalVariableDeclarationService localVariableDeclarationService;
 
   /**
    * Gets all Java files from the current working directory.
@@ -55,61 +35,31 @@ public class JavaLanguageService {
    */
   public List<TSFile> getAllJavaFilesFromCwd(Path cwd) {
     try {
+      if (cwd == null) {
+        return List.of();
+      }
       return this.pathHelper.findFilesByExtention(cwd, SupportedLanguage.JAVA);
     } catch (Exception e) {
-      e.printStackTrace();
       return List.of();
     }
   }
 
   /**
-   * Gets the scope of a node.
+   * Checks if a directory is a Java project.
    *
-   * @param node The node to get the scope of.
-   * @return An optional containing the scope type, or empty if not found.
+   * @param rootDir The root path of the project.
+   * @return True if the directory is a Java project, false otherwise.
    */
-  public Optional<ScopeType> getNodeScope(TSNode node) {
-    if (node == null) {
-      return Optional.empty();
+  public boolean isJavaProject(Path rootDir) {
+    if (rootDir == null || !Files.isDirectory(rootDir)) {
+      return false;
     }
-    String nodeType = node.getType();
-    if ("local_variable_declaration".equals(nodeType) || "formal_parameter".equals(nodeType)) {
-      return Optional.of(ScopeType.LOCAL);
-    }
-    boolean isPublic = false;
-    for (int i = 0; i < node.getChildCount(); i++) {
-      TSNode child = node.getChild(i);
-      if ("modifiers".equals(child.getType())) {
-        for (int j = 0; j < child.getChildCount(); j++) {
-          if ("public".equals(child.getChild(j).getType())) {
-            isPublic = true;
-            break;
-          }
-        }
-      }
-      if (isPublic) {
-        break;
-      }
-    }
-    if ("class_declaration".equals(nodeType)
-        || "interface_declaration".equals(nodeType)
-        || "enum_declaration".equals(nodeType)
-        || "record_declaration".equals(nodeType)
-        || "annotation_type_declaration".equals(nodeType)) {
-      return isPublic ? Optional.of(ScopeType.PROJECT) : Optional.of(ScopeType.CLASS);
-    }
-    if ("field_declaration".equals(nodeType) || "method_declaration".equals(nodeType)) {
-      return isPublic ? Optional.of(ScopeType.PROJECT) : Optional.of(ScopeType.CLASS);
-    }
-    return Optional.empty();
+    return Files.exists(rootDir.resolve("build.gradle"))
+        || Files.exists(rootDir.resolve("build.gradle.kts"))
+        || Files.exists(rootDir.resolve("pom.xml"))
+        || Files.isDirectory(rootDir.resolve("src/main/java"));
   }
 
-  /**
-   * Gets the identifier type of a node.
-   *
-   * @param node The node to get the identifier type of.
-   * @return The identifier type, or null if not found.
-   */
   public JavaIdentifierType getIdentifierType(TSNode node, SupportedIDE ide) {
     if (!"identifier".equals(node.getType())) {
       return null;
@@ -135,122 +85,5 @@ public class JavaLanguageService {
       default:
         return null;
     }
-  }
-
-  /**
-   * Gets the identifier type of a node at a given position.
-   *
-   * @param file The file to search in.
-   * @param line The line number of the node.
-   * @param column The column number of the node.
-   * @return The identifier type, or null if not found.
-   */
-  public JavaIdentifierType getIdentifierType(TSFile file, int line, int column, SupportedIDE ide) {
-    TSNode node = file.getNodeFromPosition(line, column, ide);
-    return this.getIdentifierType(node, ide);
-  }
-
-  /**
-   * Processes a class rename operation across the entire project.
-   *
-   * @param cwd The current working directory.
-   * @param file The file containing the class to rename.
-   * @param node The class identifier node.
-   * @param packageName The package name of the class.
-   * @param currentName The current class name.
-   * @param newName The new class name.
-   * @return A list of modified files.
-   */
-  public List<TSFile> processClassRename(
-      Path cwd, TSFile file, TSNode node, String packageName, String currentName, String newName) {
-    List<TSFile> modifiedFiles = new java.util.ArrayList<>();
-    file.updateSourceCode(node, newName);
-    if (this.shouldRenameFileName(file, currentName)) {
-      file.rename(newName);
-    }
-    if (file.isModified()) {
-      modifiedFiles.add(file);
-    }
-    List<TSFile> allJavaFiles = this.getAllJavaFilesFromCwd(cwd);
-    for (TSFile foundFile : allJavaFiles) {
-      Optional<String> foundFilePackageName = 
-          this.packageDeclarationService.getPackageName(foundFile);
-      if (foundFilePackageName.isEmpty()) {
-        continue;
-      }
-      if (foundFile.getFile().getAbsolutePath().equals(file.getFile().getAbsolutePath())) {
-        continue;
-      }
-      Optional<TSNode> importNode = 
-          this.importDeclarationService.getImportDeclarationNode(
-              foundFile, currentName, packageName);
-      if (importNode.isEmpty() && !foundFilePackageName.get().equals(packageName)) {
-        continue;
-      }
-      this.localVariableDeclarationService.renameLocalVariablesInFile(
-          foundFile, currentName, newName);
-      this.formalParameterService.renameFormalParametersInFile(foundFile, currentName, newName);
-      this.fieldDeclarationService.renameClassFields(foundFile, currentName, newName);
-      if (!foundFilePackageName.get().equals(packageName)) {
-        this.importDeclarationService.updateImport(
-            foundFile, packageName + "." + currentName, packageName + "." + newName);
-      }
-      if (foundFile.isModified()) {
-        modifiedFiles.add(foundFile);
-      }
-    }
-    return modifiedFiles;
-  }
-
-  /**
-   * Processes a method rename operation across the entire project.
-   *
-   * @param cwd The current working directory.
-   * @param file The file containing the method to rename.
-   * @param methodDeclarationNode The method declaration node to rename.
-   * @param currentName The current method name.
-   * @param newName The new method name.
-   * @param className The name of the class containing the method.
-   * @return A list of modified files.
-   */
-  public List<TSFile> processMethodRename(
-      Path cwd,
-      TSFile file,
-      TSNode methodDeclarationNode,
-      String currentName,
-      String newName,
-      String className) {
-    List<TSFile> modifiedFiles = new java.util.ArrayList<>();
-    boolean renamed = 
-        this.methodDeclarationService.renameMethodDeclaration(file, methodDeclarationNode, newName);
-    if (!renamed || !file.isModified()) {
-      return null;
-    }
-    modifiedFiles.add(file);
-    List<TSFile> allJavaFiles = this.getAllJavaFilesFromCwd(cwd);
-    for (TSFile foundFile : allJavaFiles) {
-      List<TSNode> usageNodes = 
-          this.methodDeclarationService.findMethodUsagesInFile(foundFile, currentName, className);
-      for (TSNode usageNode : usageNodes) {
-        foundFile.updateSourceCode(usageNode, newName);
-      }
-      if (foundFile.isModified() && !modifiedFiles.contains(foundFile)) {
-        modifiedFiles.add(foundFile);
-      }
-    }
-    return modifiedFiles;
-  }
-
-  /**
-   * Checks if the file should be renamed based on the class name.
-   *
-   * @param file The TSFile to check.
-   * @param currentName The current class name.
-   * @return True if the file should be renamed, false otherwise.
-   */
-  private boolean shouldRenameFileName(TSFile file, String currentName) {
-    String fileName = 
-        com.google.common.io.Files.getNameWithoutExtension(file.getFile().getAbsolutePath());
-    return fileName.equals(currentName);
   }
 }

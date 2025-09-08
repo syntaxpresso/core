@@ -1,0 +1,123 @@
+# Name for the workflow
+name: Develop Branch CI
+
+# Controls when the workflow will run
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This job runs tests and builds the project
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up GraalVM
+        uses: actions/setup-java@v4
+        with:
+          distribution: "graalvm"
+          java-version: "24"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run tests
+        run: ./gradlew test
+
+      - name: Build project
+        run: ./gradlew build
+
+      - name: Build shadow JAR
+        run: ./gradlew shadowJar
+
+  # This job builds the native binaries for multiple platforms
+  build-native:
+    needs: test-and-build
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: amd64
+            binary_name: core
+            output_name: syntaxpresso-linux-amd64
+          - os: macos-13
+            platform: macos
+            arch: amd64
+            binary_name: core
+            output_name: syntaxpresso-macos-amd64
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+            binary_name: core
+            output_name: syntaxpresso-macos-arm64
+          - os: windows-latest
+            platform: windows
+            arch: amd64
+            binary_name: core.exe
+            output_name: syntaxpresso-windows-amd64.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up GraalVM
+        uses: actions/setup-java@v4
+        with:
+          distribution: "graalvm"
+          java-version: "24"
+
+      - name: Grant execute permission for gradlew (Unix)
+        if: matrix.platform != 'windows'
+        run: chmod +x gradlew
+
+      - name: Build native image
+        run: ./gradlew nativeCompile
+
+      - name: Rename binary for platform
+        run: |
+          if [ -f "build/native/nativeCompile/${{ matrix.binary_name }}" ]; then
+            mv "build/native/nativeCompile/${{ matrix.binary_name }}" "build/native/nativeCompile/${{ matrix.output_name }}"
+            echo "Renamed ${{ matrix.binary_name }} to ${{ matrix.output_name }}"
+          else
+            echo "Binary ${{ matrix.binary_name }} not found!"
+            ls -la build/native/nativeCompile/
+            exit 1
+          fi
+        shell: bash
+
+      - name: Make binary executable (Unix)
+        if: matrix.platform != 'windows'
+        run: |
+          chmod +x "build/native/nativeCompile/${{ matrix.output_name }}"
+          echo "Made ${{ matrix.output_name }} executable"
+
+      - name: Verify renamed binary
+        run: |
+          if [ -f "build/native/nativeCompile/${{ matrix.output_name }}" ]; then
+            echo "Successfully created ${{ matrix.output_name }}"
+            ls -la "build/native/nativeCompile/${{ matrix.output_name }}"
+          else
+            echo "Failed to create ${{ matrix.output_name }}"
+            ls -la build/native/nativeCompile/
+            exit 1
+          fi
+        shell: bash
+
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: develop-binary-${{ matrix.platform }}-${{ matrix.arch }}
+          path: build/native/nativeCompile/${{ matrix.output_name }}
+          retention-days: 7

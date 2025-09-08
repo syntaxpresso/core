@@ -38,3 +38,5 @@ out/
 ### VS Code ###
 .vscode/
 
+### Project ###
+src/main/java/io/github/syntaxpresso/core/command/TestCommand.java

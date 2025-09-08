@@ -105,7 +105,32 @@
       ]
     },
     {
+      "type": "io.github.syntaxpresso.core.command.dto.ParseSourceCodeResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["io.github.syntaxpresso.core.common.extra.SupportedIDE", "io.github.syntaxpresso.core.common.extra.SupportedLanguage", "java.lang.String", "java.lang.String", "boolean"]
+        }
+      ]
+    },
+    {
       "type": "io.github.syntaxpresso.core.service.extra.JavaIdentifierType",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "io.github.syntaxpresso.core.common.extra.SupportedIDE",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true
+    },
+    {
+      "type": "io.github.syntaxpresso.core.common.extra.SupportedLanguage",
       "allDeclaredFields": true,
       "allDeclaredMethods": true
     },

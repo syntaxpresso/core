@@ -3,6 +3,7 @@ package io.github.syntaxpresso.core.service.java.language;
 import io.github.syntaxpresso.core.util.StringHelper;
 
 public class VariableNamingService {
+
   /**
    * Checks if a type represents a collection (List, Set, ArrayList, etc.).
    *
