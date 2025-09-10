@@ -4,6 +4,8 @@ import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.service.java.language.extra.AnnotationArgument;
 import io.github.syntaxpresso.core.service.java.language.extra.AnnotationCapture;
+import io.github.syntaxpresso.core.service.java.language.extra.AnnotationInsertionPoint;
+import io.github.syntaxpresso.core.service.java.language.extra.AnnotationInsertionPoint.AnnotationInsertionPosition;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,13 +38,13 @@ import org.treesitter.TSNode;
  *
  * <pre>
  * AnnotationService annotationService = new AnnotationService();
- * 
+ *
  * // Find an annotation by name
  * Optional&lt;TSNode&gt; tableAnnotation = annotationService.findAnnotationByName(tsFile, scopeNode, "Table");
  * if (tableAnnotation.isPresent()) {
  *   // Get arguments as structured objects
  *   Map&lt;String, AnnotationArgument&gt; args = annotationService.getAnnotationArguments(tsFile, tableAnnotation.get());
- *   
+ *
  *   AnnotationArgument nameArg = args.get("name");
  *   if (nameArg != null) {
  *     TSNode keyNode = nameArg.getKeyNode();        // Access to key node
@@ -51,10 +53,10 @@ import org.treesitter.TSNode;
  *     String valueText = nameArg.getValue(tsFile);  // "\"users\""
  *   }
  * }
- * 
+ *
  * // Get all argument pairs
  * List&lt;TSNode&gt; argumentPairs = annotationService.getAnnotationArgumentPairs(tsFile, tableAnnotation.get());
- * 
+ *
  * // Find specific value by key
  * Optional&lt;TSNode&gt; nameValue = annotationService.getAnnotationValueByKey(tsFile, tableAnnotation.get(), "name");
  * </pre>
@@ -64,6 +66,54 @@ import org.treesitter.TSNode;
  * @see AnnotationArgument
  */
 public class AnnotationService {
+
+  /**
+   * Retrieves all annotation nodes (both marker and regular annotations) within a given scope.
+   *
+   * <p>This method searches for all annotation declarations within the specified scope node,
+   * including both marker annotations (e.g., {@code @Override}) and annotations with arguments
+   * (e.g., {@code @Table(name = "users")}). The search is performed using tree-sitter queries
+   * to accurately identify annotation nodes at the AST level.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * // Find all annotations on a class
+   * TSNode classNode = tsFile.query("(class_declaration) @class").execute().firstNode();
+   * List&lt;TSNode&gt; classAnnotations = service.getAllAnnotations(tsFile, classNode);
+   * for (TSNode annotation : classAnnotations) {
+   *   String annotationText = tsFile.getTextFromNode(annotation);
+   *   // annotationText = "@Entity", "@Table(name = \"users\")", etc.
+   * }
+   *
+   * // Find all annotations on a method
+   * TSNode methodNode = tsFile.query("(method_declaration) @method").execute().firstNode();
+   * List&lt;TSNode&gt; methodAnnotations = service.getAllAnnotations(tsFile, methodNode);
+   * </pre>
+   *
+   * Query captures: - annotation: Regular annotation nodes - markerAnnotation: Marker annotation
+   * nodes
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param scopeNode The scope node to search within (e.g., class, method, field declaration)
+   * @return List of annotation nodes found within the scope. Returns empty list if no annotations
+   *     found or invalid input.
+   */
+  public List<TSNode> getAllAnnotations(TSFile tsFile, TSNode scopeNode) {
+    if (tsFile == null || tsFile.getTree() == null || scopeNode == null) {
+      return Collections.emptyList();
+    }
+    String queryString =
+        """
+        (
+          [
+            (annotation) @annotation
+            (marker_annotation) @markerAnnotation
+          ]
+        )
+        """;
+    return tsFile.query(queryString).execute().nodes();
+  }
 
   /**
    * Gets detailed information about an annotation, including all its argument pairs.
@@ -89,7 +139,7 @@ public class AnnotationService {
    * @param annotationNode The annotation node to analyze
    * @return List of maps with capture names: name, key, value, entity, argumentPair
    */
-  public List<Map<String, TSNode>> getAnnotationNodeInfo(TSFile tsFile, TSNode annotationNode) {
+  private List<Map<String, TSNode>> getAnnotationNodeInfo(TSFile tsFile, TSNode annotationNode) {
     if (tsFile == null || tsFile.getTree() == null || annotationNode == null) {
       return Collections.emptyList();
     }
@@ -296,15 +346,14 @@ public class AnnotationService {
   /**
    * Gets annotation arguments as a map of key names to AnnotationArgument objects.
    *
-   * <p>This method provides a convenient way to access annotation arguments with both
-   * the key and value nodes available. Each argument is mapped by its key name for
-   * easy lookup.
+   * <p>This method provides a convenient way to access annotation arguments with both the key and
+   * value nodes available. Each argument is mapped by its key name for easy lookup.
    *
    * <p>Usage example:
    *
    * <pre>
    * Map&lt;String, AnnotationArgument&gt; args = service.getAnnotationArguments(tsFile, annotationNode);
-   * 
+   *
    * AnnotationArgument nameArg = args.get("name");
    * if (nameArg != null) {
    *   TSNode keyNode = nameArg.getKeyNode();        // Access to key node
@@ -312,7 +361,7 @@ public class AnnotationService {
    *   String keyText = nameArg.getKey(tsFile);      // "name"
    *   String valueText = nameArg.getValue(tsFile);  // "\"users\""
    * }
-   * 
+   *
    * // Iterate through all arguments
    * for (Map.Entry&lt;String, AnnotationArgument&gt; entry : args.entrySet()) {
    *   String key = entry.getKey();                  // "name", "schema", etc.
@@ -323,26 +372,25 @@ public class AnnotationService {
    *
    * @param tsFile The {@link TSFile} containing the annotation
    * @param annotationNode The annotation node to analyze
-   * @return Map of key names to AnnotationArgument objects. Returns empty map if no arguments found.
+   * @return Map of key names to AnnotationArgument objects. Returns empty map if no arguments
+   *     found.
    */
-  public Map<String, AnnotationArgument> getAnnotationArguments(TSFile tsFile, TSNode annotationNode) {
+  public Map<String, AnnotationArgument> getAnnotationArguments(
+      TSFile tsFile, TSNode annotationNode) {
     if (tsFile == null || tsFile.getTree() == null || annotationNode == null) {
       return Collections.emptyMap();
     }
-    
     List<Map<String, TSNode>> annotationInfo = this.getAnnotationNodeInfo(tsFile, annotationNode);
     Map<String, AnnotationArgument> argumentMap = new HashMap<>();
-    
     for (Map<String, TSNode> map : annotationInfo) {
       TSNode keyNode = map.get(AnnotationCapture.KEY.getCaptureName());
       TSNode valueNode = map.get(AnnotationCapture.VALUE.getCaptureName());
-      
+
       if (keyNode != null && valueNode != null) {
         String keyText = tsFile.getTextFromNode(keyNode);
         argumentMap.put(keyText, new AnnotationArgument(keyNode, valueNode));
       }
     }
-    
     return argumentMap;
   }
 
@@ -382,5 +430,147 @@ public class AnnotationService {
             """,
             annotationName);
     return tsFile.query(queryString).within(scopeNode).execute().firstNodeOptional();
+  }
+
+  /**
+   * Determines the optimal insertion position for adding a new annotation to a declaration.
+   *
+   * <p>This method calculates the byte position where a new annotation should be inserted based on
+   * the specified insertion strategy and existing annotations. It supports different insertion
+   * positions to accommodate various annotation placement preferences.
+   *
+   * <p>Supported insertion positions:
+   *
+   * <ul>
+   *   <li>{@code BEFORE_FIRST_ANNOTATION}: Inserts before the first existing annotation, or at the
+   *       declaration start if no annotations exist
+   *   <li>{@code ABOVE_SCOPE_DECLARATION}: Inserts directly above the declaration (class, method,
+   *       or field)
+   * </ul>
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * // Get insertion point before first annotation
+   * TSNode classNode = tsFile.query("(class_declaration) @class").execute().firstNode();
+   * AnnotationInsertionPoint insertionPoint = service.getAnnotationInsertionPosition(
+   *     tsFile, classNode, AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION);
+   *
+   * if (insertionPoint != null) {
+   *   int bytePosition = insertionPoint.getInsertByte();
+   *   AnnotationInsertionPosition position = insertionPoint.getPosition();
+   *   // Use insertion point to add annotation
+   * }
+   *
+   * // Get insertion point above declaration
+   * AnnotationInsertionPoint abovePoint = service.getAnnotationInsertionPosition(
+   *     tsFile, methodNode, AnnotationInsertionPosition.ABOVE_SCOPE_DECLARATION);
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param declarationNode The declaration node (class, method, or field) to add annotation to
+   * @param insertionPoint The desired insertion position strategy
+   * @return {@link AnnotationInsertionPoint} containing position details, or null if invalid input
+   */
+  public AnnotationInsertionPoint getAnnotationInsertionPosition(
+      TSFile tsFile, TSNode declarationNode, AnnotationInsertionPosition insertionPoint) {
+    if (tsFile == null || tsFile.getTree() == null || declarationNode == null) {
+      return null;
+    }
+    String nodeType = declarationNode.getType();
+    if (!nodeType.equals("class_declaration")
+        && !nodeType.equals("field_declaration")
+        && !nodeType.equals("method_declaration")) {
+      return null;
+    }
+    List<TSNode> allAnnotations = this.getAllAnnotations(tsFile, declarationNode);
+    AnnotationInsertionPoint annotationInsertionPoint = new AnnotationInsertionPoint();
+    annotationInsertionPoint.setPosition(insertionPoint);
+    if (insertionPoint.equals(AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION)) {
+      if (!allAnnotations.isEmpty()) {
+        annotationInsertionPoint.setInsertByte(allAnnotations.get(0).getStartByte());
+      } else {
+        annotationInsertionPoint.setInsertByte(declarationNode.getStartByte());
+      }
+    } else {
+      annotationInsertionPoint.setInsertByte(declarationNode.getStartByte());
+    }
+    return annotationInsertionPoint;
+  }
+
+  /**
+   * Adds a new annotation to a Java declaration at the specified insertion point.
+   *
+   * <p>This method inserts a new annotation into the source code at the position determined by the
+   * provided {@link AnnotationInsertionPoint}. The annotation text is inserted with appropriate
+   * line breaks to maintain proper formatting. The method supports adding annotations to classes,
+   * methods, and fields.
+   *
+   * <p>The insertion behavior depends on the insertion point position:
+   *
+   * <ul>
+   *   <li>{@code BEFORE_FIRST_ANNOTATION}: Inserts the annotation before existing annotations
+   *   <li>{@code ABOVE_SCOPE_DECLARATION}: Inserts the annotation directly above the declaration
+   * </ul>
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * // Add annotation to a class
+   * TSNode classNode = tsFile.query("(class_declaration) @class").execute().firstNode();
+   * AnnotationInsertionPoint insertionPoint = service.getAnnotationInsertionPosition(
+   *     tsFile, classNode, AnnotationInsertionPosition.ABOVE_SCOPE_DECLARATION);
+   *
+   * service.addAnnotation(tsFile, classNode, insertionPoint, "@Entity");
+   * // Result: @Entity is added above the class declaration
+   *
+   * // Add annotation with arguments
+   * service.addAnnotation(tsFile, classNode, insertionPoint, "@Table(name = \"users\")");
+   *
+   * // Add annotation to a method
+   * TSNode methodNode = tsFile.query("(method_declaration) @method").execute().firstNode();
+   * AnnotationInsertionPoint methodPoint = service.getAnnotationInsertionPosition(
+   *     tsFile, methodNode, AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION);
+   * service.addAnnotation(tsFile, methodNode, methodPoint, "@Override");
+   *
+   * // Add annotation to a field
+   * TSNode fieldNode = tsFile.query("(field_declaration) @field").execute().firstNode();
+   * AnnotationInsertionPoint fieldPoint = service.getAnnotationInsertionPosition(
+   *     tsFile, fieldNode, AnnotationInsertionPosition.ABOVE_SCOPE_DECLARATION);
+   * service.addAnnotation(tsFile, fieldNode, fieldPoint, "@NotNull");
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code to modify
+   * @param declarationNode The declaration node (class, method, or field) to add annotation to
+   * @param insertionPoint The {@link AnnotationInsertionPoint} specifying where to insert
+   * @param annotationText The annotation text to insert (e.g., "@Override", "@Entity",
+   *     "@Table(name = \"users\")")
+   */
+  public void addAnnotation(
+      TSFile tsFile,
+      TSNode declarationNode,
+      AnnotationInsertionPoint insertionPoint,
+      String annotationText) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || declarationNode == null
+        || insertionPoint == null
+        || Strings.isNullOrEmpty(annotationText)) {
+      return;
+    }
+    String nodeType = declarationNode.getType();
+    if (!nodeType.equals("class_declaration")
+        && !nodeType.equals("field_declaration")
+        && !nodeType.equals("method_declaration")) {
+      return;
+    }
+    String insertText;
+    if (insertionPoint.getPosition().equals(AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION)) {
+      insertText = annotationText + "\n";
+    } else {
+      insertText = annotationText + "\n";
+    }
+    tsFile.updateSourceCode(
+        insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), insertText);
   }
 }
