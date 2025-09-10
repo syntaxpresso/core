@@ -564,12 +564,7 @@ public class AnnotationService {
         && !nodeType.equals("method_declaration")) {
       return;
     }
-    String insertText;
-    if (insertionPoint.getPosition().equals(AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION)) {
-      insertText = annotationText + "\n";
-    } else {
-      insertText = annotationText + "\n";
-    }
+    String insertText = annotationText + "\n";
     tsFile.updateSourceCode(
         insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), insertText);
   }
