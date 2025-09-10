@@ -7,7 +7,7 @@ public class AnnotationInsertionPoint {
 
   /** Defines the possible insertion points for an annotation statement. */
   public enum AnnotationInsertionPosition {
-    /** Immediately after the scope declaration. */
+    /** Immediately above the scope declaration. */
     ABOVE_SCOPE_DECLARATION,
 
     /** Before the first existing annotation statement. */
