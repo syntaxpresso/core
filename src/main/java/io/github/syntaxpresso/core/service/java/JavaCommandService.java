@@ -436,6 +436,28 @@ public class JavaCommandService {
 
   public DataTransferObject<CreateNewJPAEntityResponse>
       createNewJPAEntity(final Path cwd, final String packageName, final String fileName) {
+    if (!fileName.endsWith(".java")) {
+      return DataTransferObject.error("File is not a .java file: " + fileName);
+    }
+    String fileNameWithoutExtension = fileName.replace(".java", "");
+    String snakeName = StringHelper.pascalToSnake(fileNameWithoutExtension);
+
+    List<TSFile> files = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
+
+    for (TSFile file : files) {
+      boolean isJPAEntity = this.jpaService.getJpaOperations().getJpaEntityService().isJPAEntity(file);
+      if(!isJPAEntity){
+        continue;
+      }
+      List<TSNode> annotations = this.javaLanguageService.getClassDeclarationService().getAllClassAnnotations(file);
+      for (TSNode a : annotations) {
+        String annotationText = file.getTextFromNode(a);
+        if (annotationText.contains(snakeName)) {
+          return DataTransferObject.error("JPA entity already exists");
+        }
+      }
+    }
+
     DataTransferObject<CreateNewFileResponse> response =
         createNewFile(cwd, packageName, fileName, JavaFileTemplate.CLASS, SourceDirectoryType.MAIN);
     if (!response.getSucceed()) {
@@ -444,36 +466,16 @@ public class JavaCommandService {
 
     TSFile tsFile = new TSFile(SupportedLanguage.JAVA, Paths.get(response.getData().getFilePath()));
 
-    String nameWithoutExtension = tsFile.getFileNameWithoutExtension().orElse(fileName);
+    Optional<TSNode> nodeFile = this.javaLanguageService.getClassDeclarationService().findClassByName(tsFile, fileNameWithoutExtension);
+    tsFile.insertTextBeforeNode(nodeFile.get(), "@Table(name = \"" + snakeName + "\")\n");
+    tsFile.insertTextBeforeNode(nodeFile.get(), "@Entity\n");
 
-    String snakeName = StringHelper.pascalToSnake(nameWithoutExtension);
-
-    String tableAnnotation = "@Table(name=\"" + snakeName + "\")\n";
-    List<TSFile> files = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
-
-    for (TSFile file : files) {
-      List<TSNode> annotations = this.javaLanguageService.getClassDeclarationService().getAllClassAnnotations(file);
-      for (TSNode a : annotations) {
-        String annotationText = tsFile.getTextFromNode(a);
-        if (annotationText.contains(snakeName)) {
-          return DataTransferObject.error("JPA entity does exists");
-        }
-      }
-    }
-
-    // tsFile.insertTextBeforeNode(, tableAnnotation);
-    // tsFile.insertTextBeforeNode(findClassByName.get(), "@Entity\n");
-
-    /**
-     * List<TSNode> annotation = this.classDeclarationService.getAllClassAnnotationNodes(tsFile);
-     * System.out.println(tsFile.getTextFromNode(annotation.getLast()));
-     */
     this.javaLanguageService
         .getImportDeclarationService()
-        .addImport(tsFile, "jakarta.persistense", "Entity");
+        .addImport(tsFile, "jakarta.persistence", "Entity");
     this.javaLanguageService
         .getImportDeclarationService()
-        .addImport(tsFile, "jakarta.persistense", "Table");
+        .addImport(tsFile, "jakarta.persistence", "Table");
 
     try {
       tsFile.save();

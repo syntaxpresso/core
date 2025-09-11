@@ -23,16 +23,13 @@ public class JPAEntityService {
         this.javaLanguageService.getClassDeclarationService().getAllClassAnnotations(file);
     for (TSNode annotation : mainClassAnnotationNodes) {
       String annotationName = file.getTextFromNode(annotation);
-      if ("jakarta.persistence.Entity".equals(annotationName)) {
-        return Optional.of(annotation);
-      }
-      if ("Entity".equals(annotationName)) {
+      if (annotationName.contains("Entity")) {
         List<TSNode> importNodes =
             this.javaLanguageService.getImportDeclarationService().findAllImportDeclarations(file);
         for (TSNode importNode : importNodes) {
           String importName = file.getTextFromNode(importNode);
-          if (importName.equals("jakarta.persistence.Entity")
-              || importName.equals("jakarta.persistence")) {
+          if (importName.equals("import jakarta.persistence.Entity;")
+              || importName.equals("import jakarta.persistence.*;")) {
             return Optional.of(annotation);
           }
         }
