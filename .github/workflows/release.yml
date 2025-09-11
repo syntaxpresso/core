@@ -10,8 +10,8 @@ on:
 jobs:
   # This job handles versioning and tagging
   release:
-    # The 'if' condition ensures this job only runs for merged pull requests
-    if: github.event.pull_request.merged == true
+    # The 'if' condition ensures this job only runs for merged pull requests from develop to main
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'develop'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -72,9 +72,10 @@ jobs:
           elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'bug') }}" == "true" || "${{ contains(github.event.pull_request.labels.*.name, 'patch') }}" == "true" ]]; then
             echo "Incrementing patch version for bug/patch"
             PATCH=$((PATCH + 1))
-          else
-            echo "No versioning label found ('feature', 'enhancement', 'bug', 'patch'). Skipping release."
-            exit 0
+           else
+             echo "No versioning label found ('feature', 'enhancement', 'bug', 'patch'). Skipping release."
+             echo "Note: This workflow only runs for merged PRs from develop to main branch."
+             exit 0
           fi
           
           # Create new version

@@ -143,8 +143,35 @@ public enum JavaBasicType {
    * @return Optional containing the package name, or empty if type not found or is primitive
    */
   public static Optional<String> getPackageNameByTypeName(String typeName) {
-    return getByTypeName(typeName)
-        .flatMap(JavaBasicType::getPackageName);
+    return getByTypeName(typeName).flatMap(JavaBasicType::getPackageName);
+  }
+
+  /**
+   * Finds a JavaBasicType by its type name and package name.
+   *
+   * @param typeName the simple type name to search for
+   * @param packageName the package name to match (null for primitives)
+   * @return Optional containing the matching JavaBasicType, or empty if not found
+   */
+  public static Optional<JavaBasicType> fromTypeNameAndPackage(String typeName, String packageName) {
+    for (JavaBasicType type : values()) {
+      if (type.getTypeName().equals(typeName)) {
+        if ((packageName == null && type.packageName == null) ||
+            (packageName != null && packageName.equals(type.packageName))) {
+          return Optional.of(type);
+        }
+      }
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Checks if this type needs an import statement.
+   *
+   * @return True if the type needs an import, false for primitives and java.lang types.
+   */
+  public boolean needsImport() {
+    return this.packageName != null && !"java.lang".equals(this.packageName);
   }
 
   @Override

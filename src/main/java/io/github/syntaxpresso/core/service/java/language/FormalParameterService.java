@@ -1,298 +1,391 @@
 package io.github.syntaxpresso.core.service.java.language;
 
 import io.github.syntaxpresso.core.common.TSFile;
-import java.util.ArrayList;
+import io.github.syntaxpresso.core.service.java.language.extra.ParameterCapture;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
-@RequiredArgsConstructor
+/**
+ * Service for analyzing and extracting method parameter information from Java source code using
+ * Tree-sitter parsing.
+ *
+ * <p>This service provides comprehensive functionality for working with method (formal) parameters
+ * in Java, including extraction of parameter nodes, detailed parameter info, finding usages within
+ * method bodies, and renaming parameters. It leverages tree-sitter queries to accurately parse and
+ * analyze parameter declarations at the AST level.
+ *
+ * <p>Key capabilities include:
+ *
+ * <ul>
+ *   <li>Extracting all parameter nodes from a method declaration
+ *   <li>Extracting type, name, and full node info for each parameter
+ *   <li>Finding all usages of a parameter within a method body
+ *   <li>Supporting generic and non-generic parameter types
+ *   <li>Renaming parameter declarations and their usages
+ * </ul>
+ *
+ * <p>Usage example:
+ *
+ * <pre>
+ * FormalParameterService paramService = new FormalParameterService();
+ * TSNode methodNode = ... // obtain method_declaration node
+ * List&lt;TSNode&gt; params = paramService.getAllFormalParameterNodes(tsFile, methodNode);
+ * for (TSNode param : params) {
+ *   List&lt;Map&lt;String, TSNode&gt;&gt; info = paramService.getFormalParameterNodeInfo(tsFile, param);
+ *   for (Map&lt;String, TSNode&gt; map : info) {
+ *     String type = tsFile.getTextFromNode(map.get("parameter_type"));
+ *     String name = tsFile.getTextFromNode(map.get("parameter_name"));
+ *     System.out.println("Parameter: " + type + " " + name);
+ *   }
+ * }
+ * </pre>
+ *
+ * @see TSFile
+ * @see ParameterCapture
+ */
 public class FormalParameterService {
-  private final LocalVariableDeclarationService localVariableDeclarationService;
-  private final VariableNamingService variableNamingService;
-  private static final String FORMAL_PARAMETER_QUERY = "(formal_parameter) @param";
-
-  private record ParameterInfo(
-      TSNode parameterNode,
-      TSNode typeNode,
-      TSNode nameNode,
-      String typeText,
-      String parameterName,
-      boolean isCollectionType) {}
 
   /**
-   * Extracts parameter information from a formal parameter node.
+   * Retrieves all method parameter nodes from a method declaration.
    *
-   * @param formalParameterNode The formal parameter node.
-   * @param file The TSFile containing the source code.
-   * @param currentName The current type name to match.
-   * @return Optional containing parameter information, or empty if extraction fails.
-   */
-  private Optional<ParameterInfo> extractParameterInfo(
-      TSNode formalParameterNode, TSFile file, String currentName) {
-    Optional<TSNode> parameterTypeNode =
-        getParameterTypeNode(formalParameterNode, file, currentName);
-    if (parameterTypeNode.isEmpty()) {
-      return Optional.empty();
-    }
-    Optional<TSNode> parameterNameNode = getParameterNameNode(formalParameterNode, file);
-    if (parameterNameNode.isEmpty()) {
-      return Optional.empty();
-    }
-    TSNode typeNode = formalParameterNode.getChildByFieldName("type");
-    String typeText = typeNode != null ? file.getTextFromNode(typeNode) : "";
-    boolean isCollectionType = this.variableNamingService.isCollectionType(typeText);
-    String currentParameterName = file.getTextFromNode(parameterNameNode.get());
-    return Optional.of(
-        new ParameterInfo(
-            formalParameterNode,
-            parameterTypeNode.get(),
-            parameterNameNode.get(),
-            typeText,
-            currentParameterName,
-            isCollectionType));
-  }
-
-  /**
-   * Finds all formal parameters of a method.
+   * <p>This method searches for all formal parameter declarations within the specified method
+   * declaration scope. It returns the AST nodes representing individual parameter declarations.
    *
-   * @param node The TSNode of the method or constructor declaration.
-   * @param tsFile The TSFile containing the source code.
-   * @return A list of all formal parameter nodes.
+   * <p>Usage example:
+   *
+   * <pre>
+   * TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "public void test(String name, int age) {}");
+   * TSNode methodNode = // ... get method declaration node
+   * List&lt;TSNode&gt; parameters = service.getAllFormalParameterNodes(tsFile, methodNode);
+   * // Returns nodes for both "String name" and "int age" parameters
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param methodDeclarationNode The method declaration {@link TSNode} to analyze
+   * @return List of formal parameter nodes, empty if method has no parameters or invalid input
    */
-  public List<TSNode> findAllFormalParameters(TSFile file, TSNode node, String typeName) {
-    if (file == null
-        || node == null
-        || typeName == null
-        || !"method_declaration".equals(node.getType())) {
+  public List<TSNode> getAllFormalParameterNodes(TSFile tsFile, TSNode methodDeclarationNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || methodDeclarationNode == null
+        || !"method_declaration".equals(methodDeclarationNode.getType())) {
       return Collections.emptyList();
     }
-    List<TSNode> foundParams = new ArrayList<>();
-    List<TSNode> allParams = file.query(node, FORMAL_PARAMETER_QUERY);
-    for (TSNode param : allParams) {
-      List<TSNode> typeNodes = file.query(param, "(type_identifier) @type");
-      for (TSNode typeNode : typeNodes) {
-        String typeNodeName = file.getTextFromNode(typeNode);
-        if (typeName.equals(typeNodeName)) {
-          foundParams.add(param);
-        }
-      }
-    }
-    return foundParams;
+    String queryString =
+        String.format(
+            """
+            (method_declaration
+              parameters: (formal_parameters
+                [
+                  (formal_parameter) %s
+                  (spread_parameter) %s
+                ]
+              )
+            )
+            """,
+            ParameterCapture.PARAMETER.getCaptureWithAt(),
+            ParameterCapture.PARAMETER.getCaptureWithAt());
+    return tsFile.query(queryString).within(methodDeclarationNode).execute().nodes();
   }
 
   /**
-   * Finds the type node within a formal parameter that matches a given name.
+   * Extracts detailed information about a specific method parameter node.
    *
-   * @param formalParameterNode The TSNode for the formal_parameter.
-   * @param file The TSFile containing the source code.
-   * @param typeName The name of the type to find.
-   * @return An Optional containing the found TSNode, or empty.
+   * <p>This method analyzes a formal parameter node to extract information about its type, name,
+   * and optional type arguments using tree-sitter queries. It supports both primitive types and
+   * generic types with type arguments.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "public void test(String name) {}");
+   * TSNode parameterNode = // ... get formal_parameter node for "String name"
+   * List&lt;Map&lt;String, TSNode&gt;&gt; info = service.getFormalParameterNodeInfo(tsFile, parameterNode);
+   * // Returns map with:
+   * // "parameter_type" -&gt; TSNode for "String"
+   * // "parameter_name" -&gt; TSNode for "name"
+   * // "parameter" -&gt; TSNode for entire "String name"
+   * </pre>
+   *
+   * Query captures: - parameter_type: The type node of the parameter - parameter_name: The name
+   * identifier of the parameter - parameter_type_argument: Type arguments for generic types -
+   * parameter: The entire parameter declaration
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param methodParameterNode The formal parameter {@link TSNode} to analyze
+   * @return A list of maps containing the captured nodes, or an empty list if invalid input
    */
-  public Optional<TSNode> getParameterTypeNode(
-      TSNode formalParameterNode, TSFile file, String typeName) {
-    if (formalParameterNode == null
-        || file == null
-        || typeName == null
-        || !"formal_parameter".equals(formalParameterNode.getType())) {
+  public List<Map<String, TSNode>> getFormalParameterNodeInfo(
+      TSFile tsFile, TSNode methodParameterNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || !methodParameterNode.getType().equals("formal_parameter")) {
+      return Collections.emptyList();
+    }
+    String queryString =
+        String.format(
+            """
+            (formal_parameter
+              type: [
+                (type_identifier) %s
+                (integral_type) %s
+                (floating_point_type) %s
+                (boolean_type) %s
+                (void_type) %s
+                (array_type) %s
+                (generic_type
+                  (type_identifier)
+                  (type_arguments
+                    [
+                      (type_identifier) %s
+                      (integral_type) %s
+                      (floating_point_type) %s
+                      (boolean_type) %s
+                      (generic_type) %s
+                      (wildcard) %s
+                    ]
+                  )
+                ) %s
+              ]
+              name: (identifier) %s
+            ) %s
+            """,
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE_ARGUMENT.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_TYPE.getCaptureWithAt(),
+            ParameterCapture.PARAMETER_NAME.getCaptureWithAt(),
+            ParameterCapture.PARAMETER.getCaptureWithAt());
+    return tsFile
+        .query(queryString)
+        .within(methodParameterNode)
+        .returningAllCaptures()
+        .execute()
+        .captures();
+  }
+
+  /**
+   * Retrieves a specific child node from a method parameter by capture name.
+   *
+   * <p>This method extracts a specific component of a formal parameter declaration based on the
+   * provided capture type. It can retrieve the parameter type, name, or the entire parameter node.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "public void test(List&lt;String&gt; items) {}");
+   * TSNode parameterNode = // ... get formal_parameter node
+   * Optional&lt;TSNode&gt; typeNode = service.getFormalParameterChildByCaptureName(
+   *     tsFile, parameterNode, ParameterCapture.PARAMETER_TYPE);
+   * // Returns TSNode for "List&lt;String&gt;"
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param methodParameterNode The formal parameter {@link TSNode} to search within
+   * @param capture The specific {@link ParameterCapture} type to retrieve
+   * @return Optional containing the requested node, empty if not found or invalid input
+   */
+  public Optional<TSNode> getFormalParameterChildByCaptureName(
+      TSFile tsFile, TSNode methodParameterNode, ParameterCapture capture) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || !methodParameterNode.getType().equals("formal_parameter")) {
       return Optional.empty();
     }
-    List<TSNode> typeNodes = file.query(formalParameterNode, "(type_identifier) @type");
-    for (TSNode typeNode : typeNodes) {
-      String typeNodeName = file.getTextFromNode(typeNode);
-      if (typeName.equals(typeNodeName)) {
-        return Optional.of(typeNode);
+    List<Map<String, TSNode>> nodeInfo =
+        this.getFormalParameterNodeInfo(tsFile, methodParameterNode);
+    for (Map<String, TSNode> map : nodeInfo) {
+      TSNode node = map.get(capture.getCaptureName());
+      if (node != null) {
+        return Optional.of(node);
       }
     }
     return Optional.empty();
   }
 
   /**
-   * Extracts the parameter name from a formal_parameter node.
+   * Retrieves the base type node of a method parameter, excluding generic type arguments.
    *
-   * @param formalParameterNode The TSNode representing the formal_parameter.
-   * @param file The TSFile containing the source code.
-   * @return An Optional containing the parameter name node, or empty if not found.
+   * <p>This method extracts the base type node from a formal parameter declaration. For generic
+   * types, it returns only the type argument. For example, in {@code List<String> items}, it would
+   * return just the {@code String} type node.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * List<TSNode> params = service.getAllFormalParameterNodes(tsFile, methodNode);
+   * Optional<TSNode> typeNode = service.getFormalParameterTypeNode(tsFile, params.get(0));
+   * if (typeNode.isPresent()) {
+   *   String type = tsFile.getTextFromNode(typeNode.get()); // e.g., "String" from List<String>
+   * }
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the source code
+   * @param methodParameterNode The formal parameter {@link TSNode} to analyze
+   * @return An {@link Optional} containing the base type node if found
    */
-  public Optional<TSNode> getParameterNameNode(TSNode formalParameterNode, TSFile file) {
-    if (formalParameterNode == null
-        || file == null
-        || !"formal_parameter".equals(formalParameterNode.getType())) {
-      return Optional.empty();
+  public Optional<TSNode> getFormalParameterTypeNode(TSFile tsFile, TSNode methodParameterNode) {
+    Optional<TSNode> parameterTypeArgumentNode =
+        this.getFormalParameterChildByCaptureName(
+            tsFile, methodParameterNode, ParameterCapture.PARAMETER_TYPE_ARGUMENT);
+    if (parameterTypeArgumentNode.isPresent()) {
+      return parameterTypeArgumentNode;
     }
-    return Optional.ofNullable(formalParameterNode.getChildByFieldName("name"));
+    return this.getFormalParameterChildByCaptureName(
+        tsFile, methodParameterNode, ParameterCapture.PARAMETER_TYPE);
   }
 
   /**
-   * Checks if an identifier is part of a formal parameter declaration.
+   * Retrieves the complete type node of a method parameter, including generic type information if
+   * present.
    *
-   * @param identifierNode The identifier node to check.
-   * @return True if this identifier is declaring a formal parameter.
+   * <p>This method extracts the full type node from a formal parameter declaration, which includes
+   * the base type and any generic type arguments. For example, in {@code List<String> items}, it
+   * would return the entire {@code List<String>} type node.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * List<TSNode> params = service.getAllFormalParameterNodes(tsFile, methodNode);
+   * Optional<TSNode> fullTypeNode = service.getFormalParameterFullTypeNode(tsFile, params.get(0));
+   * if (fullTypeNode.isPresent()) {
+   *   String type = tsFile.getTextFromNode(fullTypeNode.get()); // e.g., "List<String>"
+   * }
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the source code
+   * @param methodParameterNode The formal parameter {@link TSNode} to analyze
+   * @return An {@link Optional} containing the complete type node if found
    */
-  public boolean isFormalParameterDeclaration(TSNode identifierNode) {
-    if (identifierNode == null || identifierNode.isNull()) {
-      return false;
-    }
-    TSNode parent = identifierNode.getParent();
-    return parent != null && !parent.isNull() && "formal_parameter".equals(parent.getType());
+  public Optional<TSNode> getFormalParameterFullTypeNode(
+      TSFile tsFile, TSNode methodParameterNode) {
+    return this.getFormalParameterChildByCaptureName(
+        tsFile, methodParameterNode, ParameterCapture.PARAMETER_TYPE);
   }
 
   /**
-   * Checks if an identifier represents usage of a formal parameter.
+   * Retrieves the name node of a method parameter.
    *
-   * @param identifierNode The identifier node to check.
-   * @param methodDeclarationNode The method declaration node.
-   * @param paramName The parameter name to check.
-   * @param file The TSFile for text extraction.
-   * @return True if this is a formal parameter usage.
+   * <p>This method extracts the identifier node that represents the parameter's name from a formal
+   * parameter declaration.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "public void test(String userName) {}");
+   * TSNode parameterNode = // ... get formal_parameter node
+   * Optional&lt;TSNode&gt; nameNode = service.getFormalParameterNameNode(tsFile, parameterNode);
+   * if (nameNode.isPresent()) {
+   *   String paramName = tsFile.getTextFromNode(nameNode.get()); // "userName"
+   * }
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param methodParameterNode The formal parameter {@link TSNode} to analyze
+   * @return Optional containing the parameter name node, empty if not found or invalid input
    */
-  public boolean isFormalParameterUsage(
-      TSFile file,
-      TSNode methodDeclarationNode,
-      TSNode identifierNode,
-      String paramName,
-      String currentName) {
-    if (identifierNode == null
-        || identifierNode.isNull()
+  public Optional<TSNode> getFormalParameterNameNode(TSFile tsFile, TSNode methodParameterNode) {
+    return this.getFormalParameterChildByCaptureName(
+        tsFile, methodParameterNode, ParameterCapture.PARAMETER_NAME);
+  }
+
+  /**
+   * Finds all usages of a method parameter within the method body.
+   *
+   * <p>This method searches for a parameter in various contexts including method calls,
+   * assignments, binary expressions, ternary expressions, and argument lists. It identifies all
+   * locations where the parameter is referenced within the method scope.
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * TSFile tsFile = new TSFile(SupportedLanguage.JAVA, """
+   *     public void process(String input) {
+   *         System.out.println(input);
+   *         String result = input.trim();
+   *         if (input != null) { ... }
+   *     }
+   * """);
+   * TSNode parameterNode = // ... get formal_parameter node for "input"
+   * TSNode methodNode = // ... get method_declaration node
+   * List&lt;TSNode&gt; usages = service.findAllFormalParameterNodeUsages(tsFile, parameterNode, methodNode);
+   * // Returns identifier nodes for all three usages of "input"
+   * </pre>
+   *
+   * Query captures: - name: The parameter name identifier within various expression contexts
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param methodParameterNode The formal parameter {@link TSNode} whose usages to find
+   * @param methodDeclarationNode The method declaration {@link TSNode} to search within
+   * @return List of identifier nodes where the parameter is used, empty if no usages found or
+   *     invalid input
+   */
+  public List<TSNode> findAllFormalParameterNodeUsages(
+      TSFile tsFile, TSNode methodParameterNode, TSNode methodDeclarationNode) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || methodParameterNode == null
         || methodDeclarationNode == null
-        || methodDeclarationNode.isNull()) {
-      return false;
-    }
-    // Check if it's a field access (this.paramName)
-    TSNode parent = identifierNode.getParent();
-    if (parent != null && "field_access".equals(parent.getType())) {
-      TSNode objectNode = parent.getChildByFieldName("object");
-      if (objectNode != null && "this".equals(file.getTextFromNode(objectNode))) {
-        return false; // this.paramName is a field access, not parameter usage
-      }
-    }
-    // Exclude if it's a local variable declaration or usage
-    if (this.localVariableDeclarationService.isLocalVariableDeclaration(identifierNode)) {
-      return false;
-    }
-    if (this.localVariableDeclarationService.isLocalVariableUsage(
-        identifierNode, methodDeclarationNode, paramName, file)) {
-      return false;
-    }
-    // Check if it matches any formal parameter name
-    List<TSNode> formalParams = findAllFormalParameters(file, methodDeclarationNode, currentName);
-    for (TSNode param : formalParams) {
-      Optional<TSNode> nameNode = getParameterNameNode(param, file);
-      if (nameNode.isPresent()
-          && paramName.equals(file.getTextFromNode(nameNode.get()))
-          && identifierNode.getStartByte() >= param.getEndByte()) {
-        return true; // It's after the parameter declaration, so it's a usage
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Finds all formal parameter usages by currentName within a method body.
-   *
-   * @param file The TSFile containing the source code.
-   * @param methodDeclarationNode The TSNode of the method declaration.
-   * @param currentName The current name of the parameter type to find usages for.
-   * @return A list of TSNode identifiers representing formal parameter usages.
-   */
-  public List<TSNode> findAllFormalParameterUsages(
-      TSFile file, TSNode methodDeclarationNode, String currentName) {
-    if (file == null
-        || methodDeclarationNode == null
-        || currentName == null
+        || !"formal_parameter".equals(methodParameterNode.getType())
         || !"method_declaration".equals(methodDeclarationNode.getType())) {
       return Collections.emptyList();
     }
-    List<TSNode> parameterUsages = new ArrayList<>();
-    // Get all formal parameters with the specified type
-    List<TSNode> formalParameters =
-        findAllFormalParameters(file, methodDeclarationNode, currentName);
-    // For each formal parameter, find its usages in the method body
-    for (TSNode formalParameter : formalParameters) {
-      Optional<TSNode> parameterNameNode = getParameterNameNode(formalParameter, file);
-      if (parameterNameNode.isEmpty()) {
-        continue;
-      }
-      String parameterName = file.getTextFromNode(parameterNameNode.get());
-      // Find usages in method body
-      TSNode bodyNode = methodDeclarationNode.getChildByFieldName("body");
-      if (bodyNode != null && "block".equals(bodyNode.getType())) {
-        List<TSNode> identifiers = file.query(bodyNode, "(identifier) @id");
-        for (TSNode identifier : identifiers) {
-          String identifierText = file.getTextFromNode(identifier);
-          if (parameterName.equals(identifierText)
-              && isFormalParameterUsage(
-                  file, methodDeclarationNode, identifier, parameterName, currentName)) {
-            parameterUsages.add(identifier);
-          }
-        }
-      }
+    Optional<TSNode> methodParameterNameNode =
+        this.getFormalParameterNameNode(tsFile, methodParameterNode);
+    if (methodParameterNameNode.isEmpty()) {
+      return Collections.emptyList();
     }
-    return parameterUsages.stream()
-        .sorted(Comparator.comparingInt(TSNode::getStartByte))
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * Renames formal parameters, including their types, names, and usages.
-   *
-   * @param file The file containing the source code.
-   * @param methodDeclarationNode The TSNode of the method declaration.
-   * @param currentName The current name of the parameter type (PascalCase).
-   * @param newName The new name for the parameter type (PascalCase).
-   */
-  public void renameFormalParameters(
-      TSFile file, TSNode methodDeclarationNode, String currentName, String newName) {
-    List<TSNode> formalParameterNodes =
-        findAllFormalParameters(file, methodDeclarationNode, currentName);
-    // Extract parameter info once
-    List<ParameterInfo> parameterInfos =
-        formalParameterNodes.stream()
-            .map(node -> extractParameterInfo(node, file, currentName))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(Collectors.toList());
-    // First pass: rename usages (in reverse order to preserve byte positions)
-    for (ParameterInfo info : parameterInfos.reversed()) {
-      List<TSNode> paramUsages =
-          findAllFormalParameterUsages(file, methodDeclarationNode, currentName);
-      for (TSNode usage : paramUsages.reversed()) {
-        String usageText = file.getTextFromNode(usage);
-        String newUsageName =
-            this.variableNamingService.generateNewVariableName(
-                usageText, currentName, newName, info.isCollectionType());
-        if (!usageText.equals(newUsageName)) {
-          file.updateSourceCode(usage, newUsageName);
-        }
-      }
-    }
-    // Second pass: rename declarations (in reverse order to preserve byte positions)
-    for (ParameterInfo info : parameterInfos.reversed()) {
-      String newParameterName =
-          this.variableNamingService.generateNewVariableName(
-              info.parameterName(), currentName, newName, info.isCollectionType());
-      if (!info.parameterName().equals(newParameterName)) {
-        file.updateSourceCode(info.nameNode(), newParameterName);
-      }
-      file.updateSourceCode(info.typeNode(), newName);
-    }
-  }
-
-  /**
-   * Renames all formal parameters of the specified type across all methods in a file.
-   *
-   * @param file The file containing the source code.
-   * @param currentName The current name of the parameter type (PascalCase).
-   * @param newName The new name for the parameter type (PascalCase).
-   */
-  public void renameFormalParametersInFile(TSFile file, String currentName, String newName) {
-    List<TSNode> methodDeclarationNodes = file.query("(method_declaration) @method");
-    for (TSNode methodDeclarationNode : methodDeclarationNodes) {
-      renameFormalParameters(file, methodDeclarationNode, currentName, newName);
-    }
+    String methodParameterName = tsFile.getTextFromNode(methodParameterNameNode.get());
+    String queryString =
+        String.format(
+            """
+            [
+              (method_invocation
+                object: (identifier) @name
+              )
+              (argument_list
+                (identifier) @name
+              )
+              (variable_declarator
+                value: (identifier) @name
+              )
+              (assignment_expression
+                left: (identifier) @name
+              )
+              (assignment_expression
+                right: (identifier) @name
+              )
+              (binary_expression
+                left: (identifier) @name
+              )
+              (binary_expression
+                right: (identifier) @name
+              )
+              (ternary_expression
+                consequence: (identifier) @name
+              )
+              (ternary_expression
+                alternative: (identifier) @name
+              )
+              (ternary_expression
+                condition: (identifier) @name
+              )
+              (#eq? @name "%s")
+            ]
+            """,
+            methodParameterName);
+    return tsFile.query(queryString).within(methodDeclarationNode).execute().nodes();
   }
 }
