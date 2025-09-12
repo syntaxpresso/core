@@ -12,61 +12,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
-/**
- * Service for analyzing and manipulating method declarations and invocations in Java source code
- * using tree-sitter.
- *
- * <p>This service provides comprehensive functionality for working with method declarations and
- * method invocations within Java source files, including extraction of method information, finding
- * method usages, and performing method-related transformations. It leverages tree-sitter queries to
- * accurately parse and analyze method declarations and invocations at the AST level.
- *
- * <p>Key capabilities include:
- *
- * <ul>
- *   <li>Extracting method name, return type, parameters, and modifiers
- *   <li>Finding all method declarations within a class
- *   <li>Locating method invocations and their components
- *   <li>Identifying special methods like main method
- *   <li>Analyzing method signatures and parameter lists
- *   <li>Finding method usages across different contexts
- * </ul>
- *
- * <p>Usage example:
- *
- * <pre>
- * MethodDeclarationService methodService = new MethodDeclarationService(parameterService);
- *
- * // Find all methods in a class
- * TSNode classNode = classService.findClassByName(tsFile, "MyClass").get();
- * List&lt;TSNode&gt; methods = methodService.getAllMethodDeclarationNodes(tsFile, classNode);
- *
- * // Analyze each method
- * for (TSNode methodNode : methods) {
- *   List&lt;Map&lt;String, TSNode&gt;&gt; methodInfo = methodService.getMethodDeclarationNodeInfo(tsFile, methodNode);
- *   for (Map&lt;String, TSNode&gt; info : methodInfo) {
- *     String methodName = tsFile.getTextFromNode(info.get("method_name"));
- *     String returnType = tsFile.getTextFromNode(info.get("method_return_type"));
- *     System.out.println("Method: " + returnType + " " + methodName);
- *   }
- * }
- *
- * // Find method invocations
- * List&lt;TSNode&gt; invocations = methodService.getAllMethodInvocationNodes(tsFile, classNode);
- * for (TSNode invocation : invocations) {
- *   Optional&lt;TSNode&gt; nameNode = methodService.getMethodInvocationNameNode(tsFile, invocation);
- *   if (nameNode.isPresent()) {
- *     String methodName = tsFile.getTextFromNode(nameNode.get());
- *     System.out.println("Method called: " + methodName);
- *   }
- * }
- * </pre>
- *
- * @see TSFile
- * @see MethodCapture
- * @see MethodInvocationCapture
- * @see FormalParameterService
- */
 @Getter
 @RequiredArgsConstructor
 public class MethodDeclarationService {

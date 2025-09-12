@@ -54,7 +54,8 @@ class JavaLanguageServiceTest {
         new MethodDeclarationService(formalParameterService);
     ClassDeclarationService classDeclarationService =
         new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
-    PackageDeclarationService packageDeclarationService = new PackageDeclarationService();
+    PackageDeclarationService packageDeclarationService =
+        new PackageDeclarationService(this.pathHelper);
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();
@@ -862,4 +863,3 @@ class JavaLanguageServiceTest {
     }
   }
 }
-

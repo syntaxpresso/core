@@ -14,57 +14,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.treesitter.TSNode;
 
-/**
- * Service for analyzing and manipulating annotation declarations in Java source code using
- * tree-sitter.
- *
- * <p>This service provides comprehensive functionality for working with annotations within Java
- * source files, including extraction of annotation information, finding annotations by name, and
- * analyzing annotation arguments. It leverages tree-sitter queries to accurately parse and analyze
- * annotation declarations at the AST level.
- *
- * <p>Key capabilities include:
- *
- * <ul>
- *   <li>Extracting annotation name, argument pairs, keys and values
- *   <li>Finding annotations by name within a scope
- *   <li>Handling both marker annotations and annotations with arguments
- *   <li>Accessing individual annotation argument pairs
- *   <li>Retrieving specific annotation values by key
- *   <li>Getting structured AnnotationArgument objects with both key and value nodes
- * </ul>
- *
- * <p>Usage example:
- *
- * <pre>
- * AnnotationService annotationService = new AnnotationService();
- *
- * // Find an annotation by name
- * Optional&lt;TSNode&gt; tableAnnotation = annotationService.findAnnotationByName(tsFile, scopeNode, "Table");
- * if (tableAnnotation.isPresent()) {
- *   // Get arguments as structured objects
- *   Map&lt;String, AnnotationArgument&gt; args = annotationService.getAnnotationArguments(tsFile, tableAnnotation.get());
- *
- *   AnnotationArgument nameArg = args.get("name");
- *   if (nameArg != null) {
- *     TSNode keyNode = nameArg.getKeyNode();        // Access to key node
- *     TSNode valueNode = nameArg.getValueNode();    // Access to value node
- *     String keyText = nameArg.getKey(tsFile);      // "name"
- *     String valueText = nameArg.getValue(tsFile);  // "\"users\""
- *   }
- * }
- *
- * // Get all argument pairs
- * List&lt;TSNode&gt; argumentPairs = annotationService.getAnnotationArgumentPairs(tsFile, tableAnnotation.get());
- *
- * // Find specific value by key
- * Optional&lt;TSNode&gt; nameValue = annotationService.getAnnotationValueByKey(tsFile, tableAnnotation.get(), "name");
- * </pre>
- *
- * @see TSFile
- * @see AnnotationCapture
- * @see AnnotationArgument
- */
 public class AnnotationService {
 
   /**
@@ -72,8 +21,8 @@ public class AnnotationService {
    *
    * <p>This method searches for all annotation declarations within the specified scope node,
    * including both marker annotations (e.g., {@code @Override}) and annotations with arguments
-   * (e.g., {@code @Table(name = "users")}). The search is performed using tree-sitter queries
-   * to accurately identify annotation nodes at the AST level.
+   * (e.g., {@code @Table(name = "users")}). The search is performed using tree-sitter queries to
+   * accurately identify annotation nodes at the AST level.
    *
    * <p>Usage example:
    *
@@ -543,8 +492,8 @@ public class AnnotationService {
    * @param tsFile The {@link TSFile} containing the Java source code to modify
    * @param declarationNode The declaration node (class, method, or field) to add annotation to
    * @param insertionPoint The {@link AnnotationInsertionPoint} specifying where to insert
-   * @param annotationText The annotation text to insert (e.g., "@Override", "@Entity",
-   *     "@Table(name = \"users\")")
+   * @param annotationText The annotation text to insert (e.g., "@Override", "@Entity", "@Table(name
+   *     = \"users\")")
    */
   public void addAnnotation(
       TSFile tsFile,
