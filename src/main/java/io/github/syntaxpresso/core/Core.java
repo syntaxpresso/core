@@ -81,7 +81,7 @@ public class Core {
     FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
     ClassDeclarationService classDeclarationService =
         new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
-    PackageDeclarationService packageDeclarationService = new PackageDeclarationService();
+    PackageDeclarationService packageDeclarationService = new PackageDeclarationService(pathHelper);
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();

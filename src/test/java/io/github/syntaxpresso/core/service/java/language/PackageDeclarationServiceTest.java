@@ -9,6 +9,7 @@ import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.language.extra.PackageCapture;
+import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,6 +26,7 @@ import org.treesitter.TSNode;
 @DisplayName("PackageDeclarationService Tests")
 class PackageDeclarationServiceTest {
   private PackageDeclarationService packageDeclarationService;
+  private PathHelper pathHelper;
 
   private static final String SIMPLE_PACKAGE_CODE =
       """
@@ -74,7 +76,8 @@ class PackageDeclarationServiceTest {
 
   @BeforeEach
   void setUp() {
-    this.packageDeclarationService = new PackageDeclarationService();
+    this.pathHelper = new PathHelper();
+    this.packageDeclarationService = new PackageDeclarationService(this.pathHelper);
   }
 
   @Nested
@@ -182,12 +185,12 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      List<Map<String, TSNode>> packageInfo = 
+      List<Map<String, TSNode>> packageInfo =
           packageDeclarationService.getPackageDeclarationInfo(tsFile, packageNode.get());
 
       assertFalse(packageInfo.isEmpty());
       Map<String, TSNode> info = packageInfo.get(0);
-      
+
       TSNode packageScopeNode = info.get(PackageCapture.PACKAGE_SCOPE.getCaptureName());
       assertNotNull(packageScopeNode);
       assertEquals("com.example.service", tsFile.getTextFromNode(packageScopeNode));
@@ -207,12 +210,12 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, NESTED_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      List<Map<String, TSNode>> packageInfo = 
+      List<Map<String, TSNode>> packageInfo =
           packageDeclarationService.getPackageDeclarationInfo(tsFile, packageNode.get());
 
       assertFalse(packageInfo.isEmpty());
       Map<String, TSNode> info = packageInfo.get(0);
-      
+
       TSNode packageScopeNode = info.get(PackageCapture.PACKAGE_SCOPE.getCaptureName());
       assertNotNull(packageScopeNode);
       assertEquals("com.example.project.service.impl", tsFile.getTextFromNode(packageScopeNode));
@@ -232,7 +235,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      List<Map<String, TSNode>> packageInfo = 
+      List<Map<String, TSNode>> packageInfo =
           packageDeclarationService.getPackageDeclarationInfo(null, packageNode.get());
 
       assertTrue(packageInfo.isEmpty());
@@ -244,7 +247,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       TSNode invalidNode = tsFile.query("(identifier) @id").returning("id").execute().firstNode();
 
-      List<Map<String, TSNode>> packageInfo = 
+      List<Map<String, TSNode>> packageInfo =
           packageDeclarationService.getPackageDeclarationInfo(tsFile, invalidNode);
 
       assertTrue(packageInfo.isEmpty());
@@ -273,7 +276,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      Optional<TSNode> classNameNode = 
+      Optional<TSNode> classNameNode =
           packageDeclarationService.getPackageClassNameNode(tsFile, packageNode.get());
 
       assertTrue(classNameNode.isPresent());
@@ -286,7 +289,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, NESTED_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      Optional<TSNode> classNameNode = 
+      Optional<TSNode> classNameNode =
           packageDeclarationService.getPackageClassNameNode(tsFile, packageNode.get());
 
       assertTrue(classNameNode.isPresent());
@@ -299,7 +302,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      Optional<TSNode> classNameNode = 
+      Optional<TSNode> classNameNode =
           packageDeclarationService.getPackageClassNameNode(null, packageNode.get());
 
       assertFalse(classNameNode.isPresent());
@@ -311,7 +314,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       TSNode invalidNode = tsFile.query("(identifier) @id").returning("id").execute().firstNode();
 
-      Optional<TSNode> classNameNode = 
+      Optional<TSNode> classNameNode =
           packageDeclarationService.getPackageClassNameNode(tsFile, invalidNode);
 
       assertFalse(classNameNode.isPresent());
@@ -340,7 +343,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      Optional<TSNode> classScopeNode = 
+      Optional<TSNode> classScopeNode =
           packageDeclarationService.getPackageClassScopeNode(tsFile, packageNode.get());
 
       assertTrue(classScopeNode.isPresent());
@@ -353,7 +356,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, NESTED_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      Optional<TSNode> classScopeNode = 
+      Optional<TSNode> classScopeNode =
           packageDeclarationService.getPackageClassScopeNode(tsFile, packageNode.get());
 
       assertTrue(classScopeNode.isPresent());
@@ -366,7 +369,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      Optional<TSNode> classScopeNode = 
+      Optional<TSNode> classScopeNode =
           packageDeclarationService.getPackageClassScopeNode(null, packageNode.get());
 
       assertFalse(classScopeNode.isPresent());
@@ -378,7 +381,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       TSNode invalidNode = tsFile.query("(identifier) @id").returning("id").execute().firstNode();
 
-      Optional<TSNode> classScopeNode = 
+      Optional<TSNode> classScopeNode =
           packageDeclarationService.getPackageClassScopeNode(tsFile, invalidNode);
 
       assertFalse(classScopeNode.isPresent());
@@ -407,7 +410,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      Optional<TSNode> packageScopeNode = 
+      Optional<TSNode> packageScopeNode =
           packageDeclarationService.getPackageScopeNode(tsFile, packageNode.get());
 
       assertTrue(packageScopeNode.isPresent());
@@ -420,11 +423,12 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, NESTED_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      Optional<TSNode> packageScopeNode = 
+      Optional<TSNode> packageScopeNode =
           packageDeclarationService.getPackageScopeNode(tsFile, packageNode.get());
 
       assertTrue(packageScopeNode.isPresent());
-      assertEquals("com.example.project.service.impl", tsFile.getTextFromNode(packageScopeNode.get()));
+      assertEquals(
+          "com.example.project.service.impl", tsFile.getTextFromNode(packageScopeNode.get()));
     }
 
     @Test
@@ -433,7 +437,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
-      Optional<TSNode> packageScopeNode = 
+      Optional<TSNode> packageScopeNode =
           packageDeclarationService.getPackageScopeNode(null, packageNode.get());
 
       assertFalse(packageScopeNode.isPresent());
@@ -445,7 +449,7 @@ class PackageDeclarationServiceTest {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       TSNode invalidNode = tsFile.query("(identifier) @id").returning("id").execute().firstNode();
 
-      Optional<TSNode> packageScopeNode = 
+      Optional<TSNode> packageScopeNode =
           packageDeclarationService.getPackageScopeNode(tsFile, invalidNode);
 
       assertFalse(packageScopeNode.isPresent());
@@ -456,8 +460,7 @@ class PackageDeclarationServiceTest {
   @DisplayName("getFilePathFromPackageScope() Tests")
   class GetFilePathFromPackageScopeTests {
 
-    @TempDir
-    Path tempDir;
+    @TempDir Path tempDir;
 
     /**
      * Tests that getFilePathFromPackageScope resolves package paths correctly.
@@ -475,11 +478,13 @@ class PackageDeclarationServiceTest {
      */
     @Test
     @DisplayName("should resolve package path for main source directory")
-    void getFilePathFromPackageScope_withMainSourceType_shouldResolveCorrectly() throws IOException {
+    void getFilePathFromPackageScope_withMainSourceType_shouldResolveCorrectly()
+        throws IOException {
       String packageScope = "com.example.service";
 
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          tempDir, packageScope, JavaSourceDirectoryType.MAIN);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(
+              tempDir, packageScope, JavaSourceDirectoryType.MAIN);
 
       assertTrue(packagePath.isPresent());
       assertTrue(Files.exists(packagePath.get()));
@@ -489,11 +494,13 @@ class PackageDeclarationServiceTest {
 
     @Test
     @DisplayName("should resolve package path for test source directory")
-    void getFilePathFromPackageScope_withTestSourceType_shouldResolveCorrectly() throws IOException {
+    void getFilePathFromPackageScope_withTestSourceType_shouldResolveCorrectly()
+        throws IOException {
       String packageScope = "com.example.test";
 
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          tempDir, packageScope, JavaSourceDirectoryType.TEST);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(
+              tempDir, packageScope, JavaSourceDirectoryType.TEST);
 
       assertTrue(packagePath.isPresent());
       assertTrue(Files.exists(packagePath.get()));
@@ -503,11 +510,13 @@ class PackageDeclarationServiceTest {
 
     @Test
     @DisplayName("should resolve single level package path")
-    void getFilePathFromPackageScope_withSingleLevelPackage_shouldResolveCorrectly() throws IOException {
+    void getFilePathFromPackageScope_withSingleLevelPackage_shouldResolveCorrectly()
+        throws IOException {
       String packageScope = "service";
 
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          tempDir, packageScope, JavaSourceDirectoryType.MAIN);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(
+              tempDir, packageScope, JavaSourceDirectoryType.MAIN);
 
       assertTrue(packagePath.isPresent());
       assertTrue(Files.exists(packagePath.get()));
@@ -516,15 +525,17 @@ class PackageDeclarationServiceTest {
 
     @Test
     @DisplayName("should find existing source directory")
-    void getFilePathFromPackageScope_withExistingSourceDir_shouldUseExistingDir() throws IOException {
+    void getFilePathFromPackageScope_withExistingSourceDir_shouldUseExistingDir()
+        throws IOException {
       // Create existing source directory
       Path existingSourceDir = tempDir.resolve("src/main/java");
       Files.createDirectories(existingSourceDir);
 
       String packageScope = "com.example.existing";
 
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          tempDir, packageScope, JavaSourceDirectoryType.MAIN);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(
+              tempDir, packageScope, JavaSourceDirectoryType.MAIN);
 
       assertTrue(packagePath.isPresent());
       assertTrue(Files.exists(packagePath.get()));
@@ -537,8 +548,9 @@ class PackageDeclarationServiceTest {
     void getFilePathFromPackageScope_withNullRootDir_shouldReturnEmpty() {
       String packageScope = "com.example.service";
 
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          null, packageScope, JavaSourceDirectoryType.MAIN);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(
+              null, packageScope, JavaSourceDirectoryType.MAIN);
 
       assertFalse(packagePath.isPresent());
     }
@@ -551,8 +563,9 @@ class PackageDeclarationServiceTest {
 
       String packageScope = "com.example.service";
 
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          fileInsteadOfDir, packageScope, JavaSourceDirectoryType.MAIN);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(
+              fileInsteadOfDir, packageScope, JavaSourceDirectoryType.MAIN);
 
       assertFalse(packagePath.isPresent());
     }
@@ -560,8 +573,9 @@ class PackageDeclarationServiceTest {
     @Test
     @DisplayName("should return empty for null package scope")
     void getFilePathFromPackageScope_withNullPackageScope_shouldReturnEmpty() {
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          tempDir, null, JavaSourceDirectoryType.MAIN);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(
+              tempDir, null, JavaSourceDirectoryType.MAIN);
 
       assertFalse(packagePath.isPresent());
     }
@@ -569,8 +583,9 @@ class PackageDeclarationServiceTest {
     @Test
     @DisplayName("should return empty for blank package scope")
     void getFilePathFromPackageScope_withBlankPackageScope_shouldReturnEmpty() {
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          tempDir, "   ", JavaSourceDirectoryType.MAIN);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(
+              tempDir, "   ", JavaSourceDirectoryType.MAIN);
 
       assertFalse(packagePath.isPresent());
     }
@@ -580,19 +595,21 @@ class PackageDeclarationServiceTest {
     void getFilePathFromPackageScope_withNullSourceDirectoryType_shouldReturnEmpty() {
       String packageScope = "com.example.service";
 
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          tempDir, packageScope, null);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(tempDir, packageScope, null);
 
       assertFalse(packagePath.isPresent());
     }
 
     @Test
     @DisplayName("should handle nested package directories")
-    void getFilePathFromPackageScope_withDeeplyNestedPackage_shouldResolveCorrectly() throws IOException {
+    void getFilePathFromPackageScope_withDeeplyNestedPackage_shouldResolveCorrectly()
+        throws IOException {
       String packageScope = "com.example.project.service.impl.utils";
 
-      Optional<Path> packagePath = packageDeclarationService.getFilePathFromPackageScope(
-          tempDir, packageScope, JavaSourceDirectoryType.MAIN);
+      Optional<Path> packagePath =
+          packageDeclarationService.getFilePathFromPackageScope(
+              tempDir, packageScope, JavaSourceDirectoryType.MAIN);
 
       assertTrue(packagePath.isPresent());
       assertTrue(Files.exists(packagePath.get()));
@@ -608,9 +625,9 @@ class PackageDeclarationServiceTest {
     @DisplayName("should handle malformed source code")
     void methods_withMalformedCode_shouldHandleGracefully() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, MALFORMED_CODE);
-      
+
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
-      
+
       // Should not crash, behavior may vary based on tree-sitter parsing
       assertNotNull(packageNode);
     }
@@ -619,9 +636,9 @@ class PackageDeclarationServiceTest {
     @DisplayName("should handle empty source code")
     void methods_withEmptyCode_shouldHandleGracefully() {
       TSFile tsFile = new TSFile(SupportedLanguage.JAVA, "");
-      
+
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
-      
+
       assertFalse(packageNode.isPresent());
     }
 
@@ -632,10 +649,10 @@ class PackageDeclarationServiceTest {
       Optional<TSNode> packageNode = packageDeclarationService.getPackageDeclarationNode(tsFile);
 
       assertTrue(packageNode.isPresent());
-      
-      List<Map<String, TSNode>> packageInfo = 
+
+      List<Map<String, TSNode>> packageInfo =
           packageDeclarationService.getPackageDeclarationInfo(tsFile, packageNode.get());
-      
+
       // Single level packages may not have scope/name separation
       assertNotNull(packageInfo);
     }
@@ -645,23 +662,30 @@ class PackageDeclarationServiceTest {
     void methods_withInvalidInput_shouldHandleGracefully() {
       TSFile validFile = new TSFile(SupportedLanguage.JAVA, SIMPLE_PACKAGE_CODE);
       TSFile invalidFile = new TSFile(SupportedLanguage.JAVA, "");
-      TSNode invalidNode = validFile.query("(identifier) @id").returning("id").execute().firstNode();
+      TSNode invalidNode =
+          validFile.query("(identifier) @id").returning("id").execute().firstNode();
 
       // Test all methods with invalid combinations
       assertFalse(packageDeclarationService.getPackageDeclarationNode(null).isPresent());
       assertFalse(packageDeclarationService.getPackageDeclarationNode(invalidFile).isPresent());
-      
+
       assertTrue(packageDeclarationService.getPackageDeclarationInfo(null, invalidNode).isEmpty());
-      assertTrue(packageDeclarationService.getPackageDeclarationInfo(validFile, invalidNode).isEmpty());
-      
+      assertTrue(
+          packageDeclarationService.getPackageDeclarationInfo(validFile, invalidNode).isEmpty());
+
       assertFalse(packageDeclarationService.getPackageClassNameNode(null, invalidNode).isPresent());
-      assertFalse(packageDeclarationService.getPackageClassNameNode(validFile, invalidNode).isPresent());
-      
-      assertFalse(packageDeclarationService.getPackageClassScopeNode(null, invalidNode).isPresent());
-      assertFalse(packageDeclarationService.getPackageClassScopeNode(validFile, invalidNode).isPresent());
-      
+      assertFalse(
+          packageDeclarationService.getPackageClassNameNode(validFile, invalidNode).isPresent());
+
+      assertFalse(
+          packageDeclarationService.getPackageClassScopeNode(null, invalidNode).isPresent());
+      assertFalse(
+          packageDeclarationService.getPackageClassScopeNode(validFile, invalidNode).isPresent());
+
       assertFalse(packageDeclarationService.getPackageScopeNode(null, invalidNode).isPresent());
-      assertFalse(packageDeclarationService.getPackageScopeNode(validFile, invalidNode).isPresent());
+      assertFalse(
+          packageDeclarationService.getPackageScopeNode(validFile, invalidNode).isPresent());
     }
   }
 }
+

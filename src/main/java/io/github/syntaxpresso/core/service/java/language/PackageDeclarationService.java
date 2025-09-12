@@ -11,52 +11,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
-/**
- * Service for analyzing and manipulating package declarations in Java source code using tree-sitter.
- *
- * <p>This service provides comprehensive functionality for working with package declarations within
- * Java source files, including extraction of package information, resolving package paths, and
- * performing package-related transformations. It leverages tree-sitter queries to accurately parse
- * and analyze package declarations at the AST level.
- *
- * <p>Key capabilities include:
- *
- * <ul>
- *   <li>Extracting package names and scopes from source files
- *   <li>Finding package declaration nodes
- *   <li>Resolving package paths to file system directories
- *   <li>Determining source directory types (main, test, etc.)
- *   <li>Converting between package names and directory structures
- * </ul>
- *
- * <p>Usage example:
- *
- * <pre>
- * PackageDeclarationService packageService = new PackageDeclarationService();
- *
- * // Get package declaration from a file
- * Optional&lt;TSNode&gt; packageNode = packageService.getPackageDeclarationNode(tsFile);
- * if (packageNode.isPresent()) {
- *   List&lt;Map&lt;String, TSNode&gt;&gt; info = packageService.getPackageDeclarationInfo(tsFile, packageNode.get());
- *   for (Map&lt;String, TSNode&gt; infoMap : info) {
- *     String packageName = tsFile.getTextFromNode(infoMap.get("package_scope"));
- *     System.out.println("Package: " + packageName);
- *   }
- * }
- *
- * // Resolve package path
- * Path packagePath = packageService.resolvePackagePath(projectRoot, "com.example.service");
- * System.out.println("Package directory: " + packagePath);
- * </pre>
- *
- * @see TSFile
- * @see PackageCapture
- * @see JavaSourceDirectoryType
- */
+@RequiredArgsConstructor
 public class PackageDeclarationService {
-  private final PathHelper pathHelper = new PathHelper();
+  private final PathHelper pathHelper;
 
   /**
    * Gets the package declaration node from a Java file.
@@ -166,12 +126,14 @@ public class PackageDeclarationService {
   }
 
   /**
-   * Resolves the file system path for a given package scope within the specified source directory type.
+   * Resolves the file system path for a given package scope within the specified source directory
+   * type.
    *
-   * <p>This method finds the appropriate source directory (main or test), converts the package scope
-   * (e.g., "com.example.foo") to a directory path, and ensures the directory exists.
+   * <p>This method finds the appropriate source directory (main or test), converts the package
+   * scope (e.g., "com.example.foo") to a directory path, and ensures the directory exists.
    *
    * <p>Usage example:
+   *
    * <pre>
    * Optional<Path> packageDir = service.getFilePathFromPackageScope(
    *     projectRoot, "com.example.foo", JavaSourceDirectoryType.MAIN);
@@ -183,7 +145,8 @@ public class PackageDeclarationService {
    * @param rootDir The root directory of the project.
    * @param packageScope The package scope as a dot-separated string (e.g., "com.example.foo").
    * @param sourceDirectoryType The type of source directory (main or test).
-   * @return An {@link Optional} containing the resolved package directory path, or empty if not found or on error.
+   * @return An {@link Optional} containing the resolved package directory path, or empty if not
+   *     found or on error.
    */
   public Optional<Path> getFilePathFromPackageScope(
       Path rootDir, String packageScope, JavaSourceDirectoryType sourceDirectoryType) {
