@@ -1,15 +1,7 @@
 package io.github.syntaxpresso.core.common;
 
-import io.github.syntaxpresso.core.command.CreateNewFileCommand;
-import io.github.syntaxpresso.core.command.GetCursorPositionInfoCommand;
-import io.github.syntaxpresso.core.command.GetMainClassCommand;
-import io.github.syntaxpresso.core.command.ParseSourceCodeCommand;
-import io.github.syntaxpresso.core.command.RenameCommand;
-import io.github.syntaxpresso.core.service.java.command.CreateNewFileCommandService;
-import io.github.syntaxpresso.core.service.java.command.GetCursorPositionInfoCommandService;
-import io.github.syntaxpresso.core.service.java.command.GetMainClassCommandService;
-import io.github.syntaxpresso.core.service.java.command.ParseSourceCodeCommandService;
-import io.github.syntaxpresso.core.service.java.command.RenameCommandService;
+import io.github.syntaxpresso.core.command.*;
+import io.github.syntaxpresso.core.service.java.command.*;
 import lombok.RequiredArgsConstructor;
 import picocli.CommandLine.IFactory;
 
@@ -20,6 +12,7 @@ public class CommandFactory implements IFactory {
   private final CreateNewFileCommandService createNewFileCommandService;
   private final GetCursorPositionInfoCommandService getCursorPositionInfoCommandService;
   private final ParseSourceCodeCommandService parseSourceCodeCommandService;
+  private final CreateNewJPAEntityCommandService createNewJPAEntityCommandService;
 
   @Override
   @SuppressWarnings("unchecked")
@@ -39,14 +32,8 @@ public class CommandFactory implements IFactory {
     if (cls == RenameCommand.class) {
       return (K) new RenameCommand(renameCommandService);
     }
-    if (cls == GetCursorPositionInfo.class) {
-      return (K) new GetCursorPositionInfo(javaCommandService);
-    }
-    if (cls == GetJPAEntityInfoCommand.class) {
-      return (K) new GetJPAEntityInfoCommand(javaCommandService);
-    }
     if (cls == CreateNewJPAEntityCommand.class) {
-      return (K) new CreateNewJPAEntityCommand(javaCommandService);
+      return (K) new CreateNewJPAEntityCommand(createNewJPAEntityCommandService);
     }
     // if (cls == CreateJPARepositoryCommand.class) {
     //   return (K) new CreateJPARepositoryCommand(javaCommandService);
