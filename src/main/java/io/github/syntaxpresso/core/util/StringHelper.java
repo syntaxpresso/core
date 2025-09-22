@@ -1,5 +1,6 @@
 package io.github.syntaxpresso.core.util;
 
+import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.util.extra.CaseFormat;
 
 /**
@@ -280,5 +281,14 @@ public final class StringHelper {
    */
   public static String pluralize(String str) {
     return StringPluralizer.pluralize(str);
+  }
+
+  public static String pascalToSnake(String pascalToSnakeStr){
+    if(Strings.isNullOrEmpty(pascalToSnakeStr)){
+      return pascalToSnakeStr;
+    }
+    pascalToSnakeStr = pascalToSnakeStr.replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2");
+    pascalToSnakeStr = pascalToSnakeStr.replaceAll("([a-z0-9])([A-Z])", "$1_$2");
+    return pascalToSnakeStr.toLowerCase();
   }
 }

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.language.extra.ImportCapture;
+import io.github.syntaxpresso.core.util.PathHelper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,7 +24,7 @@ import org.treesitter.TSNode;
 class ImportDeclarationServiceTest {
 
   private static final String JAVA_WITH_IMPORTS =
-      """
+"""
 package com.example;
 
 import java.util.List;
@@ -31,7 +32,7 @@ import java.util.Map;
 import java.util.Set;
 """;
   private static final String JAVA_WITH_WILDCARD_IMPORTS =
-      """
+"""
 package com.example;
 
 import java.util.*;
@@ -39,9 +40,10 @@ import java.util.*;
   private static final String JAVA_NO_IMPORTS = "package com.example;";
   private static final String JAVA_NO_PACKAGE_NO_IMPORTS = "class Test {}";
   private static final String JAVA_NO_PACKAGE_WITH_IMPORTS =
-      """
+"""
 import java.util.List;
-class Test {}""";
+class Test {}\
+""";
 
   @TempDir Path tempDir;
   private ImportDeclarationService service;
@@ -90,13 +92,15 @@ class Test {}""";
       assertFalse(info.isEmpty());
       assertEquals(
           "java.util.List",
-          tsFile.getTextFromNode(info.get(0).get(ImportCapture.FULL_IMPORT_SCOPE.getCaptureName())));
+          tsFile.getTextFromNode(
+              info.get(0).get(ImportCapture.FULL_IMPORT_SCOPE.getCaptureName())));
       assertEquals(
           "java.util",
           tsFile.getTextFromNode(
               info.get(1).get(ImportCapture.RELATIVE_IMPORT_SCOPE.getCaptureName())));
       assertEquals(
-          "List", tsFile.getTextFromNode(info.get(1).get(ImportCapture.CLASS_NAME.getCaptureName())));
+          "List",
+          tsFile.getTextFromNode(info.get(1).get(ImportCapture.CLASS_NAME.getCaptureName())));
     }
 
     @Test
@@ -108,7 +112,8 @@ class Test {}""";
       assertFalse(info.isEmpty());
       assertEquals(
           "java.util",
-          tsFile.getTextFromNode(info.get(0).get(ImportCapture.FULL_IMPORT_SCOPE.getCaptureName())));
+          tsFile.getTextFromNode(
+              info.get(0).get(ImportCapture.FULL_IMPORT_SCOPE.getCaptureName())));
       assertTrue(info.get(1).containsKey(ImportCapture.ASTERISK.getCaptureName()));
     }
   }
@@ -169,12 +174,16 @@ class Test {}""";
   @Nested
   @DisplayName("addImport()")
   class AddImport {
+    private final PathHelper pathHelper = new PathHelper();
+
     @Test
     @DisplayName("should add import after package when no imports exist")
     void shouldAddImportAfterPackageWhenNoImportsExist() throws IOException {
       tsFile = createTempTSFile(JAVA_NO_IMPORTS);
       TSNode packageNode =
-          new PackageDeclarationService().getPackageDeclarationNode(tsFile).orElse(null);
+          new PackageDeclarationService(this.pathHelper)
+              .getPackageDeclarationNode(tsFile)
+              .orElse(null);
       service.addImport(tsFile, "java.util", "List", packageNode);
       String expected = "package com.example;\n\nimport java.util.List;";
       assertEquals(expected, tsFile.getSourceCode());
@@ -194,7 +203,9 @@ class Test {}""";
     void shouldAddImportAfterExistingImports() throws IOException {
       tsFile = createTempTSFile(JAVA_NO_PACKAGE_WITH_IMPORTS);
       TSNode packageNode =
-          new PackageDeclarationService().getPackageDeclarationNode(tsFile).orElse(null);
+          new PackageDeclarationService(this.pathHelper)
+              .getPackageDeclarationNode(tsFile)
+              .orElse(null);
       service.addImport(tsFile, "java.util", "Map", packageNode);
       String expected = "import java.util.List;\nimport java.util.Map;";
       assertTrue(tsFile.getSourceCode().contains(expected));
@@ -206,7 +217,9 @@ class Test {}""";
       tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
       String originalSource = tsFile.getSourceCode();
       TSNode packageNode =
-          new PackageDeclarationService().getPackageDeclarationNode(tsFile).orElse(null);
+          new PackageDeclarationService(this.pathHelper)
+              .getPackageDeclarationNode(tsFile)
+              .orElse(null);
       service.addImport(tsFile, "java.util", "List", packageNode);
       assertEquals(originalSource, tsFile.getSourceCode());
     }
@@ -219,8 +232,7 @@ class Test {}""";
     @DisplayName("should update an existing import")
     void shouldUpdateAnExistingImport() throws IOException {
       tsFile = createTempTSFile(JAVA_WITH_IMPORTS);
-      boolean updated =
-          service.updateImport(tsFile, "java.util", "java.awt", "List", "Button");
+      boolean updated = service.updateImport(tsFile, "java.util", "java.awt", "List", "Button");
       assertTrue(updated);
       assertTrue(tsFile.getSourceCode().contains("import java.awt.Button;"));
       assertFalse(tsFile.getSourceCode().contains("import java.util.List;"));

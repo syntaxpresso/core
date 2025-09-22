@@ -8,55 +8,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
 
-/**
- * Service for analyzing and manipulating field declarations in Java source code using tree-sitter.
- *
- * <p>This service provides comprehensive functionality for working with field declarations within
- * Java classes, including extraction of field information, finding field usages, and performing
- * field-related transformations. It leverages tree-sitter queries to accurately parse and analyze
- * field declarations at the AST level.
- *
- * <p>Key capabilities include:
- *
- * <ul>
- *   <li>Extracting field type, name, and initialization values
- *   <li>Finding all field declarations within a class
- *   <li>Locating field annotations
- *   <li>Searching for field usages across the class
- *   <li>Finding fields by name or type
- *   <li>Renaming field declarations and their usages
- * </ul>
- *
- * <p>Usage example:
- *
- * <pre>
- * FieldDeclarationService fieldService = new FieldDeclarationService();
- * ClassDeclarationService classService = new ClassDeclarationService();
- *
- * // Find a class and get all its fields
- * TSNode classNode = classService.findClassByName(tsFile, "User").get();
- * List&lt;TSNode&gt; fieldNodes = fieldService.getAllFieldDeclarationNodes(tsFile, classNode);
- *
- * // Analyze each field
- * for (TSNode fieldNode : fieldNodes) {
- *   List&lt;Map&lt;String, TSNode&gt;&gt; fieldInfo = fieldService.getFieldDeclarationNodeInfo(tsFile, fieldNode);
- *   for (Map&lt;String, TSNode&gt; info : fieldInfo) {
- *     String type = tsFile.getTextFromNode(info.get("fieldType"));
- *     String name = tsFile.getTextFromNode(info.get("fieldName"));
- *     System.out.println("Field: " + type + " " + name);
- *   }
- * }
- * </pre>
- *
- * @see TSFile
- * @see FieldCapture
- */
-@Getter
-@RequiredArgsConstructor
 public class FieldDeclarationService {
 
   /**
