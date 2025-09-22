@@ -131,7 +131,9 @@ public class CreateNewJPAEntityCommandService {
     } catch (IOException e) {
       return DataTransferObject.error("Could not save file: " + e.getMessage());
     }
-    return null;
+    return DataTransferObject.success(
+        new CreateNewJPAEntityResponse(tsFile.getPath().toString())
+    );
   }
 
   private DataTransferObject<CreateNewJPAEntityResponse> verifyArgumentName(
