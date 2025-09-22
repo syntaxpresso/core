@@ -1,5 +1,6 @@
 package io.github.syntaxpresso.core.util;
 
+import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.util.extra.CaseFormat;
 
 /**
