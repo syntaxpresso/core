@@ -1,5 +1,6 @@
 package io.github.syntaxpresso.core.service.java.language;
 
+import com.google.common.annotations.Beta;
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.service.java.language.extra.AnnotationArgument;
@@ -421,6 +422,7 @@ public class AnnotationService {
    * @param insertionPoint The desired insertion position strategy
    * @return {@link AnnotationInsertionPoint} containing position details, or null if invalid input
    */
+  @Beta
   public AnnotationInsertionPoint getAnnotationInsertionPosition(
       TSFile tsFile, TSNode declarationNode, AnnotationInsertionPosition insertionPoint) {
     if (tsFile == null || tsFile.getTree() == null || declarationNode == null) {
@@ -442,7 +444,12 @@ public class AnnotationService {
         annotationInsertionPoint.setInsertByte(declarationNode.getStartByte());
       }
     } else {
-      annotationInsertionPoint.setInsertByte(declarationNode.getStartByte());
+      if (allAnnotations.size() == 0) {
+        annotationInsertionPoint.setInsertByte(declarationNode.getStartByte());
+      } else {
+        annotationInsertionPoint.setBreakLineBefore(true);
+        annotationInsertionPoint.setInsertByte(allAnnotations.getLast().getEndByte());
+      }
     }
     return annotationInsertionPoint;
   }
@@ -514,6 +521,9 @@ public class AnnotationService {
       return;
     }
     String insertText = annotationText + "\n";
+    if (insertionPoint.isBreakLineBefore()) {
+      insertText = "\n" + insertText;
+    }
     tsFile.updateSourceCode(
         insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), insertText);
   }
