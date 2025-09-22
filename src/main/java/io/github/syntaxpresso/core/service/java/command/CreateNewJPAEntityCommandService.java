@@ -72,7 +72,7 @@ public class CreateNewJPAEntityCommandService {
             verifyArgumentName(file, entityAnnotationNode.get(), snakeName);
         if (!entityExists.getSucceed()) return entityExists;
       }
-      if (entityImportDeclarationNode.isPresent()) {
+      if (tableImportDeclarationNode.isPresent()) {
         Optional<TSNode> tableAnnotationNode =
             this.javaLanguageService
                 .getAnnotationService()
@@ -132,8 +132,7 @@ public class CreateNewJPAEntityCommandService {
       return DataTransferObject.error("Could not save file: " + e.getMessage());
     }
     return DataTransferObject.success(
-        new CreateNewJPAEntityResponse(tsFile.getPath().toString())
-    );
+        new CreateNewJPAEntityResponse(tsFile.getFile().getAbsolutePath()));
   }
 
   private DataTransferObject<CreateNewJPAEntityResponse> verifyArgumentName(
@@ -143,13 +142,13 @@ public class CreateNewJPAEntityCommandService {
             .getAnnotationService()
             .getAnnotationArguments(file, tableAnnotationNode);
     AnnotationArgument nameArgumentNode = annotationArgument.get("name");
-    if(nameArgumentNode != null){
+    if (nameArgumentNode != null) {
       String argValue = nameArgumentNode.getValue(file).replace("\"", "");
       if (Strings.isNullOrEmpty(argValue)) {
-        return DataTransferObject.error("Annotation does not exists");
+        return DataTransferObject.error("Annotation does not exist");
       }
       if (argValue.equals(snakeName)) {
-        return DataTransferObject.error("JPA Entity already exists");
+        return DataTransferObject.error("JPA Entity already exist");
       }
     }
     return DataTransferObject.success();
