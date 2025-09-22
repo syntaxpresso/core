@@ -4,6 +4,7 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
+import io.github.syntaxpresso.core.service.java.language.AnnotationService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
@@ -26,6 +27,7 @@ public class JavaLanguageService {
   private final PackageDeclarationService packageDeclarationService;
   private final ImportDeclarationService importDeclarationService;
   private final LocalVariableDeclarationService localVariableDeclarationService;
+  private final AnnotationService annotationService;
 
   /**
    * Gets all Java files from the current working directory.
