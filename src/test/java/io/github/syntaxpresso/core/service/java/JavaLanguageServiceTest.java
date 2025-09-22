@@ -10,6 +10,7 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
+import io.github.syntaxpresso.core.service.java.language.AnnotationService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FormalParameterService;
@@ -59,6 +60,7 @@ class JavaLanguageServiceTest {
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();
+    AnnotationService annotationService = new AnnotationService();
 
     this.javaLanguageService =
         new JavaLanguageService(
@@ -67,7 +69,8 @@ class JavaLanguageServiceTest {
             classDeclarationService,
             packageDeclarationService,
             importDeclarationService,
-            localVariableDeclarationService);
+            localVariableDeclarationService,
+            annotationService);
   }
 
   @Nested

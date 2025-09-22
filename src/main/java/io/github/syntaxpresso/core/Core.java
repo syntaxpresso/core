@@ -13,6 +13,7 @@ import io.github.syntaxpresso.core.service.java.command.GetCursorPositionInfoCom
 import io.github.syntaxpresso.core.service.java.command.GetMainClassCommandService;
 import io.github.syntaxpresso.core.service.java.command.ParseSourceCodeCommandService;
 import io.github.syntaxpresso.core.service.java.command.RenameCommandService;
+import io.github.syntaxpresso.core.service.java.language.AnnotationService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FormalParameterService;
@@ -85,6 +86,7 @@ public class Core {
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();
+    AnnotationService annotationService = new AnnotationService();
     JavaLanguageService javaLanguageService =
         new JavaLanguageService(
             pathHelper,
@@ -92,7 +94,8 @@ public class Core {
             classDeclarationService,
             packageDeclarationService,
             importDeclarationService,
-            localVariableDeclarationService);
+            localVariableDeclarationService,
+            annotationService);
     RenameCommandService renameCommandService =
         new RenameCommandService(variableNamingService, javaLanguageService);
     GetMainClassCommandService getMainClassCommandService =
