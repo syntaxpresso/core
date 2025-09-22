@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class AnnotationInsertionPoint {
   private boolean breakLineBefore = false;
+  private boolean breakLineAfter = false;
 
   /** Defines the possible insertion points for an annotation statement. */
   public enum AnnotationInsertionPosition {
