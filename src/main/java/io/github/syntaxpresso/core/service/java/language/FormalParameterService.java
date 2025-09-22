@@ -8,44 +8,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.treesitter.TSNode;
 
-/**
- * Service for analyzing and extracting method parameter information from Java source code using
- * Tree-sitter parsing.
- *
- * <p>This service provides comprehensive functionality for working with method (formal) parameters
- * in Java, including extraction of parameter nodes, detailed parameter info, finding usages within
- * method bodies, and renaming parameters. It leverages tree-sitter queries to accurately parse and
- * analyze parameter declarations at the AST level.
- *
- * <p>Key capabilities include:
- *
- * <ul>
- *   <li>Extracting all parameter nodes from a method declaration
- *   <li>Extracting type, name, and full node info for each parameter
- *   <li>Finding all usages of a parameter within a method body
- *   <li>Supporting generic and non-generic parameter types
- *   <li>Renaming parameter declarations and their usages
- * </ul>
- *
- * <p>Usage example:
- *
- * <pre>
- * FormalParameterService paramService = new FormalParameterService();
- * TSNode methodNode = ... // obtain method_declaration node
- * List&lt;TSNode&gt; params = paramService.getAllFormalParameterNodes(tsFile, methodNode);
- * for (TSNode param : params) {
- *   List&lt;Map&lt;String, TSNode&gt;&gt; info = paramService.getFormalParameterNodeInfo(tsFile, param);
- *   for (Map&lt;String, TSNode&gt; map : info) {
- *     String type = tsFile.getTextFromNode(map.get("parameter_type"));
- *     String name = tsFile.getTextFromNode(map.get("parameter_name"));
- *     System.out.println("Parameter: " + type + " " + name);
- *   }
- * }
- * </pre>
- *
- * @see TSFile
- * @see ParameterCapture
- */
 public class FormalParameterService {
 
   /**

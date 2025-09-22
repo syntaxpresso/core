@@ -9,64 +9,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.Getter;
 import org.treesitter.TSNode;
 
-/**
- * Service for analyzing and manipulating import declarations in Java source code using tree-sitter.
- *
- * <p>This service provides comprehensive functionality for working with import declarations within
- * Java source files, including extraction of import information, finding import statements,
- * checking for existing imports, and performing import-related transformations. It leverages
- * tree-sitter queries to accurately parse and analyze import declarations at the AST level.
- *
- * <p>Key capabilities include:
- *
- * <ul>
- *   <li>Extracting import scope, class name, and wildcard information
- *   <li>Finding all import declarations within a file
- *   <li>Locating specific imports by package and class name
- *   <li>Checking for wildcard imports vs specific class imports
- *   <li>Determining optimal insertion points for new imports
- *   <li>Adding and updating import statements
- * </ul>
- *
- * <p>Usage example:
- *
- * <pre>
- * ImportDeclarationService importService = new ImportDeclarationService();
- *
- * // Check if a class is already imported
- * boolean imported = importService.isClassImported(tsFile, "java.util", "List");
- * if (!imported) {
- *   // Add the import
- *   TSNode packageNode = packageService.getPackageDeclarationNode(tsFile).orElse(null);
- *   importService.addImport(tsFile, "java.util", "List", packageNode);
- * }
- *
- * // Find all imports in the file
- * List&lt;TSNode&gt; imports = importService.getAllImportDeclarationNodes(tsFile);
- * for (TSNode importNode : imports) {
- *   List&lt;Map&lt;String, TSNode&gt;&gt; info = importService.getImportDeclarationNodeInfo(tsFile, importNode);
- *   for (Map&lt;String, TSNode&gt; infoMap : info) {
- *     TSNode classNode = infoMap.get("class_name");
- *     if (classNode != null) {
- *       String className = tsFile.getTextFromNode(classNode);
- *       System.out.println("Imported class: " + className);
- *     }
- *   }
- * }
- * </pre>
- *
- * @see TSFile
- * @see ImportCapture
- * @see ImportInsertionPoint
- * @see PackageDeclarationService
- */
-@Getter
 public class ImportDeclarationService {
-  private final PackageDeclarationService packageDeclarationService =
-      new PackageDeclarationService();
 
   /**
    * Retrieves all import declaration nodes from the given Java source file.

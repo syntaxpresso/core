@@ -10,61 +10,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.treesitter.TSNode;
 
-/**
- * Service for analyzing and manipulating local variable declarations, formal parameters, and field
- * declarations in Java source code using tree-sitter.
- *
- * <p>This service provides comprehensive functionality for working with variable declarations of
- * all types within Java source files, including extraction of variable information, finding
- * variable usages, scope analysis, and performing variable-related transformations. It leverages
- * tree-sitter queries to accurately parse and analyze variable declarations at the AST level.
- *
- * <p>Key capabilities include:
- *
- * <ul>
- *   <li>Extracting variable type, name, modifiers, and initialization values
- *   <li>Finding all variable declarations (local, parameters, fields) within a file
- *   <li>Locating variable usages within appropriate scopes
- *   <li>Analyzing generic types and type arguments
- *   <li>Handling scope-based variable resolution and shadowing
- *   <li>Finding type references across different contexts
- * </ul>
- *
- * <p>Variable types supported:
- *
- * <ul>
- *   <li><strong>Local variables:</strong> Variables declared within method bodies or blocks
- *   <li><strong>Formal parameters:</strong> Method and constructor parameters
- *   <li><strong>Field declarations:</strong> Class-level instance and static fields
- * </ul>
- *
- * <p>Usage example:
- *
- * <pre>
- * LocalVariableDeclarationService varService = new LocalVariableDeclarationService();
- *
- * // Find all variable declarations in a file
- * List&lt;TSNode&gt; allVars = varService.getAllMethodParameterNodes(tsFile);
- * for (TSNode varNode : allVars) {
- *   List&lt;Map&lt;String, TSNode&gt;&gt; info = varService.getLocalVariableDeclarationNodeInfo(tsFile, varNode);
- *   for (Map&lt;String, TSNode&gt; infoMap : info) {
- *     String type = tsFile.getTextFromNode(infoMap.get("variable_type"));
- *     String name = tsFile.getTextFromNode(infoMap.get("variable_name"));
- *     System.out.println("Variable: " + type + " " + name);
- *   }
- * }
- *
- * // Find all usages of a specific variable
- * List&lt;TSNode&gt; usages = varService.findVariableUsagesInScope(tsFile, varNode);
- * for (TSNode usage : usages) {
- *   int line = usage.getStartPoint().getRow() + 1;
- *   System.out.println("Usage at line: " + line);
- * }
- * </pre>
- *
- * @see TSFile
- * @see VariableCapture
- */
 public class LocalVariableDeclarationService {
   /**
    * Retrieves all variable declaration nodes from a file, including local variables, formal
