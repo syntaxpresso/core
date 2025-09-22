@@ -2,7 +2,7 @@ package io.github.syntaxpresso.core.command;
 
 import io.github.syntaxpresso.core.command.dto.CreateNewJPAEntityResponse;
 import io.github.syntaxpresso.core.common.DataTransferObject;
-import io.github.syntaxpresso.core.service.java.JavaCommandService;
+import io.github.syntaxpresso.core.service.java.command.CreateNewJPAEntityCommandService;
 import lombok.RequiredArgsConstructor;
 import picocli.CommandLine;
 
@@ -13,7 +13,7 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(name = "create-new-jpa-entity", description = "Create New JPA Entity")
 public class CreateNewJPAEntityCommand
     implements Callable<DataTransferObject<CreateNewJPAEntityResponse>> {
-  private final JavaCommandService javaCommandService;
+  private final CreateNewJPAEntityCommandService createNewJPAEntityCommandService;
 
     @CommandLine.Option(names = "--cwd", description = "Current Working Directory", required = true)
     private Path cwd;
@@ -29,7 +29,6 @@ public class CreateNewJPAEntityCommand
 
   @Override
   public DataTransferObject<CreateNewJPAEntityResponse> call() throws Exception {
-    System.out.println(1);
-    return this.javaCommandService.createNewJPAEntity(cwd, packageName, fileName);
+    return this.createNewJPAEntityCommandService.createNewJPAEntity(cwd, packageName, fileName);
   }
 }
