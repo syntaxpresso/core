@@ -9,19 +9,8 @@ import io.github.syntaxpresso.core.command.RenameCommand;
 import io.github.syntaxpresso.core.command.*;
 import io.github.syntaxpresso.core.common.CommandFactory;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
-import io.github.syntaxpresso.core.service.java.command.CreateNewFileCommandService;
-import io.github.syntaxpresso.core.service.java.command.GetCursorPositionInfoCommandService;
-import io.github.syntaxpresso.core.service.java.command.GetMainClassCommandService;
-import io.github.syntaxpresso.core.service.java.command.ParseSourceCodeCommandService;
-import io.github.syntaxpresso.core.service.java.command.RenameCommandService;
-import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.FormalParameterService;
-import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.MethodDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
-import io.github.syntaxpresso.core.service.java.language.VariableNamingService;
+import io.github.syntaxpresso.core.service.java.command.*;
+import io.github.syntaxpresso.core.service.java.language.*;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
@@ -33,11 +22,8 @@ import picocli.CommandLine.Command;
       GetMainClassCommand.class,
       CreateNewFileCommand.class,
       GetCursorPositionInfoCommand.class,
-      ParseSourceCodeCommand.class
-      CreateJPARepositoryCommand.class,
-      GetCursorPositionInfo.class,
-      GetJPAEntityInfoCommand.class,
-            CreateNewJPAEntityCommand.class
+      ParseSourceCodeCommand.class,
+      CreateNewJPAEntityCommand.class
     })
 public class Core {
 
@@ -90,6 +76,7 @@ public class Core {
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();
+    AnnotationService annotationService = new AnnotationService();
     JavaLanguageService javaLanguageService =
         new JavaLanguageService(
             pathHelper,
@@ -97,7 +84,8 @@ public class Core {
             classDeclarationService,
             packageDeclarationService,
             importDeclarationService,
-            localVariableDeclarationService);
+            localVariableDeclarationService,
+            annotationService);
     RenameCommandService renameCommandService =
         new RenameCommandService(variableNamingService, javaLanguageService);
     GetMainClassCommandService getMainClassCommandService =
@@ -108,11 +96,14 @@ public class Core {
         new GetCursorPositionInfoCommandService(javaLanguageService, pathHelper);
     ParseSourceCodeCommandService parseSourceCodeCommandService =
         new ParseSourceCodeCommandService();
+    CreateNewJPAEntityCommandService createNewJPAEntityCommandService =
+        new CreateNewJPAEntityCommandService(javaLanguageService, createNewFileCommandService);
     return new CommandFactory(
         renameCommandService,
         getMainClassCommandService,
         createNewFileCommandService,
         getCursorPositionInfoCommandService,
-        parseSourceCodeCommandService);
+        parseSourceCodeCommandService,
+        createNewJPAEntityCommandService);
   }
 }
