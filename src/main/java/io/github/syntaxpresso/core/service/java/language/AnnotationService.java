@@ -442,7 +442,11 @@ public class AnnotationService {
         annotationInsertionPoint.setInsertByte(declarationNode.getStartByte());
       }
     } else {
-      annotationInsertionPoint.setInsertByte(declarationNode.getStartByte());
+      if (allAnnotations.size() == 0) {
+        annotationInsertionPoint.setInsertByte(declarationNode.getStartByte());
+      } else {
+        annotationInsertionPoint.setInsertByte(allAnnotations.getLast().getEndByte());
+      }
     }
     return annotationInsertionPoint;
   }
