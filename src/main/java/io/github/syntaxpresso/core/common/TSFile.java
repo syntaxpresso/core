@@ -257,9 +257,9 @@ public class TSFile {
     TSPoint endPoint = rootNode.getEndPoint();
     int requestedLine = line - 1;
     int requestedColumn = column;
-    // if (ide.equals(SupportedIDE.NEOVIM) || ide.equals(SupportedIDE.VSCODE)) {
-    //   requestedColumn++;
-    // }
+    if (ide.equals(SupportedIDE.NEOVIM) || ide.equals(SupportedIDE.VSCODE)) {
+      requestedColumn++;
+    }
     if (requestedLine > endPoint.getRow()
         || (requestedLine == endPoint.getRow() && requestedColumn > endPoint.getColumn())) {
       return null;
