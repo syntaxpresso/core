@@ -106,13 +106,15 @@ public class CreateJPARepositoryCommandService {
       // Instead, find any class declaration in the external source
       Optional<TSNode> externalClassNode = this.findFirstClassDeclaration(externalSuperclassFile);
       if (externalClassNode.isPresent()) {
-        Optional<String> externalClassName = this.extractEntityType(externalSuperclassFile, externalClassNode.get());
+        Optional<String> externalClassName =
+            this.extractEntityType(externalSuperclassFile, externalClassNode.get());
         if (externalClassName.isPresent() && externalClassName.get().equals(superClassName)) {
           // We found the matching external superclass, search within it
-          return this.findIdFieldRecursively(cwd, externalSuperclassFile, externalClassNode.get(), null);
+          return this.findIdFieldRecursively(
+              cwd, externalSuperclassFile, externalClassNode.get(), null);
         }
       }
-      // If we have external source but it doesn't match the expected class name, 
+      // If we have external source but it doesn't match the expected class name,
       // don't ask for the same superclass again - treat as not found
       return IdFieldSearchResult.notFound();
     }
@@ -131,14 +133,18 @@ public class CreateJPARepositoryCommandService {
   }
 
   /**
-   * Finds the first class declaration in a TSFile, regardless of its name or visibility.
-   * This is useful for external source code where we don't have a filename to match against.
+   * Finds the first class declaration in a TSFile, regardless of its name or visibility. This is
+   * useful for external source code where we don't have a filename to match against.
    */
   private Optional<TSNode> findFirstClassDeclaration(TSFile tsFile) {
     if (tsFile == null || tsFile.getTree() == null) {
       return Optional.empty();
     }
-    return tsFile.query("(class_declaration) @class").returning("class").execute().firstNodeOptional();
+    return tsFile
+        .query("(class_declaration) @class")
+        .returning("class")
+        .execute()
+        .firstNodeOptional();
   }
 
   private Optional<String> extractEntityType(TSFile tsFile, TSNode publicClassNode) {
@@ -294,30 +300,16 @@ public class CreateJPARepositoryCommandService {
       Path filePath,
       SupportedLanguage language,
       SupportedIDE ide,
-      String entityType,
-      String entityIdType,
-      String entityPackageName,
       String superclassSource) {
     TSFile tsFile = new TSFile(language, filePath);
-    JPARepositoryData jpaRepositoryData;
-    if (Strings.isNullOrEmpty(entityIdType)
-        && Strings.isNullOrEmpty(entityType)
-        && Strings.isNullOrEmpty(entityPackageName)) {
-      PrepareDataResult prepareResult = this.prepareData(tsFile, cwd, superclassSource);
-      if (prepareResult.requiresSymbolSource()) {
-        return DataTransferObject.success(prepareResult.getRequiresSymbolResponse());
-      }
-      if (prepareResult.isError()) {
-        return DataTransferObject.error(prepareResult.getErrorMessage());
-      }
-      jpaRepositoryData = prepareResult.getRepositoryData();
-    } else {
-      jpaRepositoryData =
-          this.buildJPARepositoryData(cwd, entityType, entityIdType, entityPackageName);
-      if (jpaRepositoryData == null) {
-        return DataTransferObject.error("Unable to gather necessary repository data.");
-      }
+    PrepareDataResult prepareResult = this.prepareData(tsFile, cwd, superclassSource);
+    if (prepareResult.requiresSymbolSource()) {
+      return DataTransferObject.success(prepareResult.getRequiresSymbolResponse());
     }
+    if (prepareResult.isError()) {
+      return DataTransferObject.error(prepareResult.getErrorMessage());
+    }
+    JPARepositoryData jpaRepositoryData = prepareResult.getRepositoryData();
     DataTransferObject<CreateNewFileResponse> createFileResult =
         this.createRepositoryFile(jpaRepositoryData);
     if (!createFileResult.getSucceed()) {

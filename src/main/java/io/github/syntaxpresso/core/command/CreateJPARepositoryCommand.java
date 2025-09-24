@@ -25,18 +25,6 @@ public class CreateJPARepositoryCommand
   @Option(names = "--file-path", description = "The path to the file", required = true)
   private Path filePath;
 
-  @Option(names = "--entity-type", description = "The JPA Entity type", required = false)
-  private String entityType;
-
-  @Option(names = "--entity-id-type", description = "The JPA Entity's ID type", required = false)
-  private String entityIdType;
-
-  @Option(
-      names = "--entity-package-name",
-      description = "The JPA Entity's package name",
-      required = false)
-  private String entityPackageName;
-
   @Option(
       names = "--language",
       description = "The language related to the command execution.",
@@ -59,14 +47,7 @@ public class CreateJPARepositoryCommand
   public DataTransferObject<CreateJPARepositoryResponse> call() {
     if (this.language.equals(SupportedLanguage.JAVA)) {
       return this.createJPARepositoryCommandService.run(
-          this.cwd,
-          this.filePath,
-          this.language,
-          this.ide,
-          this.entityType,
-          this.entityIdType,
-          this.entityPackageName,
-          this.superclassSource);
+          this.cwd, this.filePath, this.language, this.ide, this.superclassSource);
     }
     return DataTransferObject.error("Language not supported.");
   }
