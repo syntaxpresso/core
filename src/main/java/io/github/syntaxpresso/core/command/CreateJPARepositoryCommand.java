@@ -31,7 +31,10 @@ public class CreateJPARepositoryCommand
   @Option(names = "--entity-id-type", description = "The JPA Entity's ID type", required = false)
   private String entityIdType;
 
-  @Option(names = "--package-name", description = "The JPA Entity's package name", required = false)
+  @Option(
+      names = "--entity-package-name",
+      description = "The JPA Entity's package name",
+      required = false)
   private String entityPackageName;
 
   @Option(

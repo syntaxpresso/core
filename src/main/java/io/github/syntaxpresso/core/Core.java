@@ -1,12 +1,12 @@
 package io.github.syntaxpresso.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.syntaxpresso.core.command.*;
 import io.github.syntaxpresso.core.command.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.GetCursorPositionInfoCommand;
 import io.github.syntaxpresso.core.command.GetMainClassCommand;
 import io.github.syntaxpresso.core.command.ParseSourceCodeCommand;
 import io.github.syntaxpresso.core.command.RenameCommand;
-import io.github.syntaxpresso.core.command.*;
 import io.github.syntaxpresso.core.common.CommandFactory;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
 import io.github.syntaxpresso.core.service.java.command.*;
@@ -23,7 +23,8 @@ import picocli.CommandLine.Command;
       CreateNewFileCommand.class,
       GetCursorPositionInfoCommand.class,
       ParseSourceCodeCommand.class,
-      CreateNewJPAEntityCommand.class
+      CreateNewJPAEntityCommand.class,
+      CreateJPARepositoryCommand.class
     })
 public class Core {
 
@@ -98,12 +99,15 @@ public class Core {
         new ParseSourceCodeCommandService();
     CreateNewJPAEntityCommandService createNewJPAEntityCommandService =
         new CreateNewJPAEntityCommandService(javaLanguageService, createNewFileCommandService);
+    CreateJPARepositoryCommandService createJPARepositoryCommandService =
+        new CreateJPARepositoryCommandService(javaLanguageService);
     return new CommandFactory(
         renameCommandService,
         getMainClassCommandService,
         createNewFileCommandService,
         getCursorPositionInfoCommandService,
         parseSourceCodeCommandService,
-        createNewJPAEntityCommandService);
+        createNewJPAEntityCommandService,
+        createJPARepositoryCommandService);
   }
 }

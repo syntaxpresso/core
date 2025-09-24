@@ -80,7 +80,7 @@ public class CreateJPARepositoryCommandService {
       Path cwd, TSFile tsFile, TSNode publicClassNode) {
     Optional<TSNode> idFieldNode = this.getIdFieldFromEntity(tsFile, publicClassNode);
     if (idFieldNode.isPresent()) {
-      return IdFieldSearchResult.found(idFieldNode.get());
+      return IdFieldSearchResult.found(tsFile, idFieldNode.get());
     }
     Optional<TSNode> superClassNameNode =
         this.javaLanguageService
@@ -167,7 +167,7 @@ public class CreateJPARepositoryCommandService {
         String.format(
             "package %s;\n\nimport org.springframework.data.jpa.repository.JpaRepository;\nimport"
                 + " org.springframework.stereotype.Repository;\n\n@Repository\npublic interface"
-                + " %sRepository extends JpaRepository<%s, %s> {}",
+                + " %s extends JpaRepository<%s, %s> {}",
             jpaRepositoryData.getPackageName(),
             repositoryName,
             jpaRepositoryData.getEntityType(),

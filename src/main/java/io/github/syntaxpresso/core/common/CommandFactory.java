@@ -13,6 +13,7 @@ public class CommandFactory implements IFactory {
   private final GetCursorPositionInfoCommandService getCursorPositionInfoCommandService;
   private final ParseSourceCodeCommandService parseSourceCodeCommandService;
   private final CreateNewJPAEntityCommandService createNewJPAEntityCommandService;
+  private final CreateJPARepositoryCommandService createJPARepositoryCommandService;
 
   @Override
   @SuppressWarnings("unchecked")
@@ -35,9 +36,9 @@ public class CommandFactory implements IFactory {
     if (cls == CreateNewJPAEntityCommand.class) {
       return (K) new CreateNewJPAEntityCommand(createNewJPAEntityCommandService);
     }
-    // if (cls == CreateJPARepositoryCommand.class) {
-    //   return (K) new CreateJPARepositoryCommand(javaCommandService);
-    // }
+    if (cls == CreateJPARepositoryCommand.class) {
+      return (K) new CreateJPARepositoryCommand(createJPARepositoryCommandService);
+    }
     // if (cls == GetJPAEntityInfoCommand.class) {
     //   return (K) new GetJPAEntityInfoCommand(javaCommandService);
     // }
