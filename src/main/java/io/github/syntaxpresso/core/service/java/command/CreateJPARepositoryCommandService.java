@@ -252,7 +252,9 @@ public class CreateJPARepositoryCommandService {
     }
     TSFile externalSuperclassFile = null;
     if (!Strings.isNullOrEmpty(superclassSource)) {
-      externalSuperclassFile = new TSFile(SupportedLanguage.JAVA, superclassSource);
+      // Convert escaped newlines to actual newlines for proper parsing
+      String processedSource = superclassSource.replace("\\n", "\n").replace("\\\"", "\"");
+      externalSuperclassFile = new TSFile(SupportedLanguage.JAVA, processedSource);
     }
     IdFieldSearchResult searchResult =
         this.findIdFieldRecursively(cwd, tsFile, publicClassNode.get(), externalSuperclassFile);
