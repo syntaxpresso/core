@@ -303,6 +303,7 @@ public class ClassDeclarationService {
 
   /**
    * Gets the public class of a file, defined as the public class whose name matches the file name.
+   * If the file name is not available, falls back to finding the first public class.
    *
    * <p>Usage example:
    *
@@ -325,7 +326,7 @@ public class ClassDeclarationService {
     }
     Optional<String> fileName = tsFile.getFileNameWithoutExtension();
     if (fileName.isEmpty()) {
-      return Optional.empty();
+      return this.getFirstPublicClass(tsFile);
     }
     return this.findClassByName(tsFile, fileName.get());
   }
@@ -382,6 +383,35 @@ public class ClassDeclarationService {
     // Note: Import resolution would require ImportDeclarationService, but for now
     // we'll assume same package for simplicity
     return Optional.of(superclassName); // Simplified - just return the simple name
+  }
+
+  /**
+   * Gets the first public class declaration found in the file. This is useful when the file path is
+   * not available but you need to find the main class.
+   *
+   * @param tsFile The {@link TSFile} to analyze
+   * @return Optional containing the first public class declaration node, empty if none found
+   */
+  private Optional<TSNode> getFirstPublicClass(TSFile tsFile) {
+    String queryString =
+        """
+        (class_declaration
+          (modifiers) @modifiers
+          name: (identifier) @className
+        ) @classDeclaration
+        """;
+    List<Map<String, TSNode>> results =
+        tsFile.query(queryString).returningAllCaptures().execute().captures();
+    for (Map<String, TSNode> result : results) {
+      TSNode modifiers = result.get("modifiers");
+      if (modifiers != null) {
+        String modifierText = tsFile.getTextFromNode(modifiers);
+        if (modifierText.contains("public")) {
+          return Optional.of(result.get("classDeclaration"));
+        }
+      }
+    }
+    return Optional.empty();
   }
 
   /**
