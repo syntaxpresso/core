@@ -15,4 +15,9 @@ public enum JavaFileTemplate {
   public String getSourceContent(String packageName, String className) {
     return String.format(this.template, packageName, className);
   }
+
+  public String getSourceContent(
+      String packageName, String className, String entityType, String idType) {
+    return String.format(this.template, packageName, className);
+  }
 }

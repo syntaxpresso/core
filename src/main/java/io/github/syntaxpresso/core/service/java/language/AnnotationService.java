@@ -429,6 +429,7 @@ public class AnnotationService {
     String nodeType = declarationNode.getType();
     if (!nodeType.equals("class_declaration")
         && !nodeType.equals("field_declaration")
+        && !nodeType.equals("interface_declaration")
         && !nodeType.equals("method_declaration")) {
       return null;
     }
@@ -518,6 +519,7 @@ public class AnnotationService {
     String nodeType = declarationNode.getType();
     if (!nodeType.equals("class_declaration")
         && !nodeType.equals("field_declaration")
+        && !nodeType.equals("interface_declaration")
         && !nodeType.equals("method_declaration")) {
       return;
     }

@@ -290,6 +290,188 @@ class AnnotationServiceTest {
   }
 
   @Nested
+  @DisplayName("Interface Annotation Tests")
+  class InterfaceAnnotationTests {
+
+    @Test
+    @DisplayName("should find annotations on interfaces")
+    void shouldFindAnnotationsOnInterfaces() {
+      String code = "@Repository @Component public interface UserRepository {}";
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode interfaceNode = tsFile.query("(interface_declaration) @interface").execute().firstNode();
+
+      List<TSNode> annotations = annotationService.getAllAnnotations(tsFile, interfaceNode);
+
+      assertEquals(2, annotations.size());
+    }
+
+    @Test
+    @DisplayName("should find specific annotation on interface by name")
+    void shouldFindSpecificAnnotationOnInterfaceByName() {
+      String code = "@Repository @Component public interface UserRepository {}";
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode interfaceNode = tsFile.query("(interface_declaration) @interface").execute().firstNode();
+
+      Optional<TSNode> repositoryAnnotation = annotationService.findAnnotationByName(tsFile, interfaceNode, "Repository");
+      Optional<TSNode> componentAnnotation = annotationService.findAnnotationByName(tsFile, interfaceNode, "Component");
+      Optional<TSNode> nonExistentAnnotation = annotationService.findAnnotationByName(tsFile, interfaceNode, "NonExistent");
+
+      assertTrue(repositoryAnnotation.isPresent());
+      assertTrue(componentAnnotation.isPresent());
+      assertFalse(nonExistentAnnotation.isPresent());
+    }
+
+    @Test
+    @DisplayName("should handle interface annotations with arguments")
+    void shouldHandleInterfaceAnnotationsWithArguments() {
+      String code = "@Component(value = \"userRepo\") public interface UserRepository {}";
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode interfaceNode = tsFile.query("(interface_declaration) @interface").execute().firstNode();
+
+      Optional<TSNode> annotation = annotationService.findAnnotationByName(tsFile, interfaceNode, "Component");
+
+      assertTrue(annotation.isPresent());
+      
+      Map<String, AnnotationArgument> arguments = annotationService.getAnnotationArguments(tsFile, annotation.get());
+      assertEquals(1, arguments.size());
+      assertTrue(arguments.containsKey("value"));
+      assertEquals("\"userRepo\"", arguments.get("value").getValue(tsFile));
+    }
+
+    @Test
+    @DisplayName("should get insertion position for interface annotations")
+    void shouldGetInsertionPositionForInterfaceAnnotations() {
+      String code = "@Repository public interface UserRepository {}";
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode interfaceNode = tsFile.query("(interface_declaration) @interface").execute().firstNode();
+
+      AnnotationInsertionPoint beforeFirstPoint = annotationService.getAnnotationInsertionPosition(
+          tsFile, interfaceNode, AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION);
+      AnnotationInsertionPoint aboveScopePoint = annotationService.getAnnotationInsertionPosition(
+          tsFile, interfaceNode, AnnotationInsertionPosition.ABOVE_SCOPE_DECLARATION);
+
+      assertNotNull(beforeFirstPoint);
+      assertNotNull(aboveScopePoint);
+      assertEquals(AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION, beforeFirstPoint.getPosition());
+      assertEquals(AnnotationInsertionPosition.ABOVE_SCOPE_DECLARATION, aboveScopePoint.getPosition());
+    }
+
+    @Test
+    @DisplayName("should add annotation to interface above scope declaration")
+    void shouldAddAnnotationToInterfaceAboveScopeDeclaration() {
+      String code = "public interface SimpleRepository {}";
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode interfaceNode = tsFile.query("(interface_declaration) @interface").execute().firstNode();
+      
+      AnnotationInsertionPoint insertionPoint = annotationService.getAnnotationInsertionPosition(
+          tsFile, interfaceNode, AnnotationInsertionPosition.ABOVE_SCOPE_DECLARATION);
+      
+      String originalCode = tsFile.getSourceCode();
+      annotationService.addAnnotation(tsFile, interfaceNode, insertionPoint, "@Repository");
+      String updatedCode = tsFile.getSourceCode();
+
+      assertTrue(updatedCode.contains("@Repository"));
+      assertTrue(updatedCode.contains("public interface SimpleRepository"));
+      assertTrue(updatedCode.length() > originalCode.length());
+    }
+
+    @Test
+    @DisplayName("should add annotation to interface before first annotation")
+    void shouldAddAnnotationToInterfaceBeforeFirstAnnotation() {
+      String code = "@Component public interface UserRepository {}";
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode interfaceNode = tsFile.query("(interface_declaration) @interface").execute().firstNode();
+      
+      AnnotationInsertionPoint insertionPoint = annotationService.getAnnotationInsertionPosition(
+          tsFile, interfaceNode, AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION);
+      
+      String originalCode = tsFile.getSourceCode();
+      annotationService.addAnnotation(tsFile, interfaceNode, insertionPoint, "@Repository");
+      String updatedCode = tsFile.getSourceCode();
+
+      assertTrue(updatedCode.contains("@Repository"));
+      assertTrue(updatedCode.contains("@Component"));
+      assertTrue(updatedCode.length() > originalCode.length());
+      // @Repository should appear before @Component
+      int repositoryIndex = updatedCode.indexOf("@Repository");
+      int componentIndex = updatedCode.indexOf("@Component");
+      assertTrue(repositoryIndex < componentIndex);
+    }
+
+    @Test
+    @DisplayName("should handle complex interface with multiple annotations")
+    void shouldHandleComplexInterfaceWithMultipleAnnotations() {
+      String code = """
+          @Repository
+          @Component(value = "userRepo")
+          @Transactional(readOnly = true)
+          public interface UserRepository extends JpaRepository<User, Long> {
+              List<User> findByName(String name);
+          }
+          """;
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode interfaceNode = tsFile.query("(interface_declaration) @interface").execute().firstNode();
+
+      List<TSNode> annotations = annotationService.getAllAnnotations(tsFile, interfaceNode);
+      Optional<TSNode> repositoryAnnotation = annotationService.findAnnotationByName(tsFile, interfaceNode, "Repository");
+      Optional<TSNode> componentAnnotation = annotationService.findAnnotationByName(tsFile, interfaceNode, "Component");
+      Optional<TSNode> transactionalAnnotation = annotationService.findAnnotationByName(tsFile, interfaceNode, "Transactional");
+
+      assertEquals(3, annotations.size());
+      assertTrue(repositoryAnnotation.isPresent());
+      assertTrue(componentAnnotation.isPresent());
+      assertTrue(transactionalAnnotation.isPresent());
+
+      // Test getting argument from @Component annotation
+      Map<String, AnnotationArgument> componentArgs = annotationService.getAnnotationArguments(tsFile, componentAnnotation.get());
+      assertEquals(1, componentArgs.size());
+      assertEquals("\"userRepo\"", componentArgs.get("value").getValue(tsFile));
+
+      // Test getting argument from @Transactional annotation
+      Map<String, AnnotationArgument> transactionalArgs = annotationService.getAnnotationArguments(tsFile, transactionalAnnotation.get());
+      assertEquals(1, transactionalArgs.size());
+      assertEquals("true", transactionalArgs.get("readOnly").getValue(tsFile));
+    }
+
+    @Test
+    @DisplayName("should handle interface without existing annotations")
+    void shouldHandleInterfaceWithoutExistingAnnotations() {
+      String code = "public interface PlainInterface {}";
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode interfaceNode = tsFile.query("(interface_declaration) @interface").execute().firstNode();
+
+      List<TSNode> annotations = annotationService.getAllAnnotations(tsFile, interfaceNode);
+      AnnotationInsertionPoint insertionPoint = annotationService.getAnnotationInsertionPosition(
+          tsFile, interfaceNode, AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION);
+
+      assertEquals(0, annotations.size());
+      assertNotNull(insertionPoint);
+      assertEquals(AnnotationInsertionPosition.BEFORE_FIRST_ANNOTATION, insertionPoint.getPosition());
+    }
+
+    @Test
+    @DisplayName("should handle nested interface annotations")
+    void shouldHandleNestedInterfaceAnnotations() {
+      String code = """
+          public class OuterClass {
+              @Component
+              public interface InnerInterface {
+                  void method();
+              }
+          }
+          """;
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode interfaceNode = tsFile.query("(interface_declaration) @interface").execute().firstNode();
+
+      List<TSNode> annotations = annotationService.getAllAnnotations(tsFile, interfaceNode);
+      Optional<TSNode> componentAnnotation = annotationService.findAnnotationByName(tsFile, interfaceNode, "Component");
+
+      assertEquals(1, annotations.size());
+      assertTrue(componentAnnotation.isPresent());
+    }
+  }
+
+  @Nested
   @DisplayName("Error Handling Tests")
   class ErrorHandlingTests {
 
@@ -340,6 +522,27 @@ class AnnotationServiceTest {
       Map<String, AnnotationArgument> result = annotationService.getAnnotationArguments(null, null);
 
       assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("should reject unsupported node types for annotation operations")
+    void shouldRejectUnsupportedNodeTypesForAnnotationOperations() {
+      String code = "public interface TestInterface { void method(); }";
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, code);
+      TSNode identifierNode = tsFile.query("(identifier) @id").execute().firstNode();
+
+      // Test getAnnotationInsertionPosition with unsupported node type
+      AnnotationInsertionPoint insertionPoint = annotationService.getAnnotationInsertionPosition(
+          tsFile, identifierNode, AnnotationInsertionPosition.ABOVE_SCOPE_DECLARATION);
+
+      assertNull(insertionPoint);
+
+      // Test addAnnotation with unsupported node type
+      String originalCode = tsFile.getSourceCode();
+      annotationService.addAnnotation(tsFile, identifierNode, null, "@Test");
+      String finalCode = tsFile.getSourceCode();
+
+      assertEquals(originalCode, finalCode); // Should remain unchanged
     }
   }
 }

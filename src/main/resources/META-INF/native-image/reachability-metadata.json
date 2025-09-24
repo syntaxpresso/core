@@ -120,6 +120,36 @@
       ]
     },
     {
+      "type": "io.github.syntaxpresso.core.command.dto.CreateJPARepositoryResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String", "java.lang.Boolean", "java.lang.String", "io.github.syntaxpresso.core.service.java.command.extra.JPARepositoryData"]
+        }
+      ]
+    },
+    {
+      "type": "io.github.syntaxpresso.core.service.java.command.extra.JPARepositoryData",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.nio.file.Path", "java.nio.file.Path", "java.lang.String", "java.lang.String", "java.lang.String"]
+        }
+      ]
+    },
+    {
       "type": "io.github.syntaxpresso.core.service.extra.JavaIdentifierType",
       "allDeclaredFields": true,
       "allDeclaredMethods": true
