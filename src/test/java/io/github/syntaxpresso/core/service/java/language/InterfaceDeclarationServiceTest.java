@@ -2,7 +2,6 @@ package io.github.syntaxpresso.core.service.java.language;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.syntaxpresso.core.common.TSFile;
@@ -386,7 +385,7 @@ class InterfaceDeclarationServiceTest {
               public interface InnerInterface {
                   void method();
               }
-              
+
               private interface PrivateInterface {
                   void privateMethod();
               }
@@ -434,3 +433,4 @@ class InterfaceDeclarationServiceTest {
     }
   }
 }
+
