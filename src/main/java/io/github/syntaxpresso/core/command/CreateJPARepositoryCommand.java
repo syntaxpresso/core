@@ -49,6 +49,12 @@ public class CreateJPARepositoryCommand
       required = true)
   private SupportedIDE ide = SupportedIDE.NONE;
 
+  @Option(
+      names = "--superclass-source",
+      description = "Source code for missing superclass when external symbol is required",
+      required = false)
+  private String superclassSource;
+
   @Override
   public DataTransferObject<CreateJPARepositoryResponse> call() {
     if (this.language.equals(SupportedLanguage.JAVA)) {
@@ -59,7 +65,8 @@ public class CreateJPARepositoryCommand
           this.ide,
           this.entityType,
           this.entityIdType,
-          this.entityPackageName);
+          this.entityPackageName,
+          this.superclassSource);
     }
     return DataTransferObject.error("Language not supported.");
   }

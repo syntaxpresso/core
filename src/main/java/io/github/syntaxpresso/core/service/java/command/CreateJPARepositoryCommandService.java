@@ -11,6 +11,7 @@ import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
 import io.github.syntaxpresso.core.service.java.command.extra.IdFieldSearchResult;
 import io.github.syntaxpresso.core.service.java.command.extra.JPARepositoryData;
+import io.github.syntaxpresso.core.service.java.command.extra.PrepareDataResult;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,6 +79,11 @@ public class CreateJPARepositoryCommandService {
 
   private IdFieldSearchResult findIdFieldRecursively(
       Path cwd, TSFile tsFile, TSNode publicClassNode) {
+    return this.findIdFieldRecursively(cwd, tsFile, publicClassNode, null);
+  }
+
+  private IdFieldSearchResult findIdFieldRecursively(
+      Path cwd, TSFile tsFile, TSNode publicClassNode, TSFile externalSuperclassFile) {
     Optional<TSNode> idFieldNode = this.getIdFieldFromEntity(tsFile, publicClassNode);
     if (idFieldNode.isPresent()) {
       return IdFieldSearchResult.found(tsFile, idFieldNode.get());
@@ -93,6 +99,24 @@ public class CreateJPARepositoryCommandService {
     if (Strings.isNullOrEmpty(superClassName)) {
       return IdFieldSearchResult.notFound();
     }
+
+    // First check if we have an external superclass file for this superclass
+    if (externalSuperclassFile != null) {
+      // For external source, we can't use getPublicClass() as it requires a filename
+      // Instead, find any class declaration in the external source
+      Optional<TSNode> externalClassNode = this.findFirstClassDeclaration(externalSuperclassFile);
+      if (externalClassNode.isPresent()) {
+        Optional<String> externalClassName = this.extractEntityType(externalSuperclassFile, externalClassNode.get());
+        if (externalClassName.isPresent() && externalClassName.get().equals(superClassName)) {
+          // We found the matching external superclass, search within it
+          return this.findIdFieldRecursively(cwd, externalSuperclassFile, externalClassNode.get(), null);
+        }
+      }
+      // If we have external source but it doesn't match the expected class name, 
+      // don't ask for the same superclass again - treat as not found
+      return IdFieldSearchResult.notFound();
+    }
+
     Optional<TSFile> superClassFile = this.findSuperclassFile(cwd, tsFile, publicClassNode);
     if (superClassFile.isEmpty()) {
       return IdFieldSearchResult.missingSuperclass(superClassName);
@@ -102,7 +126,19 @@ public class CreateJPARepositoryCommandService {
     if (superClassPublicNode.isEmpty()) {
       return IdFieldSearchResult.notFound();
     }
-    return this.findIdFieldRecursively(cwd, superClassFile.get(), superClassPublicNode.get());
+    return this.findIdFieldRecursively(
+        cwd, superClassFile.get(), superClassPublicNode.get(), externalSuperclassFile);
+  }
+
+  /**
+   * Finds the first class declaration in a TSFile, regardless of its name or visibility.
+   * This is useful for external source code where we don't have a filename to match against.
+   */
+  private Optional<TSNode> findFirstClassDeclaration(TSFile tsFile) {
+    if (tsFile == null || tsFile.getTree() == null) {
+      return Optional.empty();
+    }
+    return tsFile.query("(class_declaration) @class").returning("class").execute().firstNodeOptional();
   }
 
   private Optional<String> extractEntityType(TSFile tsFile, TSNode publicClassNode) {
@@ -196,33 +232,40 @@ public class CreateJPARepositoryCommandService {
     }
   }
 
-  public JPARepositoryData prepareData(TSFile tsFile, Path cwd) {
+  public PrepareDataResult prepareData(TSFile tsFile, Path cwd) {
+    return this.prepareData(tsFile, cwd, null);
+  }
+
+  public PrepareDataResult prepareData(TSFile tsFile, Path cwd, String superclassSource) {
     Optional<TSNode> publicClassNode =
         this.javaLanguageService.getClassDeclarationService().getPublicClass(tsFile);
     if (publicClassNode.isEmpty()) {
-      return null;
+      return PrepareDataResult.error("No public class found in the entity file.");
     }
     Optional<String> packageName = this.extractPackageName(tsFile);
     if (packageName.isEmpty()) {
-      return null;
+      return PrepareDataResult.error("Package name could not be extracted from the entity file.");
     }
     Optional<String> entityType = this.extractEntityType(tsFile, publicClassNode.get());
     if (entityType.isEmpty()) {
-      return null;
+      return PrepareDataResult.error("Entity type could not be extracted from the entity file.");
+    }
+    TSFile externalSuperclassFile = null;
+    if (!Strings.isNullOrEmpty(superclassSource)) {
+      externalSuperclassFile = new TSFile(SupportedLanguage.JAVA, superclassSource);
     }
     IdFieldSearchResult searchResult =
-        this.findIdFieldRecursively(cwd, tsFile, publicClassNode.get());
+        this.findIdFieldRecursively(cwd, tsFile, publicClassNode.get(), externalSuperclassFile);
     if (searchResult.isFound()) {
       // Id field found - extract ID type and create JPARepositoryData
       Optional<String> idType =
           this.extractIdType(searchResult.getTsFile(), searchResult.getIdFieldNode());
       if (idType.isEmpty()) {
-        return null;
+        return PrepareDataResult.error("ID field type could not be extracted.");
       }
-
       JPARepositoryData repositoryData =
           this.buildJPARepositoryData(cwd, entityType.get(), idType.get(), packageName.get());
-      return repositoryData;
+      return PrepareDataResult.success(repositoryData);
     } else if (searchResult.hasMissingSuperclass()) {
       // Superclass exists but file not found - return response requiring symbol source
       CreateJPARepositoryResponse response =
@@ -231,10 +274,11 @@ public class CreateJPARepositoryCommandService {
               .symbol(searchResult.getMissingSuperclassName())
               .requiresSymbolSource(true)
               .build();
-      return null;
+      return PrepareDataResult.requiresSymbolSource(response);
     } else {
       // No Id field found in entire hierarchy
-      return null;
+      return PrepareDataResult.error(
+          "No @Id field found in the entity or its superclass hierarchy.");
     }
   }
 
@@ -250,16 +294,21 @@ public class CreateJPARepositoryCommandService {
       SupportedIDE ide,
       String entityType,
       String entityIdType,
-      String entityPackageName) {
+      String entityPackageName,
+      String superclassSource) {
     TSFile tsFile = new TSFile(language, filePath);
-    JPARepositoryData jpaRepositoryData = new JPARepositoryData();
+    JPARepositoryData jpaRepositoryData;
     if (Strings.isNullOrEmpty(entityIdType)
         && Strings.isNullOrEmpty(entityType)
         && Strings.isNullOrEmpty(entityPackageName)) {
-      jpaRepositoryData = this.prepareData(tsFile, cwd);
-      if (jpaRepositoryData == null) {
-        return DataTransferObject.error("Could not extract repository data from entity file.");
+      PrepareDataResult prepareResult = this.prepareData(tsFile, cwd, superclassSource);
+      if (prepareResult.requiresSymbolSource()) {
+        return DataTransferObject.success(prepareResult.getRequiresSymbolResponse());
       }
+      if (prepareResult.isError()) {
+        return DataTransferObject.error(prepareResult.getErrorMessage());
+      }
+      jpaRepositoryData = prepareResult.getRepositoryData();
     } else {
       jpaRepositoryData =
           this.buildJPARepositoryData(cwd, entityType, entityIdType, entityPackageName);
