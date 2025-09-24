@@ -137,20 +137,16 @@ public class CreateJPARepositoryCommandService {
   private Optional<String> extractPackageName(TSFile tsFile) {
     Optional<TSNode> packageDeclarationNode =
         this.javaLanguageService.getPackageDeclarationService().getPackageDeclarationNode(tsFile);
-
     if (packageDeclarationNode.isEmpty()) {
       return Optional.empty();
     }
-
     Optional<TSNode> packageScopeNode =
         this.javaLanguageService
             .getPackageDeclarationService()
             .getPackageScopeNode(tsFile, packageDeclarationNode.get());
-
     if (packageScopeNode.isEmpty()) {
       return Optional.empty();
     }
-
     String packageName = tsFile.getTextFromNode(packageScopeNode.get());
     return Strings.isNullOrEmpty(packageName) ? Optional.empty() : Optional.of(packageName);
   }
@@ -218,7 +214,8 @@ public class CreateJPARepositoryCommandService {
         this.findIdFieldRecursively(cwd, tsFile, publicClassNode.get());
     if (searchResult.isFound()) {
       // Id field found - extract ID type and create JPARepositoryData
-      Optional<String> idType = this.extractIdType(tsFile, searchResult.getIdFieldNode());
+      Optional<String> idType =
+          this.extractIdType(searchResult.getTsFile(), searchResult.getIdFieldNode());
       if (idType.isEmpty()) {
         return null;
       }

@@ -11,20 +11,19 @@ import org.treesitter.TSNode;
 public class IdFieldSearchResult {
   private final TSFile tsFile;
   private final TSNode idFieldNode;
-  private final String idFieldType;
   private final String missingSuperclassName;
   private final boolean found;
 
   public static IdFieldSearchResult found(TSFile tsFile, TSNode idFieldNode) {
-    return new IdFieldSearchResult(tsFile, idFieldNode, null, null, true);
+    return new IdFieldSearchResult(tsFile, idFieldNode, null, true);
   }
 
   public static IdFieldSearchResult missingSuperclass(String superclassName) {
-    return new IdFieldSearchResult(null, null, null, superclassName, false);
+    return new IdFieldSearchResult(null, null, superclassName, false);
   }
 
   public static IdFieldSearchResult notFound() {
-    return new IdFieldSearchResult(null, null, null, null, false);
+    return new IdFieldSearchResult(null, null, null, false);
   }
 
   public boolean hasMissingSuperclass() {
