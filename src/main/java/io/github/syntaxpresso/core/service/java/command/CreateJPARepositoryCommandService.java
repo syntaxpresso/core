@@ -15,6 +15,7 @@ import io.github.syntaxpresso.core.service.java.command.extra.PrepareDataResult;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -243,27 +244,36 @@ public class CreateJPARepositoryCommandService {
   }
 
   public PrepareDataResult prepareData(TSFile tsFile, Path cwd, String superclassSource) {
-    Optional<TSNode> publicClassNode =
+    Optional<TSNode> entityPublicClassNode =
         this.javaLanguageService.getClassDeclarationService().getPublicClass(tsFile);
-    if (publicClassNode.isEmpty()) {
+    if (entityPublicClassNode.isEmpty()) {
       return PrepareDataResult.error("No public class found in the entity file.");
     }
     Optional<String> packageName = this.extractPackageName(tsFile);
     if (packageName.isEmpty()) {
       return PrepareDataResult.error("Package name could not be extracted from the entity file.");
     }
-    Optional<String> entityType = this.extractEntityType(tsFile, publicClassNode.get());
+    Optional<String> entityType = this.extractEntityType(tsFile, entityPublicClassNode.get());
     if (entityType.isEmpty()) {
       return PrepareDataResult.error("Entity type could not be extracted from the entity file.");
     }
+    IdFieldSearchResult searchResult;
     TSFile externalSuperclassFile = null;
     if (!Strings.isNullOrEmpty(superclassSource)) {
-      // Convert escaped newlines to actual newlines for proper parsing
-      String processedSource = superclassSource.replace("\\n", "\n").replace("\\\"", "\"");
-      externalSuperclassFile = new TSFile(SupportedLanguage.JAVA, processedSource);
+      externalSuperclassFile = new TSFile(SupportedLanguage.JAVA, superclassSource);
+      Optional<TSNode> externalSuperclassFilePublicClassNode =
+          this.javaLanguageService
+              .getClassDeclarationService()
+              .getPublicClass(externalSuperclassFile);
+      if (externalSuperclassFilePublicClassNode.isEmpty()) {
+        return PrepareDataResult.error("No public class found in the entity file.");
+      }
+      searchResult =
+          this.findIdFieldRecursively(
+              cwd, externalSuperclassFile, externalSuperclassFilePublicClassNode.get());
+    } else {
+      searchResult = this.findIdFieldRecursively(cwd, tsFile, entityPublicClassNode.get());
     }
-    IdFieldSearchResult searchResult =
-        this.findIdFieldRecursively(cwd, tsFile, publicClassNode.get(), externalSuperclassFile);
     if (searchResult.isFound()) {
       // Id field found - extract ID type and create JPARepositoryData
       Optional<String> idType =
@@ -301,8 +311,17 @@ public class CreateJPARepositoryCommandService {
       SupportedLanguage language,
       SupportedIDE ide,
       String superclassSource) {
+    String decodedSuperclassSource = null;
+    if (!Strings.isNullOrEmpty(superclassSource)) {
+      try {
+        decodedSuperclassSource = new String(Base64.getDecoder().decode(superclassSource));
+      } catch (IllegalArgumentException e) {
+        return DataTransferObject.error(
+            "Invalid base64 encoding in superclass source: " + e.getMessage());
+      }
+    }
     TSFile tsFile = new TSFile(language, filePath);
-    PrepareDataResult prepareResult = this.prepareData(tsFile, cwd, superclassSource);
+    PrepareDataResult prepareResult = this.prepareData(tsFile, cwd, decodedSuperclassSource);
     if (prepareResult.requiresSymbolSource()) {
       return DataTransferObject.success(prepareResult.getRequiresSymbolResponse());
     }
