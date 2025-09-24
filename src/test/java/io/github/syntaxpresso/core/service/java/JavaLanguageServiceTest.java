@@ -15,6 +15,7 @@ import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService
 import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FormalParameterService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.InterfaceDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.MethodDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
@@ -61,12 +62,14 @@ class JavaLanguageServiceTest {
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();
     AnnotationService annotationService = new AnnotationService();
+    InterfaceDeclarationService interfaceDeclarationService = new InterfaceDeclarationService();
 
     this.javaLanguageService =
         new JavaLanguageService(
             this.pathHelper,
             variableNamingService,
             classDeclarationService,
+            interfaceDeclarationService,
             packageDeclarationService,
             importDeclarationService,
             localVariableDeclarationService,

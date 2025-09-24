@@ -73,6 +73,7 @@ public class Core {
     FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
     ClassDeclarationService classDeclarationService =
         new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
+    InterfaceDeclarationService interfaceDeclarationService = new InterfaceDeclarationService();
     PackageDeclarationService packageDeclarationService = new PackageDeclarationService(pathHelper);
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
@@ -83,6 +84,7 @@ public class Core {
             pathHelper,
             variableNamingService,
             classDeclarationService,
+            interfaceDeclarationService,
             packageDeclarationService,
             importDeclarationService,
             localVariableDeclarationService,
@@ -100,7 +102,7 @@ public class Core {
     CreateNewJPAEntityCommandService createNewJPAEntityCommandService =
         new CreateNewJPAEntityCommandService(javaLanguageService, createNewFileCommandService);
     CreateJPARepositoryCommandService createJPARepositoryCommandService =
-        new CreateJPARepositoryCommandService(javaLanguageService);
+        new CreateJPARepositoryCommandService(javaLanguageService, createNewFileCommandService);
     return new CommandFactory(
         renameCommandService,
         getMainClassCommandService,

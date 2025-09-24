@@ -1,8 +1,12 @@
 package io.github.syntaxpresso.core.service.java.command;
 
+import static io.github.syntaxpresso.core.service.java.language.extra.AnnotationInsertionPoint.AnnotationInsertionPosition.ABOVE_SCOPE_DECLARATION;
+
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.command.dto.CreateJPARepositoryResponse;
 import io.github.syntaxpresso.core.command.dto.CreateNewFileResponse;
+import io.github.syntaxpresso.core.command.extra.JavaBasicType;
+import io.github.syntaxpresso.core.command.extra.JavaFileTemplate;
 import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
@@ -12,9 +16,10 @@ import io.github.syntaxpresso.core.service.java.JavaLanguageService;
 import io.github.syntaxpresso.core.service.java.command.extra.IdFieldSearchResult;
 import io.github.syntaxpresso.core.service.java.command.extra.JPARepositoryData;
 import io.github.syntaxpresso.core.service.java.command.extra.PrepareDataResult;
+import io.github.syntaxpresso.core.service.java.language.extra.AnnotationInsertionPoint;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +29,7 @@ import org.treesitter.TSNode;
 @RequiredArgsConstructor
 public class CreateJPARepositoryCommandService {
   private final JavaLanguageService javaLanguageService;
+  private final CreateNewFileCommandService createNewFileCommandService;
 
   private JPARepositoryData buildJPARepositoryData(
       Path cwd, String entityType, String entityIdType, String entityPackageName) {
@@ -100,12 +106,14 @@ public class CreateJPARepositoryCommandService {
     if (Strings.isNullOrEmpty(superClassName)) {
       return IdFieldSearchResult.notFound();
     }
-
     // First check if we have an external superclass file for this superclass
     if (externalSuperclassFile != null) {
       // For external source, we can't use getPublicClass() as it requires a filename
       // Instead, find any class declaration in the external source
-      Optional<TSNode> externalClassNode = this.findFirstClassDeclaration(externalSuperclassFile);
+      Optional<TSNode> externalClassNode =
+          this.javaLanguageService
+              .getClassDeclarationService()
+              .getPublicClass(externalSuperclassFile);
       if (externalClassNode.isPresent()) {
         Optional<String> externalClassName =
             this.extractEntityType(externalSuperclassFile, externalClassNode.get());
@@ -119,7 +127,6 @@ public class CreateJPARepositoryCommandService {
       // don't ask for the same superclass again - treat as not found
       return IdFieldSearchResult.notFound();
     }
-
     Optional<TSFile> superClassFile = this.findSuperclassFile(cwd, tsFile, publicClassNode);
     if (superClassFile.isEmpty()) {
       return IdFieldSearchResult.missingSuperclass(superClassName);
@@ -133,31 +140,14 @@ public class CreateJPARepositoryCommandService {
         cwd, superClassFile.get(), superClassPublicNode.get(), externalSuperclassFile);
   }
 
-  /**
-   * Finds the first class declaration in a TSFile, regardless of its name or visibility. This is
-   * useful for external source code where we don't have a filename to match against.
-   */
-  private Optional<TSNode> findFirstClassDeclaration(TSFile tsFile) {
-    if (tsFile == null || tsFile.getTree() == null) {
-      return Optional.empty();
-    }
-    return tsFile
-        .query("(class_declaration) @class")
-        .returning("class")
-        .execute()
-        .firstNodeOptional();
-  }
-
   private Optional<String> extractEntityType(TSFile tsFile, TSNode publicClassNode) {
     Optional<TSNode> classNameNode =
         this.javaLanguageService
             .getClassDeclarationService()
             .getClassDeclarationNameNode(tsFile, publicClassNode);
-
     if (classNameNode.isEmpty()) {
       return Optional.empty();
     }
-
     String className = tsFile.getTextFromNode(classNameNode.get());
     return Strings.isNullOrEmpty(className) ? Optional.empty() : Optional.of(className);
   }
@@ -168,11 +158,9 @@ public class CreateJPARepositoryCommandService {
             .getClassDeclarationService()
             .getFieldDeclarationService()
             .getFieldDeclarationFullTypeNode(tsFile, idFieldNode);
-
     if (fieldTypeNode.isEmpty()) {
       return Optional.empty();
     }
-
     String idType = tsFile.getTextFromNode(fieldTypeNode.get());
     return Strings.isNullOrEmpty(idType) ? Optional.empty() : Optional.of(idType);
   }
@@ -202,41 +190,86 @@ public class CreateJPARepositoryCommandService {
       return DataTransferObject.error("Entity type, ID type, and package name are required.");
     }
     String repositoryName = jpaRepositoryData.getEntityType() + "Repository";
-    String template =
-        String.format(
-            "package %s;\n\nimport org.springframework.data.jpa.repository.JpaRepository;\nimport"
-                + " org.springframework.stereotype.Repository;\n\n@Repository\npublic interface"
-                + " %s extends JpaRepository<%s, %s> {}",
+    DataTransferObject<CreateNewFileResponse> createNewFileResponse =
+        this.createNewFileCommandService.run(
+            jpaRepositoryData.getCwd(),
             jpaRepositoryData.getPackageName(),
             repositoryName,
-            jpaRepositoryData.getEntityType(),
-            jpaRepositoryData.getEntityIdType());
+            JavaFileTemplate.INTERFACE,
+            JavaSourceDirectoryType.MAIN);
+    if (!createNewFileResponse.getSucceed()) {
+      return DataTransferObject.error("Unable to create file.");
+    }
+    TSFile tsFile =
+        new TSFile(
+            SupportedLanguage.JAVA, Paths.get(createNewFileResponse.getData().getFilePath()));
+    Optional<TSNode> packageDeclarationNode =
+        this.javaLanguageService.getPackageDeclarationService().getPackageDeclarationNode(tsFile);
+    if (packageDeclarationNode.isEmpty()) {
+      return DataTransferObject.error(
+          "Unable to get the package declaration node of the newly created file.");
+    }
+    this.javaLanguageService
+        .getImportDeclarationService()
+        .addImport(
+            tsFile,
+            "org.springframework.data.jpa.repository",
+            "JpaRepository",
+            packageDeclarationNode.get());
+    this.javaLanguageService
+        .getImportDeclarationService()
+        .addImport(
+            tsFile, "org.springframework.stereotype", "Repository", packageDeclarationNode.get());
+    Optional<JavaBasicType> typeToImport =
+        JavaBasicType.getByTypeName(jpaRepositoryData.getEntityIdType());
+    if (typeToImport.isPresent()) {
+      if (typeToImport.get().getPackageName().isPresent()) {
+        this.javaLanguageService
+            .getImportDeclarationService()
+            .addImport(
+                tsFile,
+                typeToImport.get().getPackageName().get(),
+                typeToImport.get().getTypeName(),
+                packageDeclarationNode.get());
+      }
+    }
+    Optional<TSNode> publicInterfaceNode =
+        this.javaLanguageService.getInterfaceDeclarationService().getPublicInterface(tsFile);
+    if (publicInterfaceNode.isEmpty()) {
+      return DataTransferObject.error("Unable to get the public interface node of the repository.");
+    }
+    Optional<TSNode> publicInterfaceNameNode =
+        this.javaLanguageService
+            .getInterfaceDeclarationService()
+            .getInterfaceNameNode(tsFile, publicInterfaceNode.get());
+    if (publicInterfaceNameNode.isEmpty()) {
+      return DataTransferObject.error(
+          "Unable to get the public interface name node of the repository.");
+    }
+    String template =
+        String.format(
+            " extends JpaRepository<%s, %s> ",
+            jpaRepositoryData.getEntityType(), jpaRepositoryData.getEntityIdType());
+    tsFile.updateSourceCode(
+        publicInterfaceNameNode.get().getEndByte(),
+        publicInterfaceNameNode.get().getEndByte(),
+        template);
+    AnnotationInsertionPoint repositoryAnnotationPoint =
+        this.javaLanguageService
+            .getAnnotationService()
+            .getAnnotationInsertionPosition(
+                tsFile, publicInterfaceNode.get(), ABOVE_SCOPE_DECLARATION);
+    this.javaLanguageService
+        .getAnnotationService()
+        .addAnnotation(tsFile, publicInterfaceNode.get(), repositoryAnnotationPoint, "@Repository");
     try {
-      TSFile file = new TSFile(SupportedLanguage.JAVA, template);
-      Optional<Path> filePath =
-          this.javaLanguageService
-              .getPackageDeclarationService()
-              .getFilePathFromPackageScope(
-                  jpaRepositoryData.getCwd(),
-                  jpaRepositoryData.getPackageName(),
-                  JavaSourceDirectoryType.MAIN);
-      if (filePath.isEmpty()) {
-        return DataTransferObject.error("Package directory could not be determined.");
-      }
-      Path targetPath =
-          filePath.get().resolve(repositoryName + SupportedLanguage.JAVA.getFileExtension());
-      if (Files.exists(targetPath)) {
-        return DataTransferObject.error("Repository file already exists: " + targetPath.toString());
-      }
-      file.saveAs(targetPath);
-      CreateNewFileResponse response =
-          CreateNewFileResponse.builder().filePath(file.getFile().getAbsolutePath()).build();
-      return DataTransferObject.success(response);
+      tsFile.save();
     } catch (IOException e) {
       return DataTransferObject.error("Failed to create repository file: " + e.getMessage());
-    } catch (Exception e) {
-      return DataTransferObject.error("Unexpected error occurred: " + e.getMessage());
     }
+    CreateNewFileResponse response =
+        CreateNewFileResponse.builder().filePath(tsFile.getFile().getAbsolutePath()).build();
+    return DataTransferObject.success(response);
   }
 
   public PrepareDataResult prepareData(TSFile tsFile, Path cwd) {
