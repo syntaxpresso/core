@@ -7,6 +7,7 @@ import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
 import io.github.syntaxpresso.core.service.java.language.AnnotationService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.InterfaceDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.VariableNamingService;
@@ -24,6 +25,7 @@ public class JavaLanguageService {
   private final PathHelper pathHelper;
   private final VariableNamingService variableNamingService;
   private final ClassDeclarationService classDeclarationService;
+  private final InterfaceDeclarationService interfaceDeclarationService;
   private final PackageDeclarationService packageDeclarationService;
   private final ImportDeclarationService importDeclarationService;
   private final LocalVariableDeclarationService localVariableDeclarationService;
