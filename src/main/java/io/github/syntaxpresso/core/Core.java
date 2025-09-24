@@ -5,7 +5,6 @@ import io.github.syntaxpresso.core.command.*;
 import io.github.syntaxpresso.core.command.CreateNewFileCommand;
 import io.github.syntaxpresso.core.command.GetCursorPositionInfoCommand;
 import io.github.syntaxpresso.core.command.GetMainClassCommand;
-import io.github.syntaxpresso.core.command.ParseSourceCodeCommand;
 import io.github.syntaxpresso.core.command.RenameCommand;
 import io.github.syntaxpresso.core.common.CommandFactory;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
@@ -22,7 +21,6 @@ import picocli.CommandLine.Command;
       GetMainClassCommand.class,
       CreateNewFileCommand.class,
       GetCursorPositionInfoCommand.class,
-      ParseSourceCodeCommand.class,
       CreateNewJPAEntityCommand.class,
       CreateJPARepositoryCommand.class
     })
@@ -97,8 +95,6 @@ public class Core {
         new CreateNewFileCommandService(javaLanguageService, pathHelper);
     GetCursorPositionInfoCommandService getCursorPositionInfoCommandService =
         new GetCursorPositionInfoCommandService(javaLanguageService, pathHelper);
-    ParseSourceCodeCommandService parseSourceCodeCommandService =
-        new ParseSourceCodeCommandService();
     CreateNewJPAEntityCommandService createNewJPAEntityCommandService =
         new CreateNewJPAEntityCommandService(javaLanguageService, createNewFileCommandService);
     CreateJPARepositoryCommandService createJPARepositoryCommandService =
@@ -108,7 +104,6 @@ public class Core {
         getMainClassCommandService,
         createNewFileCommandService,
         getCursorPositionInfoCommandService,
-        parseSourceCodeCommandService,
         createNewJPAEntityCommandService,
         createJPARepositoryCommandService);
   }

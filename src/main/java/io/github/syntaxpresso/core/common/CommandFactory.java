@@ -11,16 +11,12 @@ public class CommandFactory implements IFactory {
   private final GetMainClassCommandService getMainClassCommandService;
   private final CreateNewFileCommandService createNewFileCommandService;
   private final GetCursorPositionInfoCommandService getCursorPositionInfoCommandService;
-  private final ParseSourceCodeCommandService parseSourceCodeCommandService;
   private final CreateNewJPAEntityCommandService createNewJPAEntityCommandService;
   private final CreateJPARepositoryCommandService createJPARepositoryCommandService;
 
   @Override
   @SuppressWarnings("unchecked")
   public <K> K create(Class<K> cls) throws Exception {
-    if (cls == ParseSourceCodeCommand.class) {
-      return (K) new ParseSourceCodeCommand(parseSourceCodeCommandService);
-    }
     if (cls == GetCursorPositionInfoCommand.class) {
       return (K) new GetCursorPositionInfoCommand(getCursorPositionInfoCommandService);
     }
