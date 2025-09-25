@@ -1,8 +1,11 @@
 package io.github.syntaxpresso.core.service.java.language;
 
 import com.google.common.base.Strings;
+import io.github.syntaxpresso.core.command.extra.JavaBasicType;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.service.java.language.extra.FieldCapture;
+import io.github.syntaxpresso.core.service.java.language.extra.FieldInsertionPoint;
+import io.github.syntaxpresso.core.service.java.language.extra.FieldInsertionPoint.FieldInsertionPosition;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,6 +14,21 @@ import java.util.Optional;
 import org.treesitter.TSNode;
 
 public class FieldDeclarationService {
+
+  private final PackageDeclarationService packageDeclarationService;
+  private final ImportDeclarationService importDeclarationService;
+
+  public FieldDeclarationService() {
+    this.packageDeclarationService = null;
+    this.importDeclarationService = null;
+  }
+
+  public FieldDeclarationService(
+      PackageDeclarationService packageDeclarationService,
+      ImportDeclarationService importDeclarationService) {
+    this.packageDeclarationService = packageDeclarationService;
+    this.importDeclarationService = importDeclarationService;
+  }
 
   /**
    * Extracts field declaration information from a field node using tree-sitter queries.
@@ -484,5 +502,281 @@ public class FieldDeclarationService {
             """,
             fieldDeclaratorType);
     return tsFile.query(queryString).within(classDeclarationNode).execute().nodes();
+  }
+
+  /**
+   * Determines the optimal insertion position for adding a new field to a class declaration.
+   *
+   * <p>This method calculates the byte position where a new field should be inserted based on the
+   * specified insertion strategy and existing fields. It supports different insertion positions to
+   * accommodate various field placement preferences.
+   *
+   * <p>Supported insertion positions:
+   *
+   * <ul>
+   *   <li>{@code BEFORE_FIRST_FIELD}: Inserts before the first existing field declaration
+   *   <li>{@code AFTER_LAST_FIELD}: Inserts after the last existing field declaration
+   *   <li>{@code BEGINNING_OF_CLASS_BODY}: Inserts at the beginning of the class body
+   * </ul>
+   *
+   * <p>Usage example:
+   *
+   * <pre>
+   * TSNode classNode = tsFile.query("(class_declaration) @class").execute().firstNode();
+   * FieldInsertionPoint insertionPoint = service.getFieldInsertionPosition(
+   *     tsFile, classNode, FieldInsertionPosition.AFTER_LAST_FIELD);
+   *
+   * if (insertionPoint != null) {
+   *   int bytePosition = insertionPoint.getInsertByte();
+   *   FieldInsertionPosition position = insertionPoint.getPosition();
+   *   // Use insertion point to add field
+   * }
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code
+   * @param classDeclarationNode The class declaration node to add field to
+   * @param insertionPoint The desired insertion position strategy
+   * @return {@link FieldInsertionPoint} containing position details, or null if invalid input
+   */
+  public FieldInsertionPoint getFieldInsertionPosition(
+      TSFile tsFile, TSNode classDeclarationNode, FieldInsertionPosition insertionPoint) {
+    if (tsFile == null || tsFile.getTree() == null || classDeclarationNode == null) {
+      return null;
+    }
+    String nodeType = classDeclarationNode.getType();
+    if (!nodeType.equals("class_declaration")) {
+      return null;
+    }
+    List<TSNode> allFields = this.getAllFieldDeclarationNodes(tsFile, classDeclarationNode);
+    FieldInsertionPoint fieldInsertionPoint = new FieldInsertionPoint();
+    fieldInsertionPoint.setPosition(insertionPoint);
+
+    if (insertionPoint.equals(FieldInsertionPosition.BEFORE_FIRST_FIELD)) {
+      if (!allFields.isEmpty()) {
+        fieldInsertionPoint.setBreakLineAfter(true);
+        fieldInsertionPoint.setInsertByte(allFields.get(0).getStartByte());
+      } else {
+        // No fields exist, insert at beginning of class body
+        TSNode classBodyNode = this.getClassBodyNode(tsFile, classDeclarationNode);
+        if (classBodyNode != null) {
+          fieldInsertionPoint.setBreakLineAfter(true);
+          fieldInsertionPoint.setInsertByte(
+              classBodyNode.getStartByte() + 1); // After opening brace
+        }
+      }
+    } else if (insertionPoint.equals(FieldInsertionPosition.AFTER_LAST_FIELD)) {
+      if (!allFields.isEmpty()) {
+        fieldInsertionPoint.setBreakLineBefore(true);
+        fieldInsertionPoint.setInsertByte(allFields.getLast().getEndByte());
+      } else {
+        // No fields exist, insert at beginning of class body
+        TSNode classBodyNode = this.getClassBodyNode(tsFile, classDeclarationNode);
+        if (classBodyNode != null) {
+          fieldInsertionPoint.setBreakLineAfter(true);
+          fieldInsertionPoint.setInsertByte(
+              classBodyNode.getStartByte() + 1); // After opening brace
+        }
+      }
+    } else { // BEGINNING_OF_CLASS_BODY
+      TSNode classBodyNode = this.getClassBodyNode(tsFile, classDeclarationNode);
+      if (classBodyNode != null) {
+        fieldInsertionPoint.setBreakLineAfter(true);
+        fieldInsertionPoint.setInsertByte(classBodyNode.getStartByte() + 1); // After opening brace
+      }
+    }
+    return fieldInsertionPoint;
+  }
+
+  /**
+   * Gets the class body node from a class declaration.
+   *
+   * @param tsFile The {@link TSFile} containing the source code
+   * @param classDeclarationNode The class declaration node
+   * @return The class body node, or null if not found
+   */
+  private TSNode getClassBodyNode(TSFile tsFile, TSNode classDeclarationNode) {
+    if (tsFile == null || tsFile.getTree() == null || classDeclarationNode == null) {
+      return null;
+    }
+    String queryString = "(class_declaration body: (class_body) @classBody)";
+    return tsFile.query(queryString).within(classDeclarationNode).execute().firstNode();
+  }
+
+  /**
+   * Adds a field declaration to a class using a JavaBasicType at the specified insertion point.
+   *
+   * <p>This method constructs and inserts a field declaration into the class body using structured
+   * parameters. It automatically handles import statements for non-primitive JavaBasicTypes that
+   * require imports.
+   *
+   * <p>Usage examples:
+   *
+   * <pre>
+   * // Add a simple String field
+   * FieldInsertionPoint point = service.getFieldInsertionPosition(tsFile, classNode,
+   *     FieldInsertionPosition.AFTER_LAST_FIELD);
+   * service.addField(tsFile, classNode, point, "private", false, JavaBasicType.LANG_STRING, "name", null);
+   * // Result: "private String name;"
+   *
+   * // Add a final initialized field
+   * service.addField(tsFile, classNode, point, "public", true, JavaBasicType.PRIMITIVE_INT, "count", "0");
+   * // Result: "public final int count = 0;"
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code to modify
+   * @param classDeclarationNode The class declaration node to add field to
+   * @param insertionPoint The {@link FieldInsertionPoint} specifying where to insert
+   * @param visibility The field visibility ("public", "private", "protected", or "" for
+   *     package-private)
+   * @param isFinal Whether the field should be declared as final
+   * @param fieldType The {@link JavaBasicType} for the field type
+   * @param fieldName The field identifier name
+   * @param initialization Optional initialization value (null or empty for no initialization)
+   */
+  public void addField(
+      TSFile tsFile,
+      TSNode classDeclarationNode,
+      FieldInsertionPoint insertionPoint,
+      String visibility,
+      boolean isFinal,
+      JavaBasicType fieldType,
+      String fieldName,
+      String initialization) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || classDeclarationNode == null
+        || insertionPoint == null
+        || fieldType == null
+        || Strings.isNullOrEmpty(fieldName)) {
+      return;
+    }
+    String nodeType = classDeclarationNode.getType();
+    if (!nodeType.equals("class_declaration")) {
+      return;
+    }
+    if (fieldType.needsImport()
+        && this.packageDeclarationService != null
+        && this.importDeclarationService != null) {
+      Optional<TSNode> packageNode =
+          this.packageDeclarationService.getPackageDeclarationNode(tsFile);
+      if (packageNode.isPresent() && fieldType.getPackageName().isPresent()) {
+        this.importDeclarationService.addImport(
+            tsFile, fieldType.getPackageName().get(), fieldType.getTypeName(), packageNode.get());
+      }
+    }
+    String fieldText =
+        this.buildFieldDeclaration(
+            visibility, isFinal, fieldType.getTypeName(), fieldName, initialization);
+    this.insertFieldText(tsFile, insertionPoint, fieldText);
+  }
+
+  /**
+   * Adds a field declaration to a class using a custom type at the specified insertion point.
+   *
+   * <p>This method constructs and inserts a field declaration into the class body using structured
+   * parameters with a custom type string. This is useful for complex types, generics, or
+   * user-defined classes that are not covered by JavaBasicType.
+   *
+   * <p>Usage examples:
+   *
+   * <pre>
+   * // Add a custom class field
+   * FieldInsertionPoint point = service.getFieldInsertionPosition(tsFile, classNode,
+   *     FieldInsertionPosition.AFTER_LAST_FIELD);
+   * service.addField(tsFile, classNode, point, "private", false, "User", "user", null);
+   * // Result: "private User user;"
+   *
+   * // Add a generic collection field
+   * service.addField(tsFile, classNode, point, "private", false, "List&lt;User&gt;", "users", "new ArrayList&lt;&gt;()");
+   * // Result: "private List&lt;User&gt; users = new ArrayList&lt;&gt;();"
+   * </pre>
+   *
+   * @param tsFile The {@link TSFile} containing the Java source code to modify
+   * @param classDeclarationNode The class declaration node to add field to
+   * @param insertionPoint The {@link FieldInsertionPoint} specifying where to insert
+   * @param visibility The field visibility ("public", "private", "protected", or "" for
+   *     package-private)
+   * @param isFinal Whether the field should be declared as final
+   * @param customFieldType The custom type string (e.g., "User", "List&lt;User&gt;",
+   *     "Map&lt;String, Integer&gt;")
+   * @param fieldName The field identifier name
+   * @param initialization Optional initialization value (null or empty for no initialization)
+   */
+  public void addField(
+      TSFile tsFile,
+      TSNode classDeclarationNode,
+      FieldInsertionPoint insertionPoint,
+      String visibility,
+      boolean isFinal,
+      String customFieldType,
+      String fieldName,
+      String initialization) {
+    if (tsFile == null
+        || tsFile.getTree() == null
+        || classDeclarationNode == null
+        || insertionPoint == null
+        || Strings.isNullOrEmpty(customFieldType)
+        || Strings.isNullOrEmpty(fieldName)) {
+      return;
+    }
+    String nodeType = classDeclarationNode.getType();
+    if (!nodeType.equals("class_declaration")) {
+      return;
+    }
+    String fieldText =
+        this.buildFieldDeclaration(visibility, isFinal, customFieldType, fieldName, initialization);
+    this.insertFieldText(tsFile, insertionPoint, fieldText);
+  }
+
+  /**
+   * Builds a field declaration string from structured parameters.
+   *
+   * @param visibility The field visibility ("public", "private", "protected", or "" for
+   *     package-private)
+   * @param isFinal Whether the field should be declared as final
+   * @param fieldType The field type string
+   * @param fieldName The field identifier name
+   * @param initialization Optional initialization value (null or empty for no initialization)
+   * @return The complete field declaration string
+   */
+  private String buildFieldDeclaration(
+      String visibility,
+      boolean isFinal,
+      String fieldType,
+      String fieldName,
+      String initialization) {
+    StringBuilder fieldBuilder = new StringBuilder();
+    if (!Strings.isNullOrEmpty(visibility)) {
+      fieldBuilder.append(visibility).append(" ");
+    }
+    if (isFinal) {
+      fieldBuilder.append("final ");
+    }
+    fieldBuilder.append(fieldType).append(" ").append(fieldName);
+    if (!Strings.isNullOrEmpty(initialization)) {
+      fieldBuilder.append(" = ").append(initialization);
+    }
+    fieldBuilder.append(";");
+    return fieldBuilder.toString();
+  }
+
+  /**
+   * Inserts field text at the specified insertion point with proper formatting.
+   *
+   * @param tsFile The TSFile to modify
+   * @param insertionPoint The insertion point with formatting preferences
+   * @param fieldText The field declaration text to insert
+   */
+  private void insertFieldText(
+      TSFile tsFile, FieldInsertionPoint insertionPoint, String fieldText) {
+    String insertText = fieldText;
+    if (insertionPoint.isBreakLineBefore()) {
+      insertText = "\n" + insertText;
+    }
+    if (insertionPoint.isBreakLineAfter()) {
+      insertText = insertText + "\n";
+    }
+    tsFile.updateSourceCode(
+        insertionPoint.getInsertByte(), insertionPoint.getInsertByte(), insertText);
   }
 }
