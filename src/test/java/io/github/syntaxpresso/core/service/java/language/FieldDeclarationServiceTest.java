@@ -5,9 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.syntaxpresso.core.command.extra.JavaBasicType;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.java.language.extra.FieldCapture;
+import io.github.syntaxpresso.core.service.java.language.extra.FieldInsertionPoint.FieldInsertionPosition;
+import io.github.syntaxpresso.core.util.PathHelper;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -964,6 +967,610 @@ class FieldDeclarationServiceTest {
       List<TSNode> fieldNodes =
           fieldDeclarationService.getAllFieldDeclarationNodes(tsFile, mockNode);
       assertNotNull(fieldNodes);
+    }
+  }
+
+  @Nested
+  @DisplayName("Structured Parameter Tests")
+  class StructuredParameterTests {
+
+    private FieldDeclarationService fieldDeclarationServiceWithDeps;
+    private PackageDeclarationService packageService;
+    private ImportDeclarationService importService;
+
+    @BeforeEach
+    void setUp() {
+      PathHelper pathHelper = new PathHelper();
+      packageService = new PackageDeclarationService(pathHelper);
+      importService = new ImportDeclarationService();
+      fieldDeclarationServiceWithDeps = new FieldDeclarationService(packageService, importService);
+    }
+
+    @Test
+    @DisplayName("should add field using JavaBasicType successfully")
+    void addField_withJavaBasicType_shouldSucceed() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Test adding JavaBasicType field
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.LANG_STRING, "name", null);
+      
+      // Verify field was added
+      String updatedCode = tsFile.getSourceCode();
+      assertTrue(updatedCode.contains("private String name;"));
+    }
+
+    @Test
+    @DisplayName("should add field using custom type successfully")
+    void addField_withCustomType_shouldSucceed() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Test adding custom type field
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "User", "user", null);
+      
+      // Verify field was added
+      String updatedCode = tsFile.getSourceCode();
+      assertTrue(updatedCode.contains("private User user;"));
+    }
+
+    @Test
+    @DisplayName("should add field with final modifier and initialization")
+    void addField_withFinalAndInit_shouldSucceed() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Test adding final initialized field
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "public", true, JavaBasicType.PRIMITIVE_INT, "count", "0");
+      
+      // Verify field was added
+      String updatedCode = tsFile.getSourceCode();
+      assertTrue(updatedCode.contains("public final int count = 0;"));
+    }
+
+    @Test
+    @DisplayName("should add field with generic type")
+    void addField_withGenericType_shouldSucceed() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Test adding generic type field
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "List<User>", "users", "new ArrayList<>()");
+      
+      // Verify field was added
+      String updatedCode = tsFile.getSourceCode();
+      assertTrue(updatedCode.contains("private List<User> users = new ArrayList<>();"));
+    }
+
+    @Test
+    @DisplayName("should automatically add imports for JavaBasicType that needs import")
+    void addField_withJavaBasicTypeNeedingImport_shouldAddImport() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Test adding UUID field which requires import
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.UTIL_UUID, "id", null);
+      
+      String updatedCode = tsFile.getSourceCode();
+      // Verify field was added
+      assertTrue(updatedCode.contains("private UUID id;"));
+      // Verify import was added
+      assertTrue(updatedCode.contains("import java.util.UUID;"));
+    }
+
+    @Test
+    @DisplayName("should not add imports for primitive JavaBasicType")
+    void addField_withPrimitiveJavaBasicType_shouldNotAddImport() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      String originalCode = tsFile.getSourceCode();
+      
+      // Test adding int field which doesn't need import
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.PRIMITIVE_INT, "count", null);
+      
+      String updatedCode = tsFile.getSourceCode();
+      // Verify field was added
+      assertTrue(updatedCode.contains("private int count;"));
+      // Verify no additional imports were added (should have same import count)
+      int originalImportCount = originalCode.split("import").length - 1;
+      int updatedImportCount = updatedCode.split("import").length - 1;
+      assertEquals(originalImportCount, updatedImportCount);
+    }
+
+    @Test
+    @DisplayName("should handle null and empty parameters gracefully")
+    void addField_withInvalidParams_shouldHandleGracefully() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      String originalCode = tsFile.getSourceCode();
+      
+      // Test with null JavaBasicType - should not modify code
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, (JavaBasicType)null, "name", null);
+      assertEquals(originalCode, tsFile.getSourceCode());
+      
+      // Test with empty field name - should not modify code
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.LANG_STRING, "", null);
+      assertEquals(originalCode, tsFile.getSourceCode());
+      
+      // Test with empty custom type - should not modify code
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "", "name", null);
+      assertEquals(originalCode, tsFile.getSourceCode());
+    }
+
+    @Test
+    @DisplayName("should add multiple fields with different types and modifiers")
+    void addField_withMultipleFields_shouldSucceed() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Add multiple fields of different types
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.LANG_STRING, "name", null);
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.PRIMITIVE_INT, "age", "0");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "public", true, JavaBasicType.PRIMITIVE_BOOLEAN, "active", "true");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "protected", false, "List<String>", "items", "new ArrayList<>()");
+      
+      String updatedCode = tsFile.getSourceCode();
+      
+      // Verify all fields were added
+      assertTrue(updatedCode.contains("private String name;"));
+      assertTrue(updatedCode.contains("private int age = 0;"));
+      assertTrue(updatedCode.contains("public final boolean active = true;"));
+      assertTrue(updatedCode.contains("protected List<String> items = new ArrayList<>();"));
+    }
+
+    @Test
+    @DisplayName("should handle different visibility modifiers correctly")
+    void addField_withDifferentVisibilities_shouldFormatCorrectly() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Test all visibility modifiers
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "public", false, JavaBasicType.LANG_STRING, "publicField", null);
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.LANG_STRING, "privateField", null);
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "protected", false, JavaBasicType.LANG_STRING, "protectedField", null);
+      
+      // Package-private (empty visibility)
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "", false, JavaBasicType.LANG_STRING, "packageField", null);
+      
+      // Null visibility (should be treated as package-private)
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          null, false, JavaBasicType.LANG_STRING, "nullVisibilityField", null);
+      
+      String updatedCode = tsFile.getSourceCode();
+      
+      // Verify visibility modifiers
+      assertTrue(updatedCode.contains("public String publicField;"));
+      assertTrue(updatedCode.contains("private String privateField;"));
+      assertTrue(updatedCode.contains("protected String protectedField;"));
+      assertTrue(updatedCode.contains("String packageField;") && !updatedCode.contains("public String packageField;"));
+      assertTrue(updatedCode.contains("String nullVisibilityField;") && !updatedCode.contains("public String nullVisibilityField;"));
+    }
+
+    @Test
+    @DisplayName("should add fields with complex generic types")
+    void addField_withComplexGenerics_shouldSucceed() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Test complex generic types
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "Map<String, Integer>", "scoreMap", "new HashMap<>()");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "List<Map<String, Object>>", "complexList", "new ArrayList<>()");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "Optional<List<User>>", "optionalUsers", "Optional.empty()");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "CompletableFuture<ResponseEntity<String>>", "asyncResponse", null);
+      
+      String updatedCode = tsFile.getSourceCode();
+      
+      // Verify complex generic types
+      assertTrue(updatedCode.contains("private Map<String, Integer> scoreMap = new HashMap<>();"));
+      assertTrue(updatedCode.contains("private List<Map<String, Object>> complexList = new ArrayList<>();"));
+      assertTrue(updatedCode.contains("private Optional<List<User>> optionalUsers = Optional.empty();"));
+      assertTrue(updatedCode.contains("private CompletableFuture<ResponseEntity<String>> asyncResponse;"));
+    }
+
+    @Test
+    @DisplayName("should add fields at different insertion positions")
+    void addField_withDifferentInsertionPositions_shouldPlaceCorrectly() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              private String existingField;
+              
+              public void method() {
+                  // method body
+              }
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      // Test AFTER_LAST_FIELD first to avoid position corruption
+      var afterLastPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.AFTER_LAST_FIELD);
+      assertNotNull(afterLastPoint);
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), afterLastPoint, 
+          "private", false, JavaBasicType.PRIMITIVE_BOOLEAN, "afterLast", null);
+      
+      // Now recalculate BEFORE_FIRST_FIELD position after the source has been modified
+      var beforeFirstPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEFORE_FIRST_FIELD);
+      assertNotNull(beforeFirstPoint);
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), beforeFirstPoint, 
+          "private", false, JavaBasicType.PRIMITIVE_INT, "beforeFirst", null);
+      
+      String updatedCode = tsFile.getSourceCode();
+      
+      // Verify field positioning - beforeFirst should appear before existingField
+      int beforeFirstIndex = updatedCode.indexOf("private int beforeFirst;");
+      int existingFieldIndex = updatedCode.indexOf("private String existingField;");
+      int afterLastIndex = updatedCode.indexOf("private boolean afterLast;");
+      
+      assertTrue(beforeFirstIndex > 0);
+      assertTrue(existingFieldIndex > 0);
+      assertTrue(afterLastIndex > 0);
+      assertTrue(beforeFirstIndex < existingFieldIndex, "beforeFirst should appear before existingField");
+      assertTrue(existingFieldIndex < afterLastIndex, "afterLast should appear after existingField");
+    }
+
+    @Test
+    @DisplayName("should add single field with import handling")
+    void addField_withSingleJavaBasicType_shouldHandleImport() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Add a single field that requires an import
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.UTIL_UUID, "uuidField", null);
+      
+      String updatedCode = tsFile.getSourceCode();
+      
+      // Verify field was added
+      assertTrue(updatedCode.contains("private UUID uuidField;"));
+      
+      // Verify import was added
+      assertTrue(updatedCode.contains("import java.util.UUID;"));
+    }
+    
+    @Test
+    @DisplayName("should add multiple fields with imports by recalculating positions")
+    void addField_withMultipleJavaBasicTypes_shouldHandleImports() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      
+      // Add first field (primitive, no import needed)
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.PRIMITIVE_INT, "intField", null);
+      
+      // Add second field (requires import) using fresh class node lookup
+      classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.AFTER_LAST_FIELD);
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.UTIL_UUID, "uuidField", null);
+      
+      String updatedCode = tsFile.getSourceCode();
+      
+      // Verify both fields were added correctly
+      assertTrue(updatedCode.contains("private int intField;"));
+      assertTrue(updatedCode.contains("private UUID uuidField;"));
+      
+      // Verify import was added for UUID
+      assertTrue(updatedCode.contains("import java.util.UUID;"));
+      
+      // Verify no import for primitive
+      assertFalse(updatedCode.contains("import int;"));
+    }
+
+    @Test
+    @DisplayName("should handle field initialization with various expressions")
+    void addField_withVariousInitializations_shouldFormatCorrectly() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Test various initialization expressions
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.LANG_STRING, "stringLiteral", "\"Hello World\"");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.PRIMITIVE_INT, "calculation", "10 + 20");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "List<String>", "listInit", "Arrays.asList(\"a\", \"b\", \"c\")");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.UTIL_UUID, "uuidInit", "UUID.randomUUID()");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.PRIMITIVE_BOOLEAN, "booleanInit", "true && false");
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "Object", "nullInit", "null");
+      
+      String updatedCode = tsFile.getSourceCode();
+      
+      // Verify initializations
+      assertTrue(updatedCode.contains("private String stringLiteral = \"Hello World\";"));
+      assertTrue(updatedCode.contains("private int calculation = 10 + 20;"));
+      assertTrue(updatedCode.contains("private List<String> listInit = Arrays.asList(\"a\", \"b\", \"c\");"));
+      assertTrue(updatedCode.contains("private UUID uuidInit = UUID.randomUUID();"));
+      assertTrue(updatedCode.contains("private boolean booleanInit = true && false;"));
+      assertTrue(updatedCode.contains("private Object nullInit = null;"));
+    }
+
+    @Test
+    @DisplayName("should handle edge cases with whitespace and special characters")
+    void addField_withEdgeCases_shouldHandleGracefully() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Test edge cases
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "  private  ", false, JavaBasicType.LANG_STRING, "fieldWithSpaces", null);
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.LANG_STRING, "_underscoreField", null);
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.LANG_STRING, "field123", null);
+      
+      fieldDeclarationServiceWithDeps.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, "com.example.CustomType", "fullyQualifiedType", null);
+      
+      String updatedCode = tsFile.getSourceCode();
+      
+      // Verify fields were added (spaces should be preserved in visibility)
+      assertTrue(updatedCode.contains("  private   String fieldWithSpaces;"));
+      assertTrue(updatedCode.contains("private String _underscoreField;"));
+      assertTrue(updatedCode.contains("private String field123;"));
+      assertTrue(updatedCode.contains("private com.example.CustomType fullyQualifiedType;"));
+    }
+
+    @Test
+    @DisplayName("should maintain backward compatibility with no-arg constructor")
+    void addField_withNoArgConstructor_shouldWorkWithoutAutoImport() {
+      String testCode = """
+          package com.example.test;
+          
+          public class TestClass {
+              
+          }
+          """;
+      
+      TSFile tsFile = new TSFile(SupportedLanguage.JAVA, testCode);
+      Optional<TSNode> classNode = classDeclarationService.findClassByName(tsFile, "TestClass");
+      assertTrue(classNode.isPresent());
+      
+      var insertionPoint = fieldDeclarationService.getFieldInsertionPosition(
+          tsFile, classNode.get(), FieldInsertionPosition.BEGINNING_OF_CLASS_BODY);
+      assertNotNull(insertionPoint);
+      
+      // Use the no-arg constructor service (no auto-import)
+      FieldDeclarationService noArgService = new FieldDeclarationService();
+      
+      noArgService.addField(tsFile, classNode.get(), insertionPoint, 
+          "private", false, JavaBasicType.UTIL_UUID, "uuidField", null);
+      
+      String updatedCode = tsFile.getSourceCode();
+      
+      // Verify field was added
+      assertTrue(updatedCode.contains("private UUID uuidField;"));
+      
+      // Verify no import was added (since dependencies are null)
+      assertFalse(updatedCode.contains("import java.util.UUID;"));
     }
   }
 }
