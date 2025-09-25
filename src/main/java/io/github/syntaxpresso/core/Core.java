@@ -68,12 +68,12 @@ public class Core {
     FormalParameterService formalParameterDeclarationService = new FormalParameterService();
     MethodDeclarationService methodDeclarationService =
         new MethodDeclarationService(formalParameterDeclarationService);
-    FieldDeclarationService fieldDeclarationService = new FieldDeclarationService();
+    PackageDeclarationService packageDeclarationService = new PackageDeclarationService(pathHelper);
+    ImportDeclarationService importDeclarationService = new ImportDeclarationService();
+    FieldDeclarationService fieldDeclarationService = new FieldDeclarationService(packageDeclarationService, importDeclarationService);
     ClassDeclarationService classDeclarationService =
         new ClassDeclarationService(fieldDeclarationService, methodDeclarationService);
     InterfaceDeclarationService interfaceDeclarationService = new InterfaceDeclarationService();
-    PackageDeclarationService packageDeclarationService = new PackageDeclarationService(pathHelper);
-    ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();
     AnnotationService annotationService = new AnnotationService();
