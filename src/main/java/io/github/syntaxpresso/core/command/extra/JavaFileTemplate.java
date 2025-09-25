@@ -1,11 +1,11 @@
 package io.github.syntaxpresso.core.command.extra;
 
 public enum JavaFileTemplate {
-  CLASS("package %s;%n%npublic class %s {\n\n}"),
-  INTERFACE("package %s;%n%npublic interface %s {\n\n}"),
-  ENUM("package %s;%n%npublic enum %s {\n\n}"),
-  RECORD("package %s;%n%npublic record %s(\n\n) {\n\n}"),
-  ANNOTATION("package %s;%n%npublic @interface %s {\n\n}");
+  CLASS("package %s;%n%npublic class %s {}"),
+  INTERFACE("package %s;%n%npublic interface %s {}"),
+  ENUM("package %s;%n%npublic enum %s {}"),
+  RECORD("package %s;%n%npublic record %s() {}"),
+  ANNOTATION("package %s;%n%npublic @interface %s {}");
   private final String template;
 
   JavaFileTemplate(String template) {
