@@ -4,12 +4,15 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
+import io.github.syntaxpresso.core.service.java.language.AnnotationDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.AnnotationService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.EnumDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.InterfaceDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.RecordDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.VariableNamingService;
 import io.github.syntaxpresso.core.util.PathHelper;
 import java.nio.file.Files;
@@ -26,6 +29,9 @@ public class JavaLanguageService {
   private final VariableNamingService variableNamingService;
   private final ClassDeclarationService classDeclarationService;
   private final InterfaceDeclarationService interfaceDeclarationService;
+  private final EnumDeclarationService enumDeclarationService;
+  private final RecordDeclarationService recordDeclarationService;
+  private final AnnotationDeclarationService annotationDeclarationService;
   private final PackageDeclarationService packageDeclarationService;
   private final ImportDeclarationService importDeclarationService;
   private final LocalVariableDeclarationService localVariableDeclarationService;
@@ -75,6 +81,14 @@ public class JavaLanguageService {
     String parentType = parent.getType();
     switch (parentType) {
       case "class_declaration":
+        return JavaIdentifierType.CLASS_NAME;
+      case "interface_declaration":
+        return JavaIdentifierType.CLASS_NAME;
+      case "enum_declaration":
+        return JavaIdentifierType.CLASS_NAME;
+      case "record_declaration":
+        return JavaIdentifierType.CLASS_NAME;
+      case "annotation_type_declaration":
         return JavaIdentifierType.CLASS_NAME;
       case "method_declaration":
         return JavaIdentifierType.METHOD_NAME;

@@ -10,13 +10,16 @@ import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
 import io.github.syntaxpresso.core.service.extra.JavaIdentifierType;
+import io.github.syntaxpresso.core.service.java.language.AnnotationDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.AnnotationService;
 import io.github.syntaxpresso.core.service.java.language.ClassDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.EnumDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FieldDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.FormalParameterService;
 import io.github.syntaxpresso.core.service.java.language.ImportDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.InterfaceDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.LocalVariableDeclarationService;
+import io.github.syntaxpresso.core.service.java.language.RecordDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.MethodDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.PackageDeclarationService;
 import io.github.syntaxpresso.core.service.java.language.VariableNamingService;
@@ -61,6 +64,9 @@ class JavaLanguageServiceTest {
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();
+    EnumDeclarationService enumDeclarationService = new EnumDeclarationService();
+    RecordDeclarationService recordDeclarationService = new RecordDeclarationService();
+    AnnotationDeclarationService annotationDeclarationService = new AnnotationDeclarationService();
     AnnotationService annotationService = new AnnotationService();
     InterfaceDeclarationService interfaceDeclarationService = new InterfaceDeclarationService();
 
@@ -70,6 +76,9 @@ class JavaLanguageServiceTest {
             variableNamingService,
             classDeclarationService,
             interfaceDeclarationService,
+            enumDeclarationService,
+            recordDeclarationService,
+            annotationDeclarationService,
             packageDeclarationService,
             importDeclarationService,
             localVariableDeclarationService,
