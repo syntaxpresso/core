@@ -574,7 +574,7 @@ class CreateJPARepositoryCommandTest {
     private String lastCalledSuperclassSource;
 
     public TestCreateJPARepositoryCommandService() {
-      super(null, null); // Mock dependencies are not used in tests
+      super(null, null, null); // Mock dependencies are not used in tests
     }
 
     @Override
