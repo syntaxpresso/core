@@ -23,6 +23,7 @@ import picocli.CommandLine.Command;
       GetCursorPositionInfoCommand.class,
       CreateNewJPAEntityCommand.class,
       CreateJPARepositoryCommand.class,
+      GetJPAEntityInfoCommand.class,
       GetAllFilesCommand.class
     })
 public class Core {
@@ -104,8 +105,10 @@ public class Core {
         new GetCursorPositionInfoCommandService(javaLanguageService, pathHelper);
     CreateNewJPAEntityCommandService createNewJPAEntityCommandService =
         new CreateNewJPAEntityCommandService(javaLanguageService, createNewFileCommandService);
+    GetJPAEntityInfoCommandService getJPAEntityInfoCommandService =
+        new GetJPAEntityInfoCommandService(javaLanguageService);
     CreateJPARepositoryCommandService createJPARepositoryCommandService =
-        new CreateJPARepositoryCommandService(javaLanguageService, createNewFileCommandService);
+        new CreateJPARepositoryCommandService(javaLanguageService, createNewFileCommandService, getJPAEntityInfoCommandService);
     GetAllFilesCommandService getAllFilesCommandService =
         new GetAllFilesCommandService(javaLanguageService);
     return new CommandFactory(
@@ -115,6 +118,7 @@ public class Core {
         getCursorPositionInfoCommandService,
         createNewJPAEntityCommandService,
         createJPARepositoryCommandService,
+        getJPAEntityInfoCommandService,
         getAllFilesCommandService);
   }
 }

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
-import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
@@ -30,6 +29,7 @@ import org.treesitter.TSNode;
 public class CreateJPARepositoryCommandService {
   private final JavaLanguageService javaLanguageService;
   private final CreateNewFileCommandService createNewFileCommandService;
+  private final GetJPAEntityInfoCommandService getJPAEntityInfoCommandService;
 
   private JPARepositoryData buildJPARepositoryData(
       Path cwd, String entityType, String entityIdType, String entityPackageName) {
@@ -39,147 +39,6 @@ public class CreateJPARepositoryCommandService {
         .entityType(entityType)
         .entityIdType(entityIdType)
         .build();
-  }
-
-  private Optional<TSNode> getIdFieldFromEntity(TSFile tsFile, TSNode publicClassNode) {
-    List<TSNode> publicClassFieldNodes =
-        this.javaLanguageService
-            .getClassDeclarationService()
-            .getFieldDeclarationService()
-            .getAllFieldDeclarationNodes(tsFile, publicClassNode);
-    for (TSNode classFieldNode : publicClassFieldNodes) {
-      Optional<TSNode> idFieldAnnotation =
-          this.javaLanguageService
-              .getAnnotationService()
-              .findAnnotationByName(tsFile, classFieldNode, "Id");
-      if (idFieldAnnotation.isPresent()) {
-        return Optional.of(classFieldNode);
-      }
-    }
-    return Optional.empty();
-  }
-
-  private Optional<TSFile> findSuperclassFile(Path cwd, TSFile entityFile, TSNode publicClassNode) {
-    Optional<TSNode> superClassNameNode =
-        this.javaLanguageService
-            .getClassDeclarationService()
-            .getClassDeclarationSuperclassNameNode(entityFile, publicClassNode);
-    if (superClassNameNode.isEmpty()) {
-      return Optional.empty();
-    }
-    String superClassName = entityFile.getTextFromNode(superClassNameNode.get());
-    if (Strings.isNullOrEmpty(superClassName)) {
-      return Optional.empty();
-    }
-    List<TSFile> allJavaFiles = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
-    for (TSFile tsFile : allJavaFiles) {
-      Optional<String> fileName = tsFile.getFileNameWithoutExtension();
-      if (fileName.isEmpty()) {
-        continue;
-      }
-      if (fileName.get().equals(superClassName)) {
-        return Optional.of(tsFile);
-      }
-    }
-    return Optional.empty();
-  }
-
-  private IdFieldSearchResult findIdFieldRecursively(
-      Path cwd, TSFile tsFile, TSNode publicClassNode) {
-    return this.findIdFieldRecursively(cwd, tsFile, publicClassNode, null);
-  }
-
-  private IdFieldSearchResult findIdFieldRecursively(
-      Path cwd, TSFile tsFile, TSNode publicClassNode, TSFile externalSuperclassFile) {
-    Optional<TSNode> idFieldNode = this.getIdFieldFromEntity(tsFile, publicClassNode);
-    if (idFieldNode.isPresent()) {
-      return IdFieldSearchResult.found(tsFile, idFieldNode.get());
-    }
-    Optional<TSNode> superClassNameNode =
-        this.javaLanguageService
-            .getClassDeclarationService()
-            .getClassDeclarationSuperclassNameNode(tsFile, publicClassNode);
-    if (superClassNameNode.isEmpty()) {
-      return IdFieldSearchResult.notFound();
-    }
-    String superClassName = tsFile.getTextFromNode(superClassNameNode.get());
-    if (Strings.isNullOrEmpty(superClassName)) {
-      return IdFieldSearchResult.notFound();
-    }
-    // First check if we have an external superclass file for this superclass
-    if (externalSuperclassFile != null) {
-      // For external source, we can't use getPublicClass() as it requires a filename
-      // Instead, find any class declaration in the external source
-      Optional<TSNode> externalClassNode =
-          this.javaLanguageService
-              .getClassDeclarationService()
-              .getPublicClass(externalSuperclassFile);
-      if (externalClassNode.isPresent()) {
-        Optional<String> externalClassName =
-            this.extractEntityType(externalSuperclassFile, externalClassNode.get());
-        if (externalClassName.isPresent() && externalClassName.get().equals(superClassName)) {
-          // We found the matching external superclass, search within it
-          return this.findIdFieldRecursively(
-              cwd, externalSuperclassFile, externalClassNode.get(), null);
-        }
-      }
-      // If we have external source but it doesn't match the expected class name,
-      // don't ask for the same superclass again - treat as not found
-      return IdFieldSearchResult.notFound();
-    }
-    Optional<TSFile> superClassFile = this.findSuperclassFile(cwd, tsFile, publicClassNode);
-    if (superClassFile.isEmpty()) {
-      return IdFieldSearchResult.missingSuperclass(superClassName);
-    }
-    Optional<TSNode> superClassPublicNode =
-        this.javaLanguageService.getClassDeclarationService().getPublicClass(superClassFile.get());
-    if (superClassPublicNode.isEmpty()) {
-      return IdFieldSearchResult.notFound();
-    }
-    return this.findIdFieldRecursively(
-        cwd, superClassFile.get(), superClassPublicNode.get(), externalSuperclassFile);
-  }
-
-  private Optional<String> extractEntityType(TSFile tsFile, TSNode publicClassNode) {
-    Optional<TSNode> classNameNode =
-        this.javaLanguageService
-            .getClassDeclarationService()
-            .getClassDeclarationNameNode(tsFile, publicClassNode);
-    if (classNameNode.isEmpty()) {
-      return Optional.empty();
-    }
-    String className = tsFile.getTextFromNode(classNameNode.get());
-    return Strings.isNullOrEmpty(className) ? Optional.empty() : Optional.of(className);
-  }
-
-  private Optional<String> extractIdType(TSFile tsFile, TSNode idFieldNode) {
-    Optional<TSNode> fieldTypeNode =
-        this.javaLanguageService
-            .getClassDeclarationService()
-            .getFieldDeclarationService()
-            .getFieldDeclarationFullTypeNode(tsFile, idFieldNode);
-    if (fieldTypeNode.isEmpty()) {
-      return Optional.empty();
-    }
-    String idType = tsFile.getTextFromNode(fieldTypeNode.get());
-    return Strings.isNullOrEmpty(idType) ? Optional.empty() : Optional.of(idType);
-  }
-
-  private Optional<String> extractPackageName(TSFile tsFile) {
-    Optional<TSNode> packageDeclarationNode =
-        this.javaLanguageService.getPackageDeclarationService().getPackageDeclarationNode(tsFile);
-    if (packageDeclarationNode.isEmpty()) {
-      return Optional.empty();
-    }
-    Optional<TSNode> packageScopeNode =
-        this.javaLanguageService
-            .getPackageDeclarationService()
-            .getPackageScopeNode(tsFile, packageDeclarationNode.get());
-    if (packageScopeNode.isEmpty()) {
-      return Optional.empty();
-    }
-    String packageName = tsFile.getTextFromNode(packageScopeNode.get());
-    return Strings.isNullOrEmpty(packageName) ? Optional.empty() : Optional.of(packageName);
   }
 
   private DataTransferObject<CreateNewFileResponse> createRepositoryFile(
@@ -282,11 +141,12 @@ public class CreateJPARepositoryCommandService {
     if (entityPublicClassNode.isEmpty()) {
       return PrepareDataResult.error("No public class found in the entity file.");
     }
-    Optional<String> packageName = this.extractPackageName(tsFile);
+    Optional<String> packageName = this.getJPAEntityInfoCommandService.extractPackageName(tsFile);
     if (packageName.isEmpty()) {
       return PrepareDataResult.error("Package name could not be extracted from the entity file.");
     }
-    Optional<String> entityType = this.extractEntityType(tsFile, entityPublicClassNode.get());
+    Optional<String> entityType =
+        this.getJPAEntityInfoCommandService.extractEntityType(tsFile, entityPublicClassNode.get());
     if (entityType.isEmpty()) {
       return PrepareDataResult.error("Entity type could not be extracted from the entity file.");
     }
@@ -302,15 +162,18 @@ public class CreateJPARepositoryCommandService {
         return PrepareDataResult.error("No public class found in the entity file.");
       }
       searchResult =
-          this.findIdFieldRecursively(
+          this.getJPAEntityInfoCommandService.findIdFieldRecursively(
               cwd, externalSuperclassFile, externalSuperclassFilePublicClassNode.get());
     } else {
-      searchResult = this.findIdFieldRecursively(cwd, tsFile, entityPublicClassNode.get());
+      searchResult =
+          this.getJPAEntityInfoCommandService.findIdFieldRecursively(
+              cwd, tsFile, entityPublicClassNode.get());
     }
     if (searchResult.isFound()) {
       // Id field found - extract ID type and create JPARepositoryData
       Optional<String> idType =
-          this.extractIdType(searchResult.getTsFile(), searchResult.getIdFieldNode());
+          this.getJPAEntityInfoCommandService.extractIdType(
+              searchResult.getTsFile(), searchResult.getIdFieldNode());
       if (idType.isEmpty()) {
         return PrepareDataResult.error("ID field type could not be extracted.");
       }
