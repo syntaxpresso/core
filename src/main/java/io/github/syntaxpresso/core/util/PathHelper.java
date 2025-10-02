@@ -29,18 +29,14 @@ public class PathHelper {
    */
   public List<TSFile> findFilesByExtention(Path rootDir, SupportedLanguage supportedLanguage)
       throws IOException {
-    List<TSFile> tsFiles = new ArrayList<>();
     try (Stream<Path> stream = Files.walk(rootDir)) {
-      List<Path> filePaths =
-          stream
-              .filter(Files::isRegularFile)
-              .filter(path -> path.toString().endsWith(supportedLanguage.getFileExtension()))
-              .collect(Collectors.toList());
-      for (Path filePath : filePaths) {
-        tsFiles.add(new TSFile(supportedLanguage, filePath));
-      }
+      return stream
+          .filter(Files::isRegularFile)
+          .filter(path -> path.toString().endsWith(supportedLanguage.getFileExtension()))
+          .parallel()
+          .map(filePath -> new TSFile(supportedLanguage, filePath))
+          .collect(Collectors.toList());
     }
-    return tsFiles;
   }
 
   /**
