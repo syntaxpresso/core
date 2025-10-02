@@ -22,7 +22,9 @@ import picocli.CommandLine.Command;
       CreateNewFileCommand.class,
       GetCursorPositionInfoCommand.class,
       CreateNewJPAEntityCommand.class,
-      CreateJPARepositoryCommand.class
+      CreateJPARepositoryCommand.class,
+      GetJPAEntityInfoCommand.class,
+      GetAllFilesCommand.class
     })
 public class Core {
 
@@ -76,6 +78,9 @@ public class Core {
     ImportDeclarationService importDeclarationService = new ImportDeclarationService();
     LocalVariableDeclarationService localVariableDeclarationService =
         new LocalVariableDeclarationService();
+    EnumDeclarationService enumDeclarationService = new EnumDeclarationService();
+    RecordDeclarationService recordDeclarationService = new RecordDeclarationService();
+    AnnotationDeclarationService annotationDeclarationService = new AnnotationDeclarationService();
     AnnotationService annotationService = new AnnotationService();
     JavaLanguageService javaLanguageService =
         new JavaLanguageService(
@@ -83,6 +88,9 @@ public class Core {
             variableNamingService,
             classDeclarationService,
             interfaceDeclarationService,
+            enumDeclarationService,
+            recordDeclarationService,
+            annotationDeclarationService,
             packageDeclarationService,
             importDeclarationService,
             localVariableDeclarationService,
@@ -97,14 +105,20 @@ public class Core {
         new GetCursorPositionInfoCommandService(javaLanguageService, pathHelper);
     CreateNewJPAEntityCommandService createNewJPAEntityCommandService =
         new CreateNewJPAEntityCommandService(javaLanguageService, createNewFileCommandService);
+    GetJPAEntityInfoCommandService getJPAEntityInfoCommandService =
+        new GetJPAEntityInfoCommandService(javaLanguageService);
     CreateJPARepositoryCommandService createJPARepositoryCommandService =
-        new CreateJPARepositoryCommandService(javaLanguageService, createNewFileCommandService);
+        new CreateJPARepositoryCommandService(javaLanguageService, createNewFileCommandService, getJPAEntityInfoCommandService);
+    GetAllFilesCommandService getAllFilesCommandService =
+        new GetAllFilesCommandService(javaLanguageService);
     return new CommandFactory(
         renameCommandService,
         getMainClassCommandService,
         createNewFileCommandService,
         getCursorPositionInfoCommandService,
         createNewJPAEntityCommandService,
-        createJPARepositoryCommandService);
+        createJPARepositoryCommandService,
+        getJPAEntityInfoCommandService,
+        getAllFilesCommandService);
   }
 }

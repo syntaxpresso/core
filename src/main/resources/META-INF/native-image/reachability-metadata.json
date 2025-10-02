@@ -150,6 +150,66 @@
       ]
     },
     {
+      "type": "io.github.syntaxpresso.core.command.dto.GetAllFilesResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.util.List"]
+        }
+      ]
+    },
+    {
+      "type": "io.github.syntaxpresso.core.command.dto.FileResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String", "java.lang.String", "java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "io.github.syntaxpresso.core.command.dto.CreateNewJPAEntityResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.String"]
+        }
+      ]
+    },
+    {
+      "type": "io.github.syntaxpresso.core.command.dto.GetJPAEntityInfoResponse",
+      "allDeclaredFields": true,
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": ["java.lang.Boolean", "java.lang.String", "java.lang.String", "java.lang.String", "java.lang.String", "java.lang.String", "java.lang.String", "java.util.List"]
+        }
+      ]
+    },
+    {
       "type": "io.github.syntaxpresso.core.service.extra.JavaIdentifierType",
       "allDeclaredFields": true,
       "allDeclaredMethods": true

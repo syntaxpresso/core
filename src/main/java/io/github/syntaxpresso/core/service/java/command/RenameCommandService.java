@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
@@ -472,54 +473,67 @@ public class RenameCommandService {
     }
     List<TSFile> allJavaFiles =
         this.javaLanguageService.getAllJavaFilesFromCwd(sourceFileData.getCwd());
-    for (TSFile tsFile : allJavaFiles) {
-      Optional<TSNode> classDeclarationNode =
-          this.javaLanguageService.getClassDeclarationService().getPublicClass(tsFile);
-      if (classDeclarationNode.isEmpty()) {
-        continue;
-      }
-      boolean isImported =
-          this.javaLanguageService
-              .getImportDeclarationService()
-              .isClassImported(
-                  tsFile,
-                  sourceFileData.getSourcePackageScopeText(),
-                  sourceFileData.getSourceCursorPositionText());
-      if (!isImported) {
-        continue;
-      }
-      DataTransferObject<RenameResponse> importDeclarationsRename =
-          this.renameImportDeclaration(tsFile, sourceFileData, newName);
-      if (!importDeclarationsRename.getSucceed()) {
-        return importDeclarationsRename;
-      }
-      DataTransferObject<RenameResponse> fieldDeclarationsRename =
-          this.renameFieldDeclarations(
-              tsFile,
-              classDeclarationNode.get(),
-              sourceFileData.getSourceCursorPositionText(),
-              newName);
-      if (!fieldDeclarationsRename.getSucceed()) {
-        return fieldDeclarationsRename;
-      }
-      DataTransferObject<RenameResponse> formalParametersRename =
-          this.renameFormalParameters(
-              tsFile,
-              classDeclarationNode.get(),
-              sourceFileData.getSourceCursorPositionText(),
-              newName);
-      if (!formalParametersRename.getSucceed()) {
-        return formalParametersRename;
-      }
-      DataTransferObject<RenameResponse> localVariablesRename =
-          this.renameLocalVariables(
-              tsFile,
-              classDeclarationNode.get(),
-              sourceFileData.getSourceCursorPositionText(),
-              newName);
-      if (!localVariablesRename.getSucceed()) {
-        return localVariablesRename;
-      }
+    AtomicReference<DataTransferObject<RenameResponse>> errorResult = new AtomicReference<>();
+    allJavaFiles.parallelStream()
+        .filter(
+            tsFile ->
+                this.javaLanguageService
+                    .getClassDeclarationService()
+                    .getPublicClass(tsFile)
+                    .isPresent())
+        .filter(
+            tsFile ->
+                this.javaLanguageService
+                    .getImportDeclarationService()
+                    .isClassImported(
+                        tsFile,
+                        sourceFileData.getSourcePackageScopeText(),
+                        sourceFileData.getSourceCursorPositionText()))
+        .forEach(
+            tsFile -> {
+              if (errorResult.get() != null) {
+                return; // Early exit if error already occurred
+              }
+              Optional<TSNode> classDeclarationNode =
+                  this.javaLanguageService.getClassDeclarationService().getPublicClass(tsFile);
+              DataTransferObject<RenameResponse> importDeclarationsRename =
+                  this.renameImportDeclaration(tsFile, sourceFileData, newName);
+              if (!importDeclarationsRename.getSucceed()) {
+                errorResult.set(importDeclarationsRename);
+                return;
+              }
+              DataTransferObject<RenameResponse> fieldDeclarationsRename =
+                  this.renameFieldDeclarations(
+                      tsFile,
+                      classDeclarationNode.get(),
+                      sourceFileData.getSourceCursorPositionText(),
+                      newName);
+              if (!fieldDeclarationsRename.getSucceed()) {
+                errorResult.set(fieldDeclarationsRename);
+                return;
+              }
+              DataTransferObject<RenameResponse> formalParametersRename =
+                  this.renameFormalParameters(
+                      tsFile,
+                      classDeclarationNode.get(),
+                      sourceFileData.getSourceCursorPositionText(),
+                      newName);
+              if (!formalParametersRename.getSucceed()) {
+                errorResult.set(formalParametersRename);
+                return;
+              }
+              DataTransferObject<RenameResponse> localVariablesRename =
+                  this.renameLocalVariables(
+                      tsFile,
+                      classDeclarationNode.get(),
+                      sourceFileData.getSourceCursorPositionText(),
+                      newName);
+              if (!localVariablesRename.getSucceed()) {
+                errorResult.set(localVariablesRename);
+              }
+            });
+    if (errorResult.get() != null) {
+      return errorResult.get();
     }
     return DataTransferObject.success();
   }
@@ -534,45 +548,57 @@ public class RenameCommandService {
     String newNameCamelCase = StringHelper.toCamelCase(newName);
     List<TSFile> allJavaFiles =
         this.javaLanguageService.getAllJavaFilesFromCwd(sourceFileData.getCwd());
-    for (TSFile tsFile : allJavaFiles) {
-      List<TSNode> allVariablesOfTargetType =
-          this.javaLanguageService
-              .getLocalVariableDeclarationService()
-              .findLocalVariableDeclarationByType(tsFile, sourceFileData.getPublicClassNameText());
-      for (TSNode variableNode : allVariablesOfTargetType) {
-        Optional<TSNode> variableNameNode =
-            this.javaLanguageService
-                .getLocalVariableDeclarationService()
-                .getLocalVariableDeclarationNameNode(tsFile, variableNode);
-        if (variableNameNode.isEmpty()) {
-          continue;
-        }
-        String variableName = tsFile.getTextFromNode(variableNameNode.get());
-        TSNode scopeNode =
-            this.javaLanguageService
-                .getLocalVariableDeclarationService()
-                .determineScopeForVariable(variableNode);
-        if (scopeNode == null) {
-          continue;
-        }
-        List<TSNode> methodInvocations =
-            this.javaLanguageService
-                .getClassDeclarationService()
-                .getMethodDeclarationService()
-                .findMethodInvocationsByVariableNameAndMethodName(
-                    tsFile, variableName, sourceFileData.getSourceCursorPositionText(), scopeNode);
-        for (TSNode invocation : methodInvocations) {
-          Optional<TSNode> methodNameNode =
-              this.javaLanguageService
-                  .getClassDeclarationService()
-                  .getMethodDeclarationService()
-                  .getMethodInvocationNameNode(tsFile, invocation);
-          if (methodNameNode.isPresent()) {
-            this.addRenameOperation(tsFile, methodNameNode.get(), newNameCamelCase);
-          }
-        }
-      }
-    }
+    // Process files in parallel to find and rename method invocations
+    allJavaFiles.parallelStream()
+        .forEach(
+            tsFile -> {
+              List<TSNode> allVariablesOfTargetType =
+                  this.javaLanguageService
+                      .getLocalVariableDeclarationService()
+                      .findLocalVariableDeclarationByType(
+                          tsFile, sourceFileData.getPublicClassNameText());
+              allVariablesOfTargetType.forEach(
+                  variableNode -> {
+                    Optional<TSNode> variableNameNode =
+                        this.javaLanguageService
+                            .getLocalVariableDeclarationService()
+                            .getLocalVariableDeclarationNameNode(tsFile, variableNode);
+                    if (variableNameNode.isEmpty()) {
+                      return;
+                    }
+                    String variableName = tsFile.getTextFromNode(variableNameNode.get());
+                    TSNode scopeNode =
+                        this.javaLanguageService
+                            .getLocalVariableDeclarationService()
+                            .determineScopeForVariable(variableNode);
+                    if (scopeNode == null) {
+                      return;
+                    }
+                    List<TSNode> methodInvocations =
+                        this.javaLanguageService
+                            .getClassDeclarationService()
+                            .getMethodDeclarationService()
+                            .findMethodInvocationsByVariableNameAndMethodName(
+                                tsFile,
+                                variableName,
+                                sourceFileData.getSourceCursorPositionText(),
+                                scopeNode);
+                    methodInvocations.forEach(
+                        invocation -> {
+                          Optional<TSNode> methodNameNode =
+                              this.javaLanguageService
+                                  .getClassDeclarationService()
+                                  .getMethodDeclarationService()
+                                  .getMethodInvocationNameNode(tsFile, invocation);
+                          if (methodNameNode.isPresent()) {
+                            synchronized (this) {
+                              this.addRenameOperation(
+                                  tsFile, methodNameNode.get(), newNameCamelCase);
+                            }
+                          }
+                        });
+                  });
+            });
     return DataTransferObject.success();
   }
 
