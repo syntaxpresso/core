@@ -12,8 +12,6 @@ import io.github.syntaxpresso.core.service.java.command.GetAllFilesCommandServic
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Callable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,8 +21,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Comprehensive tests for GetAllFilesCommand.
- * 
- * Example usage:
+ *
+ * <p>Example usage:
+ *
  * <pre>
  * GetAllFilesCommand command = new GetAllFilesCommand(service);
  * // Set command options: --cwd /path/to/project --file-type ENUM --language JAVA --ide NONE
@@ -56,9 +55,11 @@ class GetAllFilesCommandTest {
     void shouldSuccessfullyRetrieveEnumFiles() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse expectedResponse = createSuccessResponse("StateEnum", "com.example.enums", "/path/to/StateEnum.java");
+      GetAllFilesResponse expectedResponse =
+          createSuccessResponse("StateEnum", "com.example.enums", "/path/to/StateEnum.java");
       testService.setSuccessResponse(expectedResponse);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -78,9 +79,11 @@ class GetAllFilesCommandTest {
     void shouldSuccessfullyRetrieveClassFiles() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse expectedResponse = createSuccessResponse("UserService", "com.example.service", "/path/to/UserService.java");
+      GetAllFilesResponse expectedResponse =
+          createSuccessResponse("UserService", "com.example.service", "/path/to/UserService.java");
       testService.setSuccessResponse(expectedResponse);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -99,9 +102,12 @@ class GetAllFilesCommandTest {
     void shouldSuccessfullyRetrieveInterfaceFiles() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse expectedResponse = createSuccessResponse("UserRepository", "com.example.repository", "/path/to/UserRepository.java");
+      GetAllFilesResponse expectedResponse =
+          createSuccessResponse(
+              "UserRepository", "com.example.repository", "/path/to/UserRepository.java");
       testService.setSuccessResponse(expectedResponse);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.INTERFACE, SupportedLanguage.JAVA, SupportedIDE.NEOVIM);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.INTERFACE, SupportedLanguage.JAVA, SupportedIDE.NEOVIM);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -120,9 +126,11 @@ class GetAllFilesCommandTest {
     void shouldSuccessfullyRetrieveRecordFiles() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse expectedResponse = createSuccessResponse("UserDto", "com.example.dto", "/path/to/UserDto.java");
+      GetAllFilesResponse expectedResponse =
+          createSuccessResponse("UserDto", "com.example.dto", "/path/to/UserDto.java");
       testService.setSuccessResponse(expectedResponse);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.RECORD, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.RECORD, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -141,9 +149,12 @@ class GetAllFilesCommandTest {
     void shouldSuccessfullyRetrieveAnnotationFiles() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse expectedResponse = createSuccessResponse("CustomAnnotation", "com.example.annotations", "/path/to/CustomAnnotation.java");
+      GetAllFilesResponse expectedResponse =
+          createSuccessResponse(
+              "CustomAnnotation", "com.example.annotations", "/path/to/CustomAnnotation.java");
       testService.setSuccessResponse(expectedResponse);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.ANNOTATION, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.ANNOTATION, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -164,7 +175,8 @@ class GetAllFilesCommandTest {
       Path projectDir = createTestProjectStructure();
       GetAllFilesResponse emptyResponse = new GetAllFilesResponse();
       testService.setSuccessResponse(emptyResponse);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -183,7 +195,8 @@ class GetAllFilesCommandTest {
       Path projectDir = createTestProjectStructure();
       GetAllFilesResponse multipleFilesResponse = createMultipleFilesResponse();
       testService.setSuccessResponse(multipleFilesResponse);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -201,7 +214,8 @@ class GetAllFilesCommandTest {
       // Given
       Path projectDir = createTestProjectStructure();
       testService.setErrorResponse("Directory not found: " + projectDir);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -222,7 +236,8 @@ class GetAllFilesCommandTest {
     void shouldHandleNullLanguageGracefully() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
       // Manually override the language field to null to test null handling
       setField(getAllFilesCommand, "language", null);
 
@@ -241,9 +256,11 @@ class GetAllFilesCommandTest {
     void shouldProcessJavaLanguageSuccessfullyWithDefaultSettings() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse response = createSuccessResponse("TestFile", "com.test", "/path/to/TestFile.java");
+      GetAllFilesResponse response =
+          createSuccessResponse("TestFile", "com.test", "/path/to/TestFile.java");
       testService.setSuccessResponse(response);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -263,16 +280,17 @@ class GetAllFilesCommandTest {
     void shouldHandleAllJavaFileTemplateTypes() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      
+
       // Test each file template type
       for (JavaFileTemplate fileTemplate : JavaFileTemplate.values()) {
-        GetAllFilesResponse response = createSuccessResponse(
-            fileTemplate.name() + "Test", 
-            "com.example." + fileTemplate.name().toLowerCase(), 
-            "/path/to/" + fileTemplate.name() + "Test.java"
-        );
+        GetAllFilesResponse response =
+            createSuccessResponse(
+                fileTemplate.name() + "Test",
+                "com.example." + fileTemplate.name().toLowerCase(),
+                "/path/to/" + fileTemplate.name() + "Test.java");
         testService.setSuccessResponse(response);
-        setupGetAllFilesCommand(projectDir, fileTemplate, SupportedLanguage.JAVA, SupportedIDE.NONE);
+        setupGetAllFilesCommand(
+            projectDir, fileTemplate, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
         // When
         DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -294,9 +312,11 @@ class GetAllFilesCommandTest {
     void shouldHandleNoneIDECorrectly() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse response = createSuccessResponse("NoneIDETest", "com.example", "/path/to/NoneIDETest.java");
+      GetAllFilesResponse response =
+          createSuccessResponse("NoneIDETest", "com.example", "/path/to/NoneIDETest.java");
       testService.setSuccessResponse(response);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -313,9 +333,11 @@ class GetAllFilesCommandTest {
     void shouldHandleVSCodeIDECorrectly() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse response = createSuccessResponse("VSCodeTest", "com.example", "/path/to/VSCodeTest.java");
+      GetAllFilesResponse response =
+          createSuccessResponse("VSCodeTest", "com.example", "/path/to/VSCodeTest.java");
       testService.setSuccessResponse(response);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.INTERFACE, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.INTERFACE, SupportedLanguage.JAVA, SupportedIDE.VSCODE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -332,9 +354,11 @@ class GetAllFilesCommandTest {
     void shouldHandleNeovimIDECorrectly() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse response = createSuccessResponse("NeovimTest", "com.example", "/path/to/NeovimTest.java");
+      GetAllFilesResponse response =
+          createSuccessResponse("NeovimTest", "com.example", "/path/to/NeovimTest.java");
       testService.setSuccessResponse(response);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.RECORD, SupportedLanguage.JAVA, SupportedIDE.NEOVIM);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.RECORD, SupportedLanguage.JAVA, SupportedIDE.NEOVIM);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -363,7 +387,9 @@ class GetAllFilesCommandTest {
       picocli.CommandLine.Command commandAnnotation =
           GetAllFilesCommand.class.getAnnotation(picocli.CommandLine.Command.class);
       assertEquals("get-all-files", commandAnnotation.name());
-      assertEquals("Get a list of all files in the current working directory by it's type.", commandAnnotation.description()[0]);
+      assertEquals(
+          "Get a list of all files in the current working directory by it's type.",
+          commandAnnotation.description()[0]);
     }
 
     @Test
@@ -371,9 +397,11 @@ class GetAllFilesCommandTest {
     void shouldHandleAllRequiredOptions() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse response = createSuccessResponse("OptionsTest", "com.example", "/path/to/OptionsTest.java");
+      GetAllFilesResponse response =
+          createSuccessResponse("OptionsTest", "com.example", "/path/to/OptionsTest.java");
       testService.setSuccessResponse(response);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -390,9 +418,11 @@ class GetAllFilesCommandTest {
     void shouldReturnDataTransferObjectWithCorrectGenericType() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse response = createSuccessResponse("GenericTest", "com.example", "/path/to/GenericTest.java");
+      GetAllFilesResponse response =
+          createSuccessResponse("GenericTest", "com.example", "/path/to/GenericTest.java");
       testService.setSuccessResponse(response);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -414,7 +444,8 @@ class GetAllFilesCommandTest {
       // Given
       Path projectDir = createTestProjectStructure();
       testService.setErrorResponse("Invalid directory path.");
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -431,7 +462,8 @@ class GetAllFilesCommandTest {
       // Given
       Path nonExistentDir = tempDir.resolve("non-existent");
       testService.setErrorResponse("Directory not found: " + nonExistentDir);
-      setupGetAllFilesCommand(nonExistentDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          nonExistentDir, JavaFileTemplate.ENUM, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -448,7 +480,8 @@ class GetAllFilesCommandTest {
       // Given
       Path projectDir = createTestProjectStructure();
       testService.setNullResponse();
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -464,13 +497,14 @@ class GetAllFilesCommandTest {
     void shouldHandleFilesWithComplexPackagePaths() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse response = createSuccessResponse(
-          "ComplexClass", 
-          "com.example.deep.nested.package", 
-          "/path/to/deep/nested/ComplexClass.java"
-      );
+      GetAllFilesResponse response =
+          createSuccessResponse(
+              "ComplexClass",
+              "com.example.deep.nested.package",
+              "/path/to/deep/nested/ComplexClass.java");
       testService.setSuccessResponse(response);
-      setupGetAllFilesCommand(projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
+      setupGetAllFilesCommand(
+          projectDir, JavaFileTemplate.CLASS, SupportedLanguage.JAVA, SupportedIDE.NONE);
 
       // When
       DataTransferObject<GetAllFilesResponse> result = getAllFilesCommand.call();
@@ -478,7 +512,9 @@ class GetAllFilesCommandTest {
       // Then
       assertTrue(result.getSucceed());
       assertNotNull(result.getData());
-      assertEquals("com.example.deep.nested.package", result.getData().getResponse().get(0).getPackagePath());
+      assertEquals(
+          "com.example.deep.nested.package",
+          result.getData().getResponse().get(0).getPackagePath());
       assertTrue(testService.wasServiceCalled());
     }
 
@@ -487,7 +523,8 @@ class GetAllFilesCommandTest {
     void shouldUseDefaultLanguageAndIDEWhenNotSpecified() throws Exception {
       // Given
       Path projectDir = createTestProjectStructure();
-      GetAllFilesResponse response = createSuccessResponse("DefaultTest", "com.example", "/path/to/DefaultTest.java");
+      GetAllFilesResponse response =
+          createSuccessResponse("DefaultTest", "com.example", "/path/to/DefaultTest.java");
       testService.setSuccessResponse(response);
       // Don't explicitly set language and IDE - should use defaults
       setupGetAllFilesCommandWithDefaults(projectDir, JavaFileTemplate.CLASS);
@@ -505,52 +542,54 @@ class GetAllFilesCommandTest {
   private Path createTestProjectStructure() throws IOException {
     Path projectDir = tempDir.resolve("test-project");
     Files.createDirectories(projectDir);
-    
+
     // Create standard Maven directory structure
     Files.createDirectories(projectDir.resolve("src/main/java"));
     Files.createDirectories(projectDir.resolve("src/test/java"));
-    
+
     return projectDir;
   }
 
-  private GetAllFilesResponse createSuccessResponse(String type, String packagePath, String filePath) {
+  private GetAllFilesResponse createSuccessResponse(
+      String type, String packagePath, String filePath) {
     FileResponse fileResponse = new FileResponse();
     fileResponse.setType(type);
     fileResponse.setPackagePath(packagePath);
     fileResponse.setFilePath(filePath);
-    
+
     GetAllFilesResponse response = new GetAllFilesResponse();
     response.getResponse().add(fileResponse);
-    
+
     return response;
   }
 
   private GetAllFilesResponse createMultipleFilesResponse() {
     GetAllFilesResponse response = new GetAllFilesResponse();
-    
+
     FileResponse enum1 = new FileResponse();
     enum1.setType("StateEnum");
     enum1.setPackagePath("com.example.enums");
     enum1.setFilePath("/path/to/StateEnum.java");
-    
+
     FileResponse enum2 = new FileResponse();
     enum2.setType("StatusEnum");
     enum2.setPackagePath("com.example.enums");
     enum2.setFilePath("/path/to/StatusEnum.java");
-    
+
     FileResponse enum3 = new FileResponse();
     enum3.setType("TypeEnum");
     enum3.setPackagePath("com.example.types");
     enum3.setFilePath("/path/to/TypeEnum.java");
-    
+
     response.getResponse().add(enum1);
     response.getResponse().add(enum2);
     response.getResponse().add(enum3);
-    
+
     return response;
   }
 
-  private void setupGetAllFilesCommand(Path cwd, JavaFileTemplate fileType, SupportedLanguage language, SupportedIDE ide) {
+  private void setupGetAllFilesCommand(
+      Path cwd, JavaFileTemplate fileType, SupportedLanguage language, SupportedIDE ide) {
     setField(getAllFilesCommand, "cwd", cwd);
     setField(getAllFilesCommand, "fileType", fileType);
     setField(getAllFilesCommand, "language", language);
@@ -572,7 +611,6 @@ class GetAllFilesCommandTest {
       throw new RuntimeException("Failed to set field " + fieldName, e);
     }
   }
-
 
   /**
    * Test implementation of GetAllFilesCommandService that captures method calls and allows setting
@@ -621,3 +659,4 @@ class GetAllFilesCommandTest {
     }
   }
 }
+

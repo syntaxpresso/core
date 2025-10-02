@@ -31,7 +31,7 @@ public class GetMainClassCommandService {
     }
     List<TSFile> allTSFiles = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
     Optional<DataTransferObject<GetMainClassResponse>> mainClassResult =
-        allTSFiles.parallelStream()
+        allTSFiles.stream()
             .map(tsFile -> this.processFileForMainClass(tsFile))
             .filter(Optional::isPresent)
             .map(Optional::get)
