@@ -50,16 +50,10 @@ public class GetJPAEntityInfoCommandService {
       return Optional.empty();
     }
     List<TSFile> allJavaFiles = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
-    for (TSFile tsFile : allJavaFiles) {
-      Optional<String> fileName = tsFile.getFileNameWithoutExtension();
-      if (fileName.isEmpty()) {
-        continue;
-      }
-      if (fileName.get().equals(superClassName)) {
-        return Optional.of(tsFile);
-      }
-    }
-    return Optional.empty();
+    return allJavaFiles.parallelStream()
+        .filter(tsFile -> tsFile.getFileNameWithoutExtension().isPresent())
+        .filter(tsFile -> tsFile.getFileNameWithoutExtension().get().equals(superClassName))
+        .findAny();
   }
 
   public IdFieldSearchResult findIdFieldRecursively(
