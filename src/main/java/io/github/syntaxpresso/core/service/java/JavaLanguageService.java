@@ -1,5 +1,6 @@
 package io.github.syntaxpresso.core.service.java;
 
+import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
 import io.github.syntaxpresso.core.common.extra.SupportedLanguage;
@@ -18,6 +19,7 @@ import io.github.syntaxpresso.core.util.PathHelper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
@@ -38,20 +40,38 @@ public class JavaLanguageService {
   private final AnnotationService annotationService;
 
   /**
-   * Gets all Java files from the current working directory.
+   * Gets all Java files from the current working directory based on source directory type.
    *
    * @param cwd The current working directory.
+   * @param sourceDirectoryType The type of source directory to search in.
    * @return A list of all Java files.
    */
-  public List<TSFile> getAllJavaFilesFromCwd(Path cwd) {
+  public List<TSFile> getAllJavaFilesFromCwd(
+      Path cwd, JavaSourceDirectoryType sourceDirectoryType) {
     try {
       if (cwd == null) {
         return List.of();
       }
-      return this.pathHelper.findFilesByExtention(cwd, SupportedLanguage.JAVA);
+      switch (sourceDirectoryType) {
+        case MAIN:
+          Optional<Path> mainDir = this.pathHelper.findDirectoryRecursively(cwd, "src/main");
+          Path mainSearchPath = mainDir.orElse(cwd);
+          return this.pathHelper.findFilesByExtention(mainSearchPath, SupportedLanguage.JAVA);
+        case TEST:
+          Optional<Path> testDir = this.pathHelper.findDirectoryRecursively(cwd, "src/test");
+          Path testSearchPath = testDir.orElse(cwd);
+          return this.pathHelper.findFilesByExtention(testSearchPath, SupportedLanguage.JAVA);
+        case ALL:
+        default:
+          return this.pathHelper.findFilesByExtention(cwd, SupportedLanguage.JAVA);
+      }
     } catch (Exception e) {
       return List.of();
     }
+  }
+
+  public List<TSFile> getAllJavaFilesFromCwd(Path cwd) {
+    return this.getAllJavaFilesFromCwd(cwd, JavaSourceDirectoryType.ALL);
   }
 
   /**

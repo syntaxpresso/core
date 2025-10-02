@@ -36,7 +36,8 @@ public class CreateNewJPAEntityCommandService {
     String fileNameWithoutExtension = fileName.replace(".java", "");
     String snakeName = StringHelper.pascalToSnake(fileNameWithoutExtension);
     String tableAnnotation = "@Table(name = \"" + snakeName + "\")";
-    List<TSFile> files = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
+    List<TSFile> files =
+        this.javaLanguageService.getAllJavaFilesFromCwd(cwd, JavaSourceDirectoryType.MAIN);
     Optional<DataTransferObject<CreateNewJPAEntityResponse>> conflict =
         files.parallelStream()
             .filter(

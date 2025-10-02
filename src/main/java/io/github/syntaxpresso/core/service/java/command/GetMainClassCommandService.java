@@ -1,6 +1,7 @@
 package io.github.syntaxpresso.core.service.java.command;
 
 import io.github.syntaxpresso.core.command.dto.GetMainClassResponse;
+import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.service.java.JavaLanguageService;
@@ -29,7 +30,8 @@ public class GetMainClassCommandService {
     if (!validateArguments.getSucceed()) {
       return validateArguments;
     }
-    List<TSFile> allTSFiles = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
+    List<TSFile> allTSFiles =
+        this.javaLanguageService.getAllJavaFilesFromCwd(cwd, JavaSourceDirectoryType.MAIN);
     Optional<DataTransferObject<GetMainClassResponse>> mainClassResult =
         allTSFiles.stream()
             .map(tsFile -> this.processFileForMainClass(tsFile))

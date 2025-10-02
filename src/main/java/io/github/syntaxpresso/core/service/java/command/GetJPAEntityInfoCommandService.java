@@ -2,6 +2,7 @@ package io.github.syntaxpresso.core.service.java.command;
 
 import com.google.common.base.Strings;
 import io.github.syntaxpresso.core.command.dto.GetJPAEntityInfoResponse;
+import io.github.syntaxpresso.core.command.extra.JavaSourceDirectoryType;
 import io.github.syntaxpresso.core.common.DataTransferObject;
 import io.github.syntaxpresso.core.common.TSFile;
 import io.github.syntaxpresso.core.common.extra.SupportedIDE;
@@ -49,7 +50,8 @@ public class GetJPAEntityInfoCommandService {
     if (Strings.isNullOrEmpty(superClassName)) {
       return Optional.empty();
     }
-    List<TSFile> allJavaFiles = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
+    List<TSFile> allJavaFiles =
+        this.javaLanguageService.getAllJavaFilesFromCwd(cwd, JavaSourceDirectoryType.MAIN);
     return allJavaFiles.parallelStream()
         .filter(tsFile -> tsFile.getFileNameWithoutExtension().isPresent())
         .filter(tsFile -> tsFile.getFileNameWithoutExtension().get().equals(superClassName))
