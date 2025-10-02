@@ -9,6 +9,7 @@ import io.github.syntaxpresso.core.service.java.JavaLanguageService;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.treesitter.TSNode;
@@ -65,23 +66,34 @@ public class GetAllFilesCommandService {
   public DataTransferObject<GetAllFilesResponse> run(Path cwd, JavaFileTemplate fileType) {
     GetAllFilesResponse response = new GetAllFilesResponse();
     List<TSFile> allJavaFiles = this.javaLanguageService.getAllJavaFilesFromCwd(cwd);
-    for (TSFile tsFile : allJavaFiles) {
-      Optional<FileResponse> fileResponseOpt = createFileResponse(tsFile);
-      if (fileResponseOpt.isEmpty()) {
-        continue;
-      }
-      FileResponse fileResponse = fileResponseOpt.get();
-      Optional<TSNode> publicNode = getPublicNodeByFileType(tsFile, fileType);
-      if (publicNode.isEmpty()) {
-        continue;
-      }
-      Optional<String> packageScope = extractPackageScope(tsFile);
-      if (packageScope.isEmpty()) {
-        continue;
-      }
-      fileResponse.setPackagePath(packageScope.get());
-      response.getResponse().add(fileResponse);
-    }
+    List<FileResponse> fileResponses =
+        allJavaFiles.parallelStream()
+            .map(tsFile -> processFile(tsFile, fileType))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(Collectors.toList());
+    response.getResponse().addAll(fileResponses);
     return DataTransferObject.success(response);
+  }
+
+  private Optional<FileResponse> processFile(TSFile tsFile, JavaFileTemplate fileType) {
+    Optional<FileResponse> fileResponseOpt = createFileResponse(tsFile);
+    if (fileResponseOpt.isEmpty()) {
+      return Optional.empty();
+    }
+    FileResponse fileResponse = fileResponseOpt.get();
+
+    Optional<TSNode> publicNode = getPublicNodeByFileType(tsFile, fileType);
+    if (publicNode.isEmpty()) {
+      return Optional.empty();
+    }
+
+    Optional<String> packageScope = extractPackageScope(tsFile);
+    if (packageScope.isEmpty()) {
+      return Optional.empty();
+    }
+
+    fileResponse.setPackagePath(packageScope.get());
+    return Optional.of(fileResponse);
   }
 }
