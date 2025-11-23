@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use crate::common::ts_file::TSFile;
 use crate::commands::java::treesitter::types::annotation_types::{
   AnnotationInsertionPoint, AnnotationInsertionPosition,
 };
+use crate::common::ts_file::TSFile;
 use tree_sitter::Node;
 
 impl Default for AnnotationInsertionPoint {

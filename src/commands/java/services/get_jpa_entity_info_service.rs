@@ -3,6 +3,9 @@ use std::path::Path;
 use base64::prelude::*;
 use tree_sitter::Node;
 
+use crate::commands::java::responses::get_jpa_entity_info_response::{
+  GetJpaEntityInfoResponse, IdFieldSearchResult,
+};
 use crate::commands::java::treesitter::services::annotation_service::{
   find_annotation_node_by_name, find_annotation_value_node_by_key,
 };
@@ -16,9 +19,6 @@ use crate::commands::java::treesitter::services::{
   annotation_service, class_declaration_service, field_declaration_service,
 };
 use crate::common::ts_file::TSFile;
-use crate::commands::java::responses::get_jpa_entity_info_response::{
-  GetJpaEntityInfoResponse, IdFieldSearchResult,
-};
 
 fn decode_base64_to_bytes(b64: &str) -> Result<Vec<u8>, String> {
   BASE64_STANDARD.decode(b64).map_err(|e| format!("Failed to decode base64: {}", e))

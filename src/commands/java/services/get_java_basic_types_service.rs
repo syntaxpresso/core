@@ -1,6 +1,6 @@
 use crate::{
-  commands::java::treesitter::types::java_basic_types::JavaBasicType,
   commands::java::responses::basic_java_type_response::JavaBasicTypeResponse,
+  commands::java::treesitter::types::java_basic_types::JavaBasicType,
 };
 
 pub fn run(basic_type_kind: &JavaBasicType) -> Result<Vec<JavaBasicTypeResponse>, String> {

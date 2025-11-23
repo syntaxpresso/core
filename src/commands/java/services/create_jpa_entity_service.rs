@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::commands::java::responses::file_response::FileResponse;
 use crate::commands::java::services::create_java_file_service::{
   build_save_path, correct_java_file_name, create_ts_file, generate_file_template,
 };
@@ -8,13 +9,12 @@ use crate::commands::java::treesitter::services::class_declaration_service::{
   get_class_declaration_name_node, get_public_class_node,
 };
 use crate::commands::java::treesitter::services::import_declaration_service::{self, add_import};
-use crate::common::ts_file::TSFile;
 use crate::commands::java::treesitter::types::annotation_types::AnnotationInsertionPosition;
 use crate::commands::java::treesitter::types::import_types::ImportInsertionPosition;
 use crate::commands::java::treesitter::types::java_file_type::JavaFileType;
 use crate::commands::java::treesitter::types::java_source_directory_type::JavaSourceDirectoryType;
+use crate::common::ts_file::TSFile;
 use crate::common::utils::case_util;
-use crate::commands::java::responses::file_response::FileResponse;
 
 fn add_jpa_imports(ts_file: &mut TSFile) -> Result<(), String> {
   let entity_import_result = import_declaration_service::add_import(
@@ -60,7 +60,10 @@ fn create_java_file_and_get_response(
 }
 
 fn get_class_byte_position(ts_file: &TSFile) -> Result<usize, String> {
-  let node = crate::commands::java::treesitter::services::class_declaration_service::get_public_class_node(ts_file);
+  let node =
+    crate::commands::java::treesitter::services::class_declaration_service::get_public_class_node(
+      ts_file,
+    );
   match node {
     Some(n) => Ok(n.start_byte()),
     None => Err("No public class found in file".to_string()),
@@ -83,8 +86,10 @@ fn add_table_annotation(ts_file: &mut TSFile, class_byte_position: usize) -> Res
 
 fn add_table_name_argument(ts_file: &mut TSFile, class_name: &str) -> Result<(), String> {
   let class_node =
-    crate::commands::java::treesitter::services::class_declaration_service::get_public_class_node(ts_file)
-      .ok_or("No public class found in file".to_string())?;
+    crate::commands::java::treesitter::services::class_declaration_service::get_public_class_node(
+      ts_file,
+    )
+    .ok_or("No public class found in file".to_string())?;
   let table_node = annotation_service::find_annotation_node_by_name(ts_file, class_node, "Table")
     .ok_or("@Table annotation not found".to_string())?;
   let table_byte_position = table_node.start_byte();

@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
 use crate::commands::java::treesitter::services::annotation_service::add_annotation;
-use crate::common::ts_file::TSFile;
 use crate::commands::java::treesitter::types::annotation_types::AnnotationInsertionPosition;
-use crate::commands::java::treesitter::types::java_basic_types::{FieldInsertionPoint, FieldInsertionPosition};
+use crate::commands::java::treesitter::types::java_basic_types::{
+  FieldInsertionPoint, FieldInsertionPosition,
+};
 use crate::commands::java::treesitter::types::java_field_modifier::JavaFieldModifier;
 use crate::commands::java::treesitter::types::java_visibility_modifier::JavaVisibilityModifier;
+use crate::common::ts_file::TSFile;
 use tree_sitter::Node;
 
 pub struct AddFieldDeclarationParams<'a> {

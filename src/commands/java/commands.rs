@@ -389,7 +389,11 @@ impl JavaCommands {
         Ok(String::new())
       }
       #[cfg(feature = "ui")]
-      JavaCommands::CreateJpaOneToOneRelationshipUi { cwd, entity_file_b64_src, entity_file_path } => {
+      JavaCommands::CreateJpaOneToOneRelationshipUi {
+        cwd,
+        entity_file_b64_src,
+        entity_file_path,
+      } => {
         let form = CreateEntityRelationshipForm::new(
           cwd.clone(),
           entity_file_b64_src.clone(),
@@ -654,4 +658,3 @@ impl JavaCommands {
     }
   }
 }
-

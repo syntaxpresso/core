@@ -1,10 +1,9 @@
 use std::path::Path;
 
 use crate::{
+  commands::java::responses::get_files_response::GetFilesResponse,
   commands::java::services::get_java_files_service::run,
-  commands::java::treesitter::types::java_file_type::JavaFileType,
-  commands::java::responses::{get_files_response::GetFilesResponse},
-  common::response::Response,
+  commands::java::treesitter::types::java_file_type::JavaFileType, common::response::Response,
 };
 
 pub fn execute(cwd: &Path, file_type: &JavaFileType) -> Response<GetFilesResponse> {
