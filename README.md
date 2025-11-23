@@ -54,42 +54,51 @@ src/
 ├── commands/                          # Top-level command routing
 │   ├── mod.rs                         # Commands enum (language router)
 │   └── java/                          # Java-specific commands
+│       ├── mod.rs
 │       ├── commands.rs                # JavaCommands enum (CLI + UI)
-│       ├── *_command.rs               # Command executors
-│       ├── services/          # Business logic services
+│       ├── *_command.rs               # Command executors (14 files)
+│       ├── services/                  # Business logic services
+│       │   ├── create_java_file_service.rs
+│       │   ├── create_jpa_entity_service.rs
+│       │   └── ... (15 files total)
 │       ├── validators/                # Java-specific input validation
+│       │   ├── java_class_name_validator.rs
+│       │   ├── package_name_validator.rs
+│       │   └── mod.rs
 │       ├── responses/                 # Java-specific response types
+│       │   ├── file_response.rs
+│       │   ├── package_response.rs
+│       │   └── ... (10 files total)
 │       ├── treesitter/                # Java AST manipulation
+│       │   ├── mod.rs
 │       │   ├── types/                 # Java type definitions
 │       │   │   ├── java_basic_types.rs
 │       │   │   ├── java_field_modifier.rs
-│       │   │   ├── java_id_generation.rs
-│       │   │   └── ...
+│       │   │   └── ... (20+ type files)
 │       │   └── services/              # Tree-Sitter AST services
 │       │       ├── annotation_service.rs
 │       │       ├── class_declaration_service.rs
-│       │       ├── field_declaration_service.rs
-│       │       ├── import_declaration_service.rs
-│       │       └── ...
+│       │       └── ... (10+ service files)
 │       └── ui/                        # Java UI forms (feature: ui)
 │           ├── create_java_file.rs
 │           ├── create_jpa_entity.rs
-│           ├── create_entity_field.rs
-│           └── ...
+│           └── ... (10 files total)
 ├── common/                            # Language-agnostic utilities
 │   ├── response.rs                    # Generic Response<T>
-│   ├── error_response.rs              # Error response structure
-│   ├── query.rs                       # Tree-Sitter query builder
+│   ├── error_response.rs
+│   ├── query.rs
 │   ├── ts_file.rs                     # Core Tree-Sitter abstraction
 │   ├── utils/                         # Generic utilities
 │   │   ├── case_util.rs
-│   │   ├── directory_validator.rs
 │   │   ├── path_security_util.rs
 │   │   └── path_util.rs
+│   ├── validators/                    # Generic validators
+│   │   ├── directory_validator.rs
+│   │   └── mod.rs
 │   └── ui/                            # Generic UI components (feature: ui)
-│       ├── form_trait.rs              # Form interface
-│       ├── runner.rs                  # UI runtime
-│       └── widgets.rs                 # Reusable widgets
+│       ├── form_trait.rs
+│       ├── runner.rs
+│       └── widgets.rs
 ├── lib.rs                             # Library entry point
 └── main.rs                            # CLI entry point
 
@@ -155,27 +164,37 @@ The codebase follows a clean layered architecture with strict separation of conc
            │  - Builds Response<T>  │
            └──────────┬─────────────┘
                       ▼
-           ┌────────────────────────┐
-           │ Service Layer          │
-           │  java/services/│
-           │  java/treesitter/      │
-           │      services/         │
-           │                        │
-           │  - Business logic      │
-           │  - Tree-Sitter ops     │
-           │  - File I/O            │
-           │  - Returns domain objs │
-           └──────────┬─────────────┘
-                      ▼
-           ┌────────────────────────┐
-           │ Tree-Sitter Layer      │
-           │  common/ts_file.rs     │
-           │                        │
-           │  - AST parsing         │
-           │  - Incremental updates │
-           │  - Query execution     │
-           │  - Node manipulation   │
-           └────────────────────────┘
+            ┌────────────────────────┐
+            │ Service Layer          │
+            │  java/services/        │
+            │  java/treesitter/      │
+            │      services/         │
+            │                        │
+            │  - Business logic      │
+            │  - Tree-Sitter ops     │
+            │  - File I/O            │
+            │  - Returns domain objs │
+            └──────────┬─────────────┘
+                       ▼
+            ┌────────────────────────┐
+            │ Tree-Sitter Layer      │
+            │  common/ts_file.rs     │
+            │                        │
+            │  - AST parsing         │
+            │  - Incremental updates │
+            │  - Query execution     │
+            │  - Node manipulation   │
+            └────────────────────────┘
+            
+            ┌────────────────────────┐
+            │ Validation Layer       │
+            │  common/validators/    │
+            │  java/validators/      │
+            │                        │
+            │  - Generic validators  │
+            │  - Language-specific   │
+            │    validators          │
+            └────────────────────────┘
 ```
 
 **Key Changes in Multi-Language Architecture:**
