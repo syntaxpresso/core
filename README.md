@@ -51,39 +51,64 @@ Syntaxpresso Core is a stateless CLI application designed as a backend service f
 
 ```
 src/
-├── commands/              # Command layer - CLI handlers
-│   ├── services/          # Business logic services
-│   ├── validators/        # Input validation
-│   └── *_command.rs       # Individual command implementations
-├── common/
-│   ├── services/          # Tree-Sitter AST manipulation services
-│   │   ├── annotation_service.rs
-│   │   ├── class_declaration_service.rs
-│   │   ├── field_declaration_service.rs
-│   │   ├── import_declaration_service.rs
-│   │   └── ...
-│   ├── types/             # Type definitions and domain models
-│   │   ├── java_basic_types.rs
-│   │   ├── java_field_modifier.rs
-│   │   ├── java_id_generation.rs
-│   │   └── ...
-│   ├── utils/             # Utility functions
+├── commands/                          # Top-level command routing
+│   ├── mod.rs                         # Commands enum (language router)
+│   └── java/                          # Java-specific commands
+│       ├── mod.rs
+│       ├── commands.rs                # JavaCommands enum (CLI + UI)
+│       ├── *_command.rs               # Command executors (14 files)
+│       ├── services/                  # Business logic services
+│       │   ├── create_java_file_service.rs
+│       │   ├── create_jpa_entity_service.rs
+│       │   └── ... (15 files total)
+│       ├── validators/                # Java-specific input validation
+│       │   ├── java_class_name_validator.rs
+│       │   ├── package_name_validator.rs
+│       │   └── mod.rs
+│       ├── responses/                 # Java-specific response types
+│       │   ├── file_response.rs
+│       │   ├── package_response.rs
+│       │   └── ... (10 files total)
+│       ├── treesitter/                # Java AST manipulation
+│       │   ├── mod.rs
+│       │   ├── types/                 # Java type definitions
+│       │   │   ├── java_basic_types.rs
+│       │   │   ├── java_field_modifier.rs
+│       │   │   └── ... (20+ type files)
+│       │   └── services/              # Tree-Sitter AST services
+│       │       ├── annotation_service.rs
+│       │       ├── class_declaration_service.rs
+│       │       └── ... (10+ service files)
+│       └── ui/                        # Java UI forms (feature: ui)
+│           ├── create_java_file.rs
+│           ├── create_jpa_entity.rs
+│           └── ... (10 files total)
+├── common/                            # Language-agnostic utilities
+│   ├── response.rs                    # Generic Response<T>
+│   ├── error_response.rs
+│   ├── query.rs
+│   ├── ts_file.rs                     # Core Tree-Sitter abstraction
+│   ├── utils/                         # Generic utilities
 │   │   ├── case_util.rs
 │   │   ├── path_security_util.rs
 │   │   └── path_util.rs
-│   ├── query.rs           # Tree-Sitter query builder
-│   └── ts_file.rs         # Core Tree-Sitter file abstraction
-├── responses/             # Response type definitions
-├── ui/                    # Terminal UI (feature-gated with 'ui')
-│   ├── forms/             # Interactive TUI forms
-│   ├── form_trait.rs      # Form interface definition
-│   ├── runner.rs          # UI runtime
-│   └── widgets.rs         # Reusable UI components
-├── lib.rs                 # Library entry point
-└── main.rs                # CLI entry point
+│   ├── validators/                    # Generic validators
+│   │   ├── directory_validator.rs
+│   │   └── mod.rs
+│   └── ui/                            # Generic UI components (feature: ui)
+│       ├── form_trait.rs
+│       ├── runner.rs
+│       └── widgets.rs
+├── lib.rs                             # Library entry point
+└── main.rs                            # CLI entry point
 
-tests/                     # Integration tests
+tests/                                 # Integration tests
 ```
+
+**Multi-language Structure:**
+- `commands/` - Top level routing by language
+- `commands/java/` - All Java-specific code (ready to add Python, TypeScript, etc.)
+- `common/` - Shared utilities across all languages
 
 ### Architecture Layers
 
@@ -101,8 +126,20 @@ The codebase follows a clean layered architecture with strict separation of conc
 ┌─────────────────────────────────────────────────────────────┐
 │ Clap CLI Parser (main.rs)                                   │
 │  - Validates arguments                                      │
-│  - Routes to handler                                        │
+│  - Routes to language subcommand                            │
 └────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │ Commands (mod.rs)    │
+              │  - Language router   │
+              └──────────┬───────────┘
+                         │
+                         ▼
+              ┌──────────────────────────────────┐
+              │ JavaCommands (java/commands.rs)  │
+              │  - Java-specific routing         │
+              └──────────┬───────────────────────┘
                          │
               ┌──────────┴──────────┐
               ▼                     ▼
@@ -119,7 +156,7 @@ The codebase follows a clean layered architecture with strict separation of conc
                       ▼
            ┌────────────────────────┐
            │ Command Layer          │
-           │  src/commands/*.rs     │
+           │  java/*_command.rs     │
            │                        │
            │  - Owns command names  │
            │  - Validates inputs    │
@@ -127,27 +164,44 @@ The codebase follows a clean layered architecture with strict separation of conc
            │  - Builds Response<T>  │
            └──────────┬─────────────┘
                       ▼
-           ┌────────────────────────┐
-           │ Service Layer          │
-           │  src/commands/services/│
-           │  src/common/services/  │
-           │                        │
-           │  - Business logic      │
-           │  - Tree-Sitter ops     │
-           │  - File I/O            │
-           │  - Returns domain objs │
-           └──────────┬─────────────┘
-                      ▼
-           ┌────────────────────────┐
-           │ Tree-Sitter Layer      │
-           │  src/common/ts_file.rs │
-           │                        │
-           │  - AST parsing         │
-           │  - Incremental updates │
-           │  - Query execution     │
-           │  - Node manipulation   │
-           └────────────────────────┘
+            ┌────────────────────────┐
+            │ Service Layer          │
+            │  java/services/        │
+            │  java/treesitter/      │
+            │      services/         │
+            │                        │
+            │  - Business logic      │
+            │  - Tree-Sitter ops     │
+            │  - File I/O            │
+            │  - Returns domain objs │
+            └──────────┬─────────────┘
+                       ▼
+            ┌────────────────────────┐
+            │ Tree-Sitter Layer      │
+            │  common/ts_file.rs     │
+            │                        │
+            │  - AST parsing         │
+            │  - Incremental updates │
+            │  - Query execution     │
+            │  - Node manipulation   │
+            └────────────────────────┘
+            
+            ┌────────────────────────┐
+            │ Validation Layer       │
+            │  common/validators/    │
+            │  java/validators/      │
+            │                        │
+            │  - Generic validators  │
+            │  - Language-specific   │
+            │    validators          │
+            └────────────────────────┘
 ```
+
+**Key Changes in Multi-Language Architecture:**
+- Added **language router** at top level (`Commands` enum)
+- Each language has its own **command namespace** (e.g., `JavaCommands`)
+- Language-specific code is **isolated** in `commands/{language}/`
+- Shared utilities remain in `common/` for reuse across languages
 
 ### Communication Model
 
@@ -218,53 +272,58 @@ The core is compiled in two variants to support different integration approaches
 
 ## Features & Command Reference
 
+All commands are now namespaced by language. Use `syntaxpresso-core java <command>` for Java operations.
+
 ### Discovery & Information Commands
 
-- **`get-all-jpa-entities`**: Scans project for all JPA entity classes (annotated with `@Entity`)
-- **`get-all-jpa-mapped-superclasses`**: Finds all JPA mapped superclasses (annotated with `@MappedSuperclass`)
-- **`get-jpa-entity-info`**: Extracts detailed metadata from an entity (fields, relationships, annotations)
-- **`get-all-packages`**: Lists all Java package names in the project by scanning directory structure
-- **`get-java-basic-types`**: Returns supported Java basic field types, optionally filtered for ID types
+- **`java get-all-jpa-entities`**: Scans project for all JPA entity classes (annotated with `@Entity`)
+- **`java get-all-jpa-mapped-superclasses`**: Finds all JPA mapped superclasses (annotated with `@MappedSuperclass`)
+- **`java get-jpa-entity-info`**: Extracts detailed metadata from an entity (fields, relationships, annotations)
+- **`java get-all-packages`**: Lists all Java package names in the project by scanning directory structure
+- **`java get-java-basic-types`**: Returns supported Java basic field types, optionally filtered for ID types
+- **`java get-java-files`**: Lists Java files by type (class, interface, enum, etc.)
 
 ### File Generation Commands
 
-- **`create-jpa-entity`**: Generates a new JPA entity class with package declaration and `@Entity` annotation
-- **`create-java-file`**: Creates basic Java files (classes, interfaces, enums, records, annotations)
-- **`create-jpa-repository`**: Generates Spring Data JPA repository interfaces extending `JpaRepository<Entity, ID>`
+- **`java create-jpa-entity`**: Generates a new JPA entity class with package declaration and `@Entity` annotation
+- **`java create-java-file`**: Creates basic Java files (classes, interfaces, enums, records, annotations)
+- **`java create-jpa-repository`**: Generates Spring Data JPA repository interfaces extending `JpaRepository<Entity, ID>`
 
 ### Field Generation Commands
 
-- **`create-jpa-entity-basic-field`**: Adds basic fields to entities with JPA column annotations
-- **`create-jpa-entity-id-field`**: Creates ID fields with generation strategies (AUTO, IDENTITY, SEQUENCE, UUID)
-- **`create-jpa-entity-enum-field`**: Adds enum fields with `@Enumerated` annotation and mapping type
+- **`java create-jpa-entity-basic-field`**: Adds basic fields to entities with JPA column annotations
+- **`java create-jpa-entity-id-field`**: Creates ID fields with generation strategies (AUTO, IDENTITY, SEQUENCE, UUID)
+- **`java create-jpa-entity-enum-field`**: Adds enum fields with `@Enumerated` annotation and mapping type
 
 ### Relationship Management Commands
 
-- **`create-jpa-one-to-one-relationship`**: Establishes bidirectional one-to-one entity relationships
-- **`create-jpa-many-to-one-relationship`**: Creates many-to-one relationships with cascade and fetch type options
+- **`java create-jpa-one-to-one-relationship`**: Establishes bidirectional one-to-one entity relationships
+- **`java create-jpa-many-to-one-relationship`**: Creates many-to-one relationships with cascade and fetch type options
 
-### UI Commands (UI-enabled binary only)
+### UI Commands (UI-enabled binary only, `--features ui`)
 
-The UI-enabled binary includes interactive terminal forms for:
+The UI-enabled binary includes interactive terminal forms for common operations. UI commands use the `-ui` suffix:
 
-- **`ui create-java-file`**: Interactive form to create Java files
-- **`ui create-jpa-entity`**: Interactive form to create JPA entities
-- **`ui create-jpa-entity-basic-field`**: Interactive form to add fields to entities
-- **`ui create-jpa-one-to-one-relationship`**: Interactive form to create entity relationships
-- **`ui create-jpa-repository`**: Interactive form to create JPA repositories
+- **`java create-java-file-ui`**: Interactive form to create Java files
+- **`java create-jpa-entity-ui`**: Interactive form to create JPA entities
+- **`java create-jpa-entity-basic-field-ui`**: Interactive form to add fields to entities
+- **`java create-jpa-one-to-one-relationship-ui`**: Interactive form to create entity relationships
+- **`java create-jpa-repository-ui`**: Interactive form to create JPA repositories
+
+**Example Usage:**
 
 ```bash
 # Launch interactive UI for creating a Java file
-./syntaxpresso-core ui create-java-file --cwd /path/to/project
+./syntaxpresso-core java create-java-file-ui --cwd /path/to/project
 
 # Launch UI to add a field to an entity
-./syntaxpresso-core ui create-jpa-entity-basic-field \
+./syntaxpresso-core java create-jpa-entity-basic-field-ui \
   --cwd /path/to/project \
   --entity-file-path /path/to/User.java \
   --entity-file-b64-src <base64-encoded-source>
 
 # Launch UI to create a JPA repository for an entity
-./syntaxpresso-core ui create-jpa-repository \
+./syntaxpresso-core java create-jpa-repository-ui \
   --cwd /path/to/project \
   --entity-file-path /path/to/User.java \
   --entity-file-b64-src <base64-encoded-source>
@@ -310,36 +369,36 @@ Binary location: `target/release/syntaxpresso-core`
 
 ### CLI Interface (Programmatic)
 
-All commands follow a consistent pattern with JSON responses suitable for parsing by IDE plugins:
+All commands follow a consistent pattern with JSON responses suitable for parsing by IDE plugins. Commands are now namespaced by language:
 
 ```bash
 # Discover all JPA entities in project
-./syntaxpresso-core get-all-jpa-entities --cwd /path/to/project
+./syntaxpresso-core java get-all-jpa-entities --cwd /path/to/project
 
 # Get supported Java types
-./syntaxpresso-core get-java-basic-types \
-  --cwd /path/to/project \
-  --field-type-kind all  # Options: all-types, id-types
+./syntaxpresso-core java get-java-basic-types --basic-type-kind all-types
 
 # Create a JPA entity
-./syntaxpresso-core create-jpa-entity \
+./syntaxpresso-core java create-jpa-entity \
   --cwd /path/to/project \
   --package-name com.example.domain \
   --file-name User
 
 # Add a field to existing entity
-./syntaxpresso-core create-jpa-entity-basic-field \
+./syntaxpresso-core java create-jpa-entity-basic-field \
   --cwd /path/to/project \
   --entity-file-path /absolute/path/to/User.java \
+  --entity-file-b64-src <base64-encoded-source> \
   --field-name email \
   --field-type String \
   --field-unique \
   --field-nullable false
 
 # Create bidirectional one-to-one relationship
-./syntaxpresso-core create-jpa-one-to-one-relationship \
+./syntaxpresso-core java create-jpa-one-to-one-relationship \
   --cwd /path/to/project \
   --owning-side-entity-file-path /absolute/path/to/User.java \
+  --owning-side-entity-file-b64-src <base64-encoded-source> \
   --owning-side-field-name profile \
   --inverse-side-field-name user \
   --inverse-field-type UserProfile
@@ -373,23 +432,23 @@ Error:
 
 ### Interactive UI Interface (UI-enabled binary only)
 
-For standalone terminal usage, the UI-enabled binary provides interactive forms:
+For standalone terminal usage, the UI-enabled binary provides interactive forms. Note the `-ui` suffix for UI commands:
 
 ```bash
 # Interactive Java file creation
-./syntaxpresso-core ui create-java-file --cwd /path/to/project
+./syntaxpresso-core java create-java-file-ui --cwd /path/to/project
 
 # Interactive entity creation
-./syntaxpresso-core ui create-jpa-entity --cwd /path/to/project
+./syntaxpresso-core java create-jpa-entity-ui --cwd /path/to/project
 
 # Interactive field addition (requires existing entity)
-./syntaxpresso-core ui create-jpa-entity-basic-field \
+./syntaxpresso-core java create-jpa-entity-basic-field-ui \
   --cwd /path/to/project \
   --entity-file-path /path/to/User.java \
   --entity-file-b64-src $(base64 -w 0 /path/to/User.java)
 
 # Interactive repository generation
-./syntaxpresso-core ui create-jpa-repository \
+./syntaxpresso-core java create-jpa-repository-ui \
   --cwd /path/to/project \
   --entity-file-path /path/to/User.java \
   --entity-file-b64-src $(base64 -w 0 /path/to/User.java)
@@ -613,9 +672,9 @@ The project follows custom formatting parameters defined in rustfmt.toml.
 
 ### Adding New Commands
 
-Follow these steps to add a new command:
+Follow these steps to add a new command to the Java language support:
 
-1. **Define Response Type** (`src/responses/`)
+1. **Define Response Type** (`src/commands/java/responses/`)
 ```rust
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MyCommandResponse {
@@ -623,7 +682,7 @@ pub struct MyCommandResponse {
 }
 ```
 
-2. **Implement Command** (`src/commands/`)
+2. **Implement Command** (`src/commands/java/`)
 ```rust
 pub fn my_command(args: Args) -> Response<MyCommandResponse> {
     // Call service layer
@@ -634,18 +693,36 @@ pub fn my_command(args: Args) -> Response<MyCommandResponse> {
 }
 ```
 
-3. **Add CLI Binding** (`src/main.rs`)
+3. **Add CLI Binding** (`src/commands/java/commands.rs`)
 ```rust
 #[derive(Subcommand)]
-enum Commands {
+pub enum JavaCommands {
+    // ... existing commands ...
+    
     MyCommand {
+        #[arg(long, value_parser = validate_directory_unrestricted)]
+        cwd: PathBuf,
+        
         #[arg(long)]
         my_arg: String,
     },
 }
+
+impl JavaCommands {
+    pub fn execute(&self) -> Result<String, Box<dyn std::error::Error>> {
+        match self {
+            // ... existing handlers ...
+            
+            JavaCommands::MyCommand { cwd, my_arg } => {
+                let response = my_command::execute(cwd.as_path(), my_arg);
+                response.to_json_pretty().map_err(|e| e.into())
+            }
+        }
+    }
+}
 ```
 
-4. **Implement Service** (`src/commands/services/` or `src/common/services/`)
+4. **Implement Service** (`src/commands/java/services/`)
 ```rust
 pub fn do_work(args: &Args) -> Result<MyCommandResponse, String> {
     let mut ts_file = TSFile::from_file(&args.file)?;
@@ -653,6 +730,11 @@ pub fn do_work(args: &Args) -> Result<MyCommandResponse, String> {
     // ...
     Ok(MyCommandResponse { field: "result".to_string() })
 }
+```
+
+5. **Usage:**
+```bash
+./syntaxpresso-core java my-command --cwd /path --my-arg value
 ```
 
 ### Integration Testing
@@ -703,6 +785,7 @@ To develop or integrate with the Neovim plugin:
    -- Spawn process and capture JSON output
    local handle = vim.system({
      executable_path,
+     "java",  -- Language namespace
      "create-jpa-entity",
      "--cwd", cwd,
      "--package-name", package,
@@ -717,6 +800,17 @@ To develop or integrate with the Neovim plugin:
    else
      -- Handle response.errorReason
    end
+   ```
+
+4. **For UI commands (with --features ui):**
+   ```lua
+   -- Launch interactive form in floating terminal
+   local handle = vim.fn.termopen({
+     executable_path,
+     "java",
+     "create-java-file-ui",  -- Note: -ui suffix
+     "--cwd", cwd
+   })
    ```
 
 #### VSCode / Other IDE Integration
@@ -742,8 +836,9 @@ function executeCommand(args: string[]): Promise<any> {
   });
 }
 
-// Usage
+// Usage - note the 'java' namespace
 const response = await executeCommand([
+  'java',  // Language namespace
   'create-jpa-entity',
   '--cwd', projectPath,
   '--package-name', 'com.example.domain',
