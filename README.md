@@ -17,12 +17,14 @@ A high-performance Rust-based CLI backend for IDE plugins that provides advanced
 ## Quick Reference
 
 **For Plugin Developers:**
+
 - [Installation](#installation-for-developers) - Get the binary or build from source
 - [Usage Examples](#usage-examples) - CLI command patterns and JSON responses
 - [Plugin Integration Guide](#plugin-integration-guide) - Integrate with Neovim, VSCode, etc.
 - [Architecture](#technical-architecture) - Understand the design and data flow
 
 **For Core Contributors:**
+
 - [Development Setup](#development) - Build, test, and contribute
 - [Adding New Commands](#adding-new-commands) - Extend functionality
 - [Tree-Sitter Patterns](#tree-sitter-query-examples) - Query examples
@@ -106,6 +108,7 @@ tests/                                 # Integration tests
 ```
 
 **Multi-language Structure:**
+
 - `commands/` - Top level routing by language
 - `commands/java/` - All Java-specific code (ready to add Python, TypeScript, etc.)
 - `common/` - Shared utilities across all languages
@@ -185,7 +188,7 @@ The codebase follows a clean layered architecture with strict separation of conc
             │  - Query execution     │
             │  - Node manipulation   │
             └────────────────────────┘
-            
+
             ┌────────────────────────┐
             │ Validation Layer       │
             │  common/validators/    │
@@ -198,6 +201,7 @@ The codebase follows a clean layered architecture with strict separation of conc
 ```
 
 **Key Changes in Multi-Language Architecture:**
+
 - Added **language router** at top level (`Commands` enum)
 - Each language has its own **command namespace** (e.g., `JavaCommands`)
 - Language-specific code is **isolated** in `commands/{language}/`
@@ -213,6 +217,7 @@ Syntaxpresso Core follows a **stateless request-response model**:
 4. **No Session State**: Each request is completely independent; no background daemon or persistent state
 
 This architecture ensures:
+
 - **Reliability**: Process isolation prevents state corruption
 - **Simplicity**: No complex IPC or socket communication required
 - **Language Agnostic**: Any language that can spawn processes and parse JSON can integrate
@@ -250,6 +255,7 @@ The core is compiled in two variants to support different integration approaches
 - **Performance**: No UI overhead
 
 **Use when:**
+
 - Building IDE plugins with your own custom interface (Neovim with custom Lua UI, VSCode with custom webviews, etc.)
 - Programmatically manipulating Java code in scripts or automation tools
 - Integrating into build pipelines or CI/CD systems
@@ -265,6 +271,7 @@ The core is compiled in two variants to support different integration approaches
 - **Performance**: Minimal UI overhead (< 100ms startup)
 
 **Use when:**
+
 - Building IDE plugins that leverage the provided Terminal UI (e.g., Neovim plugin that spawns TUI forms)
 - Using as a standalone terminal application without any IDE
 - Need both programmatic CLI access AND interactive forms
@@ -336,12 +343,14 @@ The UI-enabled binary includes interactive terminal forms for common operations.
 Download from [GitHub Releases](https://github.com/syntaxpresso/core/releases):
 
 **CLI-only binaries** (recommended for IDE integration):
+
 - `syntaxpresso-core-linux-amd64` - Linux x86_64
 - `syntaxpresso-core-macos-amd64` - macOS Intel
 - `syntaxpresso-core-macos-arm64` - macOS Apple Silicon
 - `syntaxpresso-core-windows-amd64.exe` - Windows x86_64
 
 **UI-enabled binaries** (for standalone use):
+
 - `syntaxpresso-core-ui-linux-amd64` - Linux x86_64
 - `syntaxpresso-core-ui-macos-amd64` - macOS Intel
 - `syntaxpresso-core-ui-macos-arm64` - macOS Apple Silicon
@@ -407,6 +416,7 @@ All commands follow a consistent pattern with JSON responses suitable for parsin
 **JSON Response Format:**
 
 Success:
+
 ```json
 {
   "command": "create-jpa-entity",
@@ -421,6 +431,7 @@ Success:
 ```
 
 Error:
+
 ```json
 {
   "command": "create-jpa-entity",
@@ -455,6 +466,7 @@ For standalone terminal usage, the UI-enabled binary provides interactive forms.
 ```
 
 **UI Navigation:**
+
 - `Tab` / `Shift+Tab` - Navigate fields
 - `Enter` - Submit / Select
 - `Esc` - Cancel/close
@@ -486,6 +498,7 @@ pub struct TSFile {
 ```
 
 **Key capabilities:**
+
 - **Incremental Parsing**: `apply_incremental_edit()` updates AST efficiently
 - **Query API**: Fluent query builder for Tree-Sitter queries
 - **Node Manipulation**: `replace_text_by_node()`, `insert_text()`
@@ -493,6 +506,7 @@ pub struct TSFile {
 - **Multiple Constructors**: Load from file, string, or base64-encoded source
 
 **Example usage:**
+
 ```rust
 // Parse a Java file
 let mut ts_file = TSFile::from_file(Path::new("User.java"))?;
@@ -514,6 +528,7 @@ ts_file.save_as(Path::new("output.java"), Path::new("/safe/base/dir"))?;
 Services encapsulate Tree-Sitter operations for specific Java constructs:
 
 **Example: `ClassDeclarationService`**
+
 ```rust
 impl ClassDeclarationService {
     pub fn insert_field_in_class_body(
@@ -525,6 +540,7 @@ impl ClassDeclarationService {
 ```
 
 Each service:
+
 - Operates on `TSFile` instances
 - Uses Tree-Sitter queries to locate nodes
 - Performs incremental updates
@@ -547,6 +563,7 @@ pub struct Response<T> {
 ```
 
 Success response:
+
 ```json
 {
   "command": "create-jpa-entity",
@@ -561,6 +578,7 @@ Success response:
 ```
 
 Error response:
+
 ```json
 {
   "command": "create-jpa-entity",
@@ -575,11 +593,13 @@ Error response:
 #### 1. Stateless Execution
 
 Each invocation is independent:
+
 - No shared state between invocations
 - No background daemons
 - Process spawns → executes → outputs JSON → exits
 
 **Benefits:**
+
 - Simple integration model
 - No state corruption
 - Easy to test and debug
@@ -598,6 +618,7 @@ ts_file.apply_incremental_edit(start_byte, end_byte, new_text);
 ```
 
 **Performance impact:**
+
 - Incremental: ~1-5ms for typical edits
 - Full reparse: ~50-200ms for large files
 
@@ -612,6 +633,7 @@ let safe_path = validator.validate_path_containment(user_path)?;
 ```
 
 Prevents attacks like:
+
 - `../../../../etc/passwd`
 - Symlink escapes
 - Relative path manipulation
@@ -626,6 +648,7 @@ pub mod ui;
 ```
 
 **Build flags:**
+
 - Default: `cargo build` → CLI-only (~3.4MB)
 - With UI: `cargo build --features ui` → Full (~4.0MB)
 
@@ -634,11 +657,13 @@ pub mod ui;
 #### Building from Source
 
 **CLI-only variant:**
+
 ```bash
 cargo build --release
 ```
 
 **UI-enabled variant:**
+
 ```bash
 cargo build --release --features ui
 ```
@@ -659,6 +684,7 @@ cargo test -- --nocapture
 ```
 
 Test coverage includes:
+
 - Tree-Sitter service operations
 - Path security validation
 - Import declaration management
@@ -675,6 +701,7 @@ The project follows custom formatting parameters defined in rustfmt.toml.
 Follow these steps to add a new command to the Java language support:
 
 1. **Define Response Type** (`src/commands/java/responses/`)
+
 ```rust
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MyCommandResponse {
@@ -683,6 +710,7 @@ pub struct MyCommandResponse {
 ```
 
 2. **Implement Command** (`src/commands/java/`)
+
 ```rust
 pub fn my_command(args: Args) -> Response<MyCommandResponse> {
     // Call service layer
@@ -694,15 +722,16 @@ pub fn my_command(args: Args) -> Response<MyCommandResponse> {
 ```
 
 3. **Add CLI Binding** (`src/commands/java/commands.rs`)
+
 ```rust
 #[derive(Subcommand)]
 pub enum JavaCommands {
     // ... existing commands ...
-    
+
     MyCommand {
         #[arg(long, value_parser = validate_directory_unrestricted)]
         cwd: PathBuf,
-        
+
         #[arg(long)]
         my_arg: String,
     },
@@ -712,7 +741,7 @@ impl JavaCommands {
     pub fn execute(&self) -> Result<String, Box<dyn std::error::Error>> {
         match self {
             // ... existing handlers ...
-            
+
             JavaCommands::MyCommand { cwd, my_arg } => {
                 let response = my_command::execute(cwd.as_path(), my_arg);
                 response.to_json_pretty().map_err(|e| e.into())
@@ -723,6 +752,7 @@ impl JavaCommands {
 ```
 
 4. **Implement Service** (`src/commands/java/services/`)
+
 ```rust
 pub fn do_work(args: &Args) -> Result<MyCommandResponse, String> {
     let mut ts_file = TSFile::from_file(&args.file)?;
@@ -733,6 +763,7 @@ pub fn do_work(args: &Args) -> Result<MyCommandResponse, String> {
 ```
 
 5. **Usage:**
+
 ```bash
 ./syntaxpresso-core java my-command --cwd /path --my-arg value
 ```
@@ -749,14 +780,14 @@ use std::fs;
 fn test_entity_creation() {
     let temp_dir = TempDir::new().unwrap();
     let project_path = temp_dir.path();
-    
+
     // Create package structure
     let entity_dir = project_path.join("src/main/java/com/example/entities");
     fs::create_dir_all(&entity_dir).unwrap();
-    
+
     // Test command
     let result = create_jpa_entity_command::execute(/* ... */);
-    
+
     assert!(result.succeed);
     assert!(entity_dir.join("User.java").exists());
 }
@@ -769,11 +800,13 @@ fn test_entity_creation() {
 To develop or integrate with the Neovim plugin:
 
 1. **Build the core:**
+
    ```bash
    cargo build --release --features ui
    ```
 
 2. **Configure plugin to use local build:**
+
    ```lua
    require("syntaxpresso").setup({
      executable_path = "/absolute/path/to/target/release/syntaxpresso-core",
@@ -781,6 +814,7 @@ To develop or integrate with the Neovim plugin:
    ```
 
 3. **Integration pattern:**
+
    ```lua
    -- Spawn process and capture JSON output
    local handle = vim.system({
@@ -791,10 +825,10 @@ To develop or integrate with the Neovim plugin:
      "--package-name", package,
      "--file-name", filename
    })
-   
+
    local result = handle:wait()
    local response = vim.json.decode(result.stdout)
-   
+
    if response.succeed then
      -- Process response.data
    else
@@ -818,15 +852,15 @@ To develop or integrate with the Neovim plugin:
 The CLI interface is language-agnostic. Example in TypeScript:
 
 ```typescript
-import { spawn } from 'child_process';
+import { spawn } from "child_process";
 
 function executeCommand(args: string[]): Promise<any> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('./syntaxpresso-core', args);
-    let stdout = '';
-    
-    proc.stdout.on('data', (data) => stdout += data);
-    proc.on('close', (code) => {
+    const proc = spawn("./syntaxpresso-core", args);
+    let stdout = "";
+
+    proc.stdout.on("data", (data) => (stdout += data));
+    proc.on("close", (code) => {
       if (code === 0) {
         resolve(JSON.parse(stdout));
       } else {
@@ -838,11 +872,14 @@ function executeCommand(args: string[]): Promise<any> {
 
 // Usage - note the 'java' namespace
 const response = await executeCommand([
-  'java',  // Language namespace
-  'create-jpa-entity',
-  '--cwd', projectPath,
-  '--package-name', 'com.example.domain',
-  '--file-name', 'User'
+  "java", // Language namespace
+  "create-jpa-entity",
+  "--cwd",
+  projectPath,
+  "--package-name",
+  "com.example.domain",
+  "--file-name",
+  "User",
 ]);
 ```
 
@@ -850,18 +887,18 @@ const response = await executeCommand([
 
 Typical operation timings on modern hardware:
 
-| Operation | Time | Notes |
-|-----------|------|-------|
-| Process spawn | ~10-20ms | Cold start overhead |
-| Parse 1000 LOC Java file | ~5-10ms | Initial parse |
-| Incremental field addition | ~1-3ms | Uses incremental parsing |
-| Full file reparse | ~50-200ms | Avoided by incremental updates |
-| JSON serialization | <1ms | Negligible overhead |
-| Total command execution | ~20-50ms | End-to-end for typical operations |
+| Operation                  | Time      | Notes                             |
+| -------------------------- | --------- | --------------------------------- |
+| Process spawn              | ~10-20ms  | Cold start overhead               |
+| Parse 1000 LOC Java file   | ~5-10ms   | Initial parse                     |
+| Incremental field addition | ~1-3ms    | Uses incremental parsing          |
+| Full file reparse          | ~50-200ms | Avoided by incremental updates    |
+| JSON serialization         | <1ms      | Negligible overhead               |
+| Total command execution    | ~20-50ms  | End-to-end for typical operations |
 
 ## Contributing
 
-Contributions are welcome! 
+Contributions are welcome!
 
 This project follows standard Rust development practices.
 
