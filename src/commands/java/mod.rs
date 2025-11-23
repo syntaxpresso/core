@@ -15,9 +15,9 @@ pub mod get_java_files_command;
 pub mod get_jpa_entity_info_command;
 
 // Supporting modules
-pub mod command_services;
 pub mod commands;
 pub mod responses;
+pub mod services;
 pub mod treesitter;
 pub mod validators;
 

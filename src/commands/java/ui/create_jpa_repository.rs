@@ -8,7 +8,7 @@ use ratatui::{
 use std::path::{Path, PathBuf};
 
 use crate::commands::java::{
-  command_services::get_jpa_entity_info_service, get_java_basic_types_command,
+  services::get_jpa_entity_info_service, get_java_basic_types_command,
 };
 use crate::commands::java::{
   create_jpa_repository_command,

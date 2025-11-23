@@ -14,7 +14,7 @@ use crate::commands::java::treesitter::types::mapping_type::MappingType;
 use crate::commands::java::treesitter::types::one_to_one_field_config::OneToOneFieldConfig;
 use crate::commands::java::treesitter::types::other_type::OtherType;
 use crate::commands::java::{
-  command_services::{get_all_jpa_entities_service, get_jpa_entity_info_service},
+  services::{get_all_jpa_entities_service, get_jpa_entity_info_service},
   create_jpa_one_to_one_relationship_command,
 };
 use crate::common::ui::form_trait::{FormBehavior, FormState, InputMode, button_helpers, helpers};

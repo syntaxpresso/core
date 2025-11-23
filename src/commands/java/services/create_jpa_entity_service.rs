@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::commands::java::command_services::create_java_file_service::{
+use crate::commands::java::services::create_java_file_service::{
   build_save_path, correct_java_file_name, create_ts_file, generate_file_template,
 };
 use crate::commands::java::treesitter::services::annotation_service;

@@ -2,12 +2,14 @@ use std::path::Path;
 
 use crate::{
   commands::java::{
-    command_services::create_jpa_entity_enum_field_service::run,
-    validators::directory_validator::validate_file_path_within_base,
+    services::create_jpa_entity_enum_field_service::run,
     treesitter::types::enum_field_config::EnumFieldConfig,
     responses::file_response::FileResponse,
   },
-  common::response::Response,
+  common::{
+    response::Response,
+    validators::directory_validator::validate_file_path_within_base,
+  },
 };
 
 pub fn execute(

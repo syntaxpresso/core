@@ -31,11 +31,12 @@ use crate::commands::java::{
     one_to_one_field_config::OneToOneFieldConfig, other_type::OtherType,
   },
   validators::{
-    directory_validator::validate_directory_unrestricted,
     java_class_name_validator::validate_java_class_name,
     package_name_validator::validate_package_name,
   },
 };
+
+use crate::common::validators::directory_validator::validate_directory_unrestricted;
 
 #[derive(Subcommand)]
 pub enum JavaCommands {

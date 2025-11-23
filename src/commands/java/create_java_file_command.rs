@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::{
   commands::java::{
-    command_services::create_java_file_service::run,
+    services::create_java_file_service::run,
     responses::file_response::FileResponse,
     treesitter::types::{java_file_type::JavaFileType, java_source_directory_type::JavaSourceDirectoryType},
   },

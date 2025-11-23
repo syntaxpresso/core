@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-  commands::java::command_services::get_all_jpa_entities_service::run,
+  commands::java::services::get_all_jpa_entities_service::run,
   commands::java::responses::{get_files_response::GetFilesResponse},
   common::response::Response,
 };

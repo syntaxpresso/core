@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use crate::commands::java::command_services::create_java_file_service::{self};
-use crate::commands::java::command_services::get_jpa_entity_info_service::{self};
+use crate::commands::java::services::create_java_file_service::{self};
+use crate::commands::java::services::get_jpa_entity_info_service::{self};
 use crate::commands::java::treesitter::services::import_declaration_service::add_import;
 use crate::commands::java::treesitter::services::interface_declaration_service::{
   get_interface_name_node, get_public_interface_node,

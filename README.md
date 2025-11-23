@@ -56,7 +56,7 @@ src/
 │   └── java/                          # Java-specific commands
 │       ├── commands.rs                # JavaCommands enum (CLI + UI)
 │       ├── *_command.rs               # Command executors
-│       ├── command_services/          # Business logic services
+│       ├── services/          # Business logic services
 │       ├── validators/                # Java-specific input validation
 │       ├── responses/                 # Java-specific response types
 │       ├── treesitter/                # Java AST manipulation
@@ -83,6 +83,7 @@ src/
 │   ├── ts_file.rs                     # Core Tree-Sitter abstraction
 │   ├── utils/                         # Generic utilities
 │   │   ├── case_util.rs
+│   │   ├── directory_validator.rs
 │   │   ├── path_security_util.rs
 │   │   └── path_util.rs
 │   └── ui/                            # Generic UI components (feature: ui)
@@ -156,7 +157,7 @@ The codebase follows a clean layered architecture with strict separation of conc
                       ▼
            ┌────────────────────────┐
            │ Service Layer          │
-           │  java/command_services/│
+           │  java/services/│
            │  java/treesitter/      │
            │      services/         │
            │                        │
@@ -702,7 +703,7 @@ impl JavaCommands {
 }
 ```
 
-4. **Implement Service** (`src/commands/java/command_services/`)
+4. **Implement Service** (`src/commands/java/services/`)
 ```rust
 pub fn do_work(args: &Args) -> Result<MyCommandResponse, String> {
     let mut ts_file = TSFile::from_file(&args.file)?;

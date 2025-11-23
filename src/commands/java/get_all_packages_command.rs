@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-  commands::java::command_services::get_all_packages_service::run,
+  commands::java::services::get_all_packages_service::run,
   commands::java::treesitter::types::java_source_directory_type::JavaSourceDirectoryType,
   commands::java::responses::{get_packages_response::GetPackagesResponse},
   common::response::Response,

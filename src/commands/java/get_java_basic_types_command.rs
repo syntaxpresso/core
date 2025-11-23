@@ -1,5 +1,5 @@
 use crate::{
-  commands::java::command_services::get_java_basic_types_service::run,
+  commands::java::services::get_java_basic_types_service::run,
   commands::java::treesitter::types::java_basic_types::JavaBasicType,
   commands::java::responses::{basic_java_type_response::JavaBasicTypeResponse},
   common::response::Response,

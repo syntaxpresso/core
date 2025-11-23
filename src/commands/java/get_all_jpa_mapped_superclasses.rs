@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::{
   commands::java::{
-    command_services::get_all_jpa_mapped_superclasses::run,
+    services::get_all_jpa_mapped_superclasses::run,
     responses::get_files_response::GetFilesResponse,
   },
   common::response::Response,

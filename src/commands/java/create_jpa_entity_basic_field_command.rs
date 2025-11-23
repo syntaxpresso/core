@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-  commands::java::command_services::create_jpa_entity_basic_field_service::run,
+  commands::java::services::create_jpa_entity_basic_field_service::run,
   commands::java::treesitter::types::basic_field_config::BasicFieldConfig,
   commands::java::responses::{file_response::FileResponse},
   common::response::Response,
