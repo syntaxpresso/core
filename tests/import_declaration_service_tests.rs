@@ -1,9 +1,9 @@
 // Import Declaration Service Integration Tests
 // This module contains comprehensive tests for all import declaration service functions
 
-use syntaxpresso_core::common::services::import_declaration_service::*;
+use syntaxpresso_core::commands::java::treesitter::services::import_declaration_service::*;
+use syntaxpresso_core::commands::java::treesitter::types::import_types::ImportInsertionPosition;
 use syntaxpresso_core::common::ts_file::TSFile;
-use syntaxpresso_core::common::types::import_types::ImportInsertionPosition;
 
 #[cfg(test)]
 mod import_declaration_tests {

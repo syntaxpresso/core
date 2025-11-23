@@ -5,9 +5,9 @@ use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
-use crate::common::{
-  ts_file::TSFile, types::java_source_directory_type::JavaSourceDirectoryType,
-  utils::path_security_util::PathSecurityValidator,
+use crate::{
+  commands::java::treesitter::types::java_source_directory_type::JavaSourceDirectoryType,
+  common::{ts_file::TSFile, utils::path_security_util::PathSecurityValidator},
 };
 
 /// Recursively searches for a directory with the given name within the root directory.
@@ -71,7 +71,7 @@ pub fn parse_all_files(cwd: &Path, source_directory_type: &JavaSourceDirectoryTy
 /// # Examples
 /// ```
 /// use std::path::Path;
-/// use syntaxpresso_core::common::types::java_source_directory_type::JavaSourceDirectoryType;
+/// use syntaxpresso_core::commands::java::treesitter::types::java_source_directory_type::JavaSourceDirectoryType;
 /// use syntaxpresso_core::common::utils::path_util::get_file_path_from_package_scope;
 ///
 /// # fn main() -> Result<(), String> {

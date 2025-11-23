@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod annotation_service_tests {
-  use syntaxpresso_core::common::services::annotation_service::*;
+  use syntaxpresso_core::commands::java::treesitter::services::annotation_service::*;
+  use syntaxpresso_core::commands::java::treesitter::types::annotation_types::AnnotationInsertionPosition;
   use syntaxpresso_core::common::ts_file::TSFile;
-  use syntaxpresso_core::common::types::annotation_types::AnnotationInsertionPosition;
 
   fn create_ts_file(content: &str) -> TSFile {
     TSFile::from_source_code(content)

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod interface_declaration_service_tests {
-  use syntaxpresso_core::common::services::interface_declaration_service::*;
+  use syntaxpresso_core::commands::java::treesitter::services::interface_declaration_service::*;
   use syntaxpresso_core::common::ts_file::TSFile;
 
   fn create_ts_file(content: &str) -> TSFile {

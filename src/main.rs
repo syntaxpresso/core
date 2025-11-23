@@ -1,6 +1,6 @@
 use clap::Parser;
 use syntaxpresso_core::commands::Commands;
-use syntaxpresso_core::responses::error_response::ErrorResponse;
+use syntaxpresso_core::common::error_response::ErrorResponse;
 
 #[derive(Parser)]
 #[command(name = "syntaxpresso-core")]

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod field_declaration_service_tests {
-  use syntaxpresso_core::common::services::class_declaration_service::find_class_node_by_name;
-  use syntaxpresso_core::common::services::field_declaration_service::*;
+  use syntaxpresso_core::commands::java::treesitter::services::class_declaration_service::find_class_node_by_name;
+  use syntaxpresso_core::commands::java::treesitter::services::field_declaration_service::*;
   use syntaxpresso_core::common::ts_file::TSFile;
 
   fn create_ts_file(content: &str) -> TSFile {

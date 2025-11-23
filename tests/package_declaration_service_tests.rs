@@ -1,7 +1,7 @@
 // Package Declaration Service Integration Tests
 // This module contains comprehensive tests for all package declaration service functions
 
-use syntaxpresso_core::common::services::package_declaration_service::*;
+use syntaxpresso_core::commands::java::treesitter::services::package_declaration_service::*;
 use syntaxpresso_core::common::ts_file::TSFile;
 
 #[cfg(test)]
