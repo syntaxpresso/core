@@ -2,14 +2,11 @@ use std::path::Path;
 
 use crate::{
   commands::java::{
+    responses::get_files_response::GetFilesResponse,
     services::create_jpa_many_to_one_relationship_service,
     treesitter::types::many_to_one_field_config::ManyToOneFieldConfig,
-    responses::get_files_response::GetFilesResponse,
   },
-  common::{
-    response::Response,
-    validators::directory_validator::validate_file_path_within_base,
-  },
+  common::{response::Response, validators::directory_validator::validate_file_path_within_base},
 };
 
 pub fn execute(

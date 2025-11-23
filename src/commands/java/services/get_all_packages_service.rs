@@ -6,7 +6,9 @@ use crate::{
   commands::java::{
     responses::package_response::PackageResponse,
     treesitter::{
-      services::package_declaration_service::{get_package_declaration_node, get_package_scope_node},
+      services::package_declaration_service::{
+        get_package_declaration_node, get_package_scope_node,
+      },
       types::java_source_directory_type::JavaSourceDirectoryType,
     },
   },

@@ -1,8 +1,7 @@
 use crate::{
+  commands::java::responses::basic_java_type_response::JavaBasicTypeResponse,
   commands::java::services::get_java_basic_types_service::run,
-  commands::java::treesitter::types::java_basic_types::JavaBasicType,
-  commands::java::responses::{basic_java_type_response::JavaBasicTypeResponse},
-  common::response::Response,
+  commands::java::treesitter::types::java_basic_types::JavaBasicType, common::response::Response,
 };
 
 pub fn execute(basic_type_kind: &JavaBasicType) -> Response<Vec<JavaBasicTypeResponse>> {

@@ -2,16 +2,12 @@ use std::path::Path;
 
 use crate::{
   commands::java::{
-    services::create_jpa_repository_service::{run, run_with_manual_id},
     responses::{
-      create_jpa_repository_response::CreateJPARepositoryResponse,
-      file_response::FileResponse,
+      create_jpa_repository_response::CreateJPARepositoryResponse, file_response::FileResponse,
     },
+    services::create_jpa_repository_service::{run, run_with_manual_id},
   },
-  common::{
-    response::Response,
-    validators::directory_validator::validate_file_path_within_base,
-  },
+  common::{response::Response, validators::directory_validator::validate_file_path_within_base},
 };
 
 pub fn execute(

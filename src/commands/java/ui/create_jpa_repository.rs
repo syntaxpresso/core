@@ -8,15 +8,13 @@ use ratatui::{
 use std::path::{Path, PathBuf};
 
 use crate::commands::java::{
-  services::get_jpa_entity_info_service, get_java_basic_types_command,
-};
-use crate::commands::java::{
   create_jpa_repository_command,
   treesitter::types::java_source_directory_type::JavaSourceDirectoryType,
 };
 use crate::commands::java::{
   get_all_packages_command, treesitter::types::java_basic_types::JavaBasicType,
 };
+use crate::commands::java::{get_java_basic_types_command, services::get_jpa_entity_info_service};
 use crate::common::ui::form_trait::{FormBehavior, FormState, InputMode, button_helpers, helpers};
 
 /// Represents which field is currently focused

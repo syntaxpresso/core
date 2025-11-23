@@ -1,5 +1,8 @@
 use std::path::{Path, PathBuf};
 
+use crate::commands::java::responses::create_jpa_repository_response::CreateJPARepositoryResponse;
+use crate::commands::java::responses::file_response::FileResponse;
+use crate::commands::java::responses::get_jpa_entity_info_response::GetJpaEntityInfoResponse;
 use crate::commands::java::services::create_java_file_service::{self};
 use crate::commands::java::services::get_jpa_entity_info_service::{self};
 use crate::commands::java::treesitter::services::import_declaration_service::add_import;
@@ -9,13 +12,10 @@ use crate::commands::java::treesitter::services::interface_declaration_service::
 use crate::commands::java::treesitter::services::package_declaration_service::{
   get_package_declaration_node, get_package_scope_node,
 };
-use crate::common::ts_file::TSFile;
 use crate::commands::java::treesitter::types::import_types::ImportInsertionPosition;
 use crate::commands::java::treesitter::types::java_file_type::JavaFileType;
 use crate::commands::java::treesitter::types::java_source_directory_type::JavaSourceDirectoryType;
-use crate::commands::java::responses::create_jpa_repository_response::CreateJPARepositoryResponse;
-use crate::commands::java::responses::file_response::FileResponse;
-use crate::commands::java::responses::get_jpa_entity_info_response::GetJpaEntityInfoResponse;
+use crate::common::ts_file::TSFile;
 
 fn create_repository_file(
   cwd: &Path,

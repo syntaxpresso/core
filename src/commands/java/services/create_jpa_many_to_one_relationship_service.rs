@@ -1,3 +1,4 @@
+use crate::commands::java::responses::file_response::FileResponse;
 use crate::commands::java::treesitter::services::class_declaration_service::get_public_class_node;
 use crate::commands::java::treesitter::services::field_declaration_service::{
   AddFieldDeclarationParams, add_field_declaration,
@@ -6,7 +7,6 @@ use crate::commands::java::treesitter::services::import_declaration_service::add
 use crate::commands::java::treesitter::services::package_declaration_service::{
   get_package_declaration_node, get_package_scope_node,
 };
-use crate::common::ts_file::TSFile;
 use crate::commands::java::treesitter::types::annotation_config::AnnotationConfig;
 use crate::commands::java::treesitter::types::cascade_type::CascadeType;
 use crate::commands::java::treesitter::types::entity_side::EntitySide;
@@ -18,9 +18,9 @@ use crate::commands::java::treesitter::types::java_visibility_modifier::JavaVisi
 use crate::commands::java::treesitter::types::many_to_one_field_config::ManyToOneFieldConfig;
 use crate::commands::java::treesitter::types::mapping_type::MappingType;
 use crate::commands::java::treesitter::types::other_type::OtherType;
+use crate::common::ts_file::TSFile;
 use crate::common::utils::case_util::{self, CaseType};
 use crate::common::utils::path_util::parse_all_files;
-use crate::commands::java::responses::file_response::FileResponse;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 

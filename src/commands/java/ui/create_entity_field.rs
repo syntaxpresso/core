@@ -7,10 +7,10 @@ use ratatui::{
 };
 use std::path::PathBuf;
 
-use crate::common::ui::form_trait::{FormBehavior, FormState, InputMode, button_helpers, helpers};
 use crate::commands::java::ui::create_basic_field::CreateBasicFieldForm;
 use crate::commands::java::ui::create_enum_field::CreateEnumFieldForm;
 use crate::commands::java::ui::create_id_field::CreateIdFieldForm;
+use crate::common::ui::form_trait::{FormBehavior, FormState, InputMode, button_helpers, helpers};
 
 /// Enum to hold different child form types
 enum ChildFormType {

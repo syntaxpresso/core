@@ -1,9 +1,8 @@
 use std::path::Path;
 
 use crate::{
-  commands::java::services::get_all_jpa_entities_service::run,
-  commands::java::responses::{get_files_response::GetFilesResponse},
-  common::response::Response,
+  commands::java::responses::get_files_response::GetFilesResponse,
+  commands::java::services::get_all_jpa_entities_service::run, common::response::Response,
 };
 
 pub fn execute(cwd: &Path) -> Response<GetFilesResponse> {

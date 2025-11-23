@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
 use crate::commands::java::treesitter::services::package_declaration_service::get_package_declaration_node;
+use crate::commands::java::treesitter::types::import_types::{
+  ImportInsertionPoint, ImportInsertionPosition,
+};
 use crate::common::ts_file::TSFile;
-use crate::commands::java::treesitter::types::import_types::{ImportInsertionPoint, ImportInsertionPosition};
 use tree_sitter::Node;
 
 impl ImportInsertionPoint {

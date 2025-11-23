@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 use crate::{
-  common::{ts_file::TSFile, utils::path_security_util::PathSecurityValidator},
   commands::java::treesitter::types::java_source_directory_type::JavaSourceDirectoryType,
+  common::{ts_file::TSFile, utils::path_security_util::PathSecurityValidator},
 };
 
 /// Recursively searches for a directory with the given name within the root directory.
