@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod class_declaration_service_tests {
-  use syntaxpresso_core::common::services::class_declaration_service::*;
+  use syntaxpresso_core::commands::java::treesitter::services::class_declaration_service::*;
   use syntaxpresso_core::common::ts_file::TSFile;
 
   // Helper function to create TSFile from Java content
