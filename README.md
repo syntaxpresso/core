@@ -10,18 +10,32 @@
 
 # Syntaxpresso Core
 
-A high-performance Rust-based CLI backend for IDE plugins that provides advanced Java code generation and manipulation capabilities using Tree-Sitter for precise AST manipulation.
+A high-performance Rust-based CLI backend for IDE plugins that provides advanced code generation and manipulation capabilities using Tree-Sitter for precise AST manipulation.
 
-> **Developer-Focused Documentation**: This README contains basic technical architecture, implementation details, and integration guides for developers building IDE plugins or extending the core.
+It is a stateless, language-agnostic AST manipulation engine built on Tree-Sitter and developed in Rust to ensure high performance in syntax processing.
 
-## Quick Reference
+Unlike traditional tools that treat code as plain text, Syntaxpresso Core understands code as a logical structure (tree). Thanks to Tree-Sitter, this logical understanding can be extended to any programming language (Java, Python, TypeScript, etc.) simply by swapping the grammar.
+
+The primary goal is to serve as a universal backend for IDE plugins and programmatic code automation. Syntaxpresso Core centralizes complex refactoring logic into a single portable binary, eliminating the need to reimplement business rules for each text editor.
+
+> **Developer-Focused Documentation**: This README contains basic technical architecture, implementation details, and integration guides for developers building IDE plugins or extending Core's. If you want to use the plugin on your IDE, refer to these repositories:
+
+- [Neovim](https://github.com/syntaxpresso/syntaxpresso.nvim)
+
+## Core Capabilities
+
+- **AST-Based Code Manipulation**: Uses Tree-Sitter for precise, syntax-aware code parsing and manipulation
+- **Incremental Parsing**: Leverages Tree-Sitter's incremental parsing for fast, efficient code updates
+- **Dual Interface**: Supports both programmatic CLI usage (for IDE integration) and interactive TUI (for standalone use)
+
+# Quick Reference
 
 **For Plugin Developers:**
 
+- [Architecture](#technical-architecture) - Understand the design and data flow
 - [Installation](#installation-for-developers) - Get the binary or build from source
 - [Usage Examples](#usage-examples) - CLI command patterns and JSON responses
 - [Plugin Integration Guide](#plugin-integration-guide) - Integrate with Neovim, VSCode, etc.
-- [Architecture](#technical-architecture) - Understand the design and data flow
 
 **For Core Contributors:**
 
@@ -30,26 +44,36 @@ A high-performance Rust-based CLI backend for IDE plugins that provides advanced
 - [Tree-Sitter Patterns](#tree-sitter-query-examples) - Query examples
 - [Contributing](#contributing) - Guidelines and process
 
-## What is Syntaxpresso Core?
+# Architecture
 
-Syntaxpresso Core is a stateless CLI application designed as a backend service for IDE plugins and automation tools. It provides programmatic Java code generation and manipulation through a JSON-based CLI interface, with an optional interactive Terminal UI for standalone usage.
+## Overview (big picture)
 
-## Core Capabilities
+Syntaxpresso follows a **client-backend architecture** with strict separation of concerns:
 
-- **AST-Based Code Manipulation**: Uses Tree-Sitter for precise, syntax-aware Java code parsing and modification
-- **JPA Entity Management**: Specialized tooling for Java Persistence API entity generation, fields, and relationships
-- **Incremental Parsing**: Leverages Tree-Sitter's incremental parsing for fast, efficient code updates
-- **Repository Generation**: Automated Spring Data JPA repository interface creation
-- **Project Discovery**: Scans Java projects to discover entities, packages, and mapped superclasses
-- **Dual Interface**: Supports both programmatic CLI usage (for IDE integration) and interactive TUI (for standalone use)
+**Backend** (Core):
 
-## Technical Architecture
+- Self-contained binary with complete AST manipulation logic
+- Language and IDE-agnostic - unaware of what invokes it
+- Accepts standardized CLI arguments, returns structured JSON
+- Can run standalone (terminal, CI/CD) or via IDE plugins
+
+**Frontend** (Client):
+
+- Lightweight interface layer (Neovim, VSCode, scripts, etc.)
+- Collects user intent and delegates processing to Core
+- No business logic - purely handles I/O and presentation
+
+**Communication Model:**
+
+- **Unidirectional**: Client → Core (never Core → Client)
+- **Stateless**: One process per request
+- **Synchronous**: Request → Process → JSON Response → Exit
 
 <div align="center">
   <img width="600" alt="syntaxpresso-architecture" src="https://private-user-images.githubusercontent.com/32070796/508597349-ddd3cd2d-3f03-4bbf-b855-8fc17248b3c2.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NjM3NjY1MzcsIm5iZiI6MTc2Mzc2NjIzNywicGF0aCI6Ii8zMjA3MDc5Ni81MDg1OTczNDktZGRkM2NkMmQtM2YwMy00YmJmLWI4NTUtOGZjMTcyNDhiM2MyLnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTExMjElMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUxMTIxVDIzMDM1N1omWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWNhMzQwZTRlOWQwZDliYmRhMGM5NDMxNzY3YjI3ZjA0NDNjNmFhMmI5NWZmYmIyMTNmNzEwYTBmYTU0MTM3OTgmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.d1-NEqBU8uHMvDr1fF8qhcJYQOf4b7_E3ois2XCAGVY" />
 </div>
 
-### Project Structure
+## Project's Structure
 
 ```
 src/
@@ -107,15 +131,26 @@ src/
 tests/                                 # Integration tests
 ```
 
-**Multi-language Structure:**
+The structure is designed to **isolate development**, reduce the learning curve, and ensure safe maintenance by preventing cross-language business logic contamination.
 
-- `commands/` - Top level routing by language
-- `commands/java/` - All Java-specific code (ready to add Python, TypeScript, etc.)
-- `common/` - Shared utilities across all languages
+**The Global Router** (`src/commands/mod.rs`):
 
-### Architecture Layers
+- Acts as a high-level dispatcher - doesn't execute commands, only routes them
+- Flow: "Java request? → Route to `java/`. Python request? → Route to `python/`."
 
-The codebase follows a clean layered architecture with strict separation of concerns:
+**Language Modules** (`src/commands/java/`, `src/commands/python/`, etc.):
+
+- Each directory functions as a **bounded context** (DDD pattern)
+- Complete encapsulation: language-specific validators, services, and Tree-Sitter types live in isolation
+- Benefit: A bug in the Python module cannot affect Java - they share no memory or language-specific logic
+
+**Shared infrastructure** (`src/common/`):
+
+- Base infrastructure used by all language modules
+- Reusable capabilities: file I/O, incremental parsing, JSON responses, path validation
+- Eliminates duplicate code across language implementations
+
+## The execution flow and the responsability of each layer
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -200,12 +235,39 @@ The codebase follows a clean layered architecture with strict separation of conc
             └────────────────────────┘
 ```
 
-**Key Changes in Multi-Language Architecture:**
+**Entry Layer** (Frontend & Parser):
+- **Frontend (Client)**: Acts as the trigger only - doesn't process logic, just invokes the binary with arguments and awaits JSON on stdout. IDE-agnostic (Neovim, VSCode, or shell).
+- **Clap CLI Parser** (`main.rs`): The gatekeeper - validates argument syntax before any domain memory is allocated, rejecting invalid commands immediately.
 
-- Added **language router** at top level (`Commands` enum)
-- Each language has its own **command namespace** (e.g., `JavaCommands`)
-- Language-specific code is **isolated** in `commands/{language}/`
-- Shared utilities remain in `common/` for reuse across languages
+**Routing Layer**:
+- **Commands Router** (`commands/mod.rs`): Global dispatcher - identifies language context ("Is this a Java command?") and forwards to the correct module, without knowing which specific command will execute.
+- **Language Dispatcher** (`java/commands.rs`): Language-specific router - knows available commands (e.g., `create-entity`, `create-repository`) and directs to the correct executor.
+
+**Dual Interface Layer**:
+- **UI Path (TUI)**: When enabled, takes control of stdin to render interactive forms, guiding users in building arguments.
+- **Programmatic Path (CLI)**: Direct execution path ("headless"), optimized for speed and automation scripts or third-party interfaces.
+
+**Command Layer** (`java/*_command.rs`):
+- Acts as the controller - orchestrates specific operations
+- Triggers semantic validators (e.g., "Is the package name valid?")
+- Calls necessary services
+- Builds standardized `Response<T>` objects
+
+**Service Layer** (`java/services/`, `java/treesitter/services/`):
+- The heart of business logic
+- Holds domain knowledge (e.g., structure of `@Entity` annotations, how to inject fields into classes)
+- Translates command intent ("create a field") into syntax tree operations
+
+**Infrastructure Layer** (`common/ts_file.rs`):
+- The only layer permitted to touch code bytes
+- Performs incremental parsing
+- Executes queries to locate nodes (e.g., find where class begins)
+- Applies surgical text edits to AST without corrupting the rest of the file
+
+**Validation Layer** (`common/validators/`, `java/validators/`):
+- Ensures integrity and safety
+- **Generic**: Prevents path traversal attacks, validates directories
+- **Language-Specific**: Enforces naming conventions (e.g., Java class and package naming rules)
 
 ### Communication Model
 
