@@ -4,6 +4,7 @@ use syntaxpresso_core::common::error_response::ErrorResponse;
 
 #[derive(Parser)]
 #[command(name = "syntaxpresso-core")]
+#[command(version)]
 #[command(
   about = "A standalone Rust-based CLI backend for IDE plugins that provides advanced Java code generation and manipulation capabilities using Tree-Sitter."
 )]
