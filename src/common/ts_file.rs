@@ -261,24 +261,24 @@ impl TSFile {
     Ok(())
   }
 
-  /// Save to a new file path with security validation against a base directory
+  /// Save to a new file path with containment validation against a base directory
   ///
   /// This method ensures that the target path is contained within the specified base directory,
-  /// preventing path traversal attacks and ensuring files are only saved within allowed locations.
+  /// preventing accidental file operations outside the working directory scope.
   ///
   /// # Arguments
   /// * `path` - The target file path to save to
   /// * `base_path` - The base directory that must contain the target path
   ///
   /// # Returns
-  /// * `Ok(())` - If the file was successfully saved within the allowed directory
-  /// * `Err(std::io::Error)` - If security validation fails or file save fails
+  /// * `Ok(())` - If the file was successfully saved within the base directory
+  /// * `Err(std::io::Error)` - If path containment validation fails or file save fails
   ///
-  /// # Security Features
+  /// # Path Validation
   /// - Validates path containment within base directory
-  /// - Prevents path traversal attacks (e.g., "../../../etc/passwd")
-  /// - Resolves symbolic links to prevent symlink attacks
-  /// - Canonicalizes paths for accurate security checking
+  /// - Rejects paths that escape the base directory (e.g., "../../outside")
+  /// - Resolves symbolic links to determine the actual file location
+  /// - Canonicalizes paths for accurate containment checking
   ///
   /// # Examples
   /// ```
