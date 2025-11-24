@@ -97,7 +97,7 @@ impl CreateJpaRepositoryForm {
 
     // Try to detect ID field from entity
     let (id_field_type, id_field_package, auto_detected) =
-      Self::try_detect_id_field(&entity_file_path, &entity_file_b64_src, &available_id_types);
+      Self::try_detect_id_field(&cwd, &entity_file_path, &entity_file_b64_src, &available_id_types);
 
     // Set default repository package (same as entity package)
     let entity_package = Self::extract_entity_package(&entity_file_path);
@@ -168,13 +168,14 @@ impl CreateJpaRepositoryForm {
 
   /// Try to detect ID field from entity using get_jpa_entity_info_service
   fn try_detect_id_field(
+    cwd: &Path,
     entity_file_path: &Path,
     entity_file_b64_src: &str,
     available_types: &[JavaTypeInfo],
   ) -> (String, String, bool) {
     // Try to get entity info
     let entity_info_result =
-      get_jpa_entity_info_service::run(Some(entity_file_path), Some(entity_file_b64_src));
+      get_jpa_entity_info_service::run(Some(entity_file_path), Some(entity_file_b64_src), cwd);
 
     if let Ok(entity_info) = entity_info_result
       && let (Some(id_type), Some(id_package)) =

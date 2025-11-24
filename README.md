@@ -237,7 +237,7 @@ This architecture ensures:
 
 1. **AST-First Approach**: All code modifications are performed through Tree-Sitter AST manipulation, not string concatenation or regex
 2. **Incremental Updates**: Uses Tree-Sitter's incremental parsing to efficiently update only affected portions of the syntax tree
-3. **Path Security**: All file operations validate paths against traversal bugs using canonicalization and containment checks
+3. **Path Containment**: All file operations validate that paths stay within the working directory using canonicalization and containment checks
 4. **Type Safety**: Strongly-typed commands and responses prevent runtime errors
 5. **Separation of Concerns**: Clear layering between CLI, commands, services, and Tree-Sitter operations
 
@@ -502,7 +502,7 @@ pub struct TSFile {
 - **Incremental Parsing**: `apply_incremental_edit()` updates AST efficiently
 - **Query API**: Fluent query builder for Tree-Sitter queries
 - **Node Manipulation**: `replace_text_by_node()`, `insert_text()`
-- **Path Security**: `save_as()` with path traversal protection
+- **Path Containment**: `save_as()` validates paths stay within base directory
 - **Multiple Constructors**: Load from file, string, or base64-encoded source
 
 **Example usage:**
@@ -519,7 +519,7 @@ if let Some(node) = nodes.first() {
     ts_file.replace_text_by_node(&node, "new content");
 }
 
-// Save with security validation
+// Save with path containment validation
 ts_file.save_as(Path::new("output.java"), Path::new("/safe/base/dir"))?;
 ```
 
@@ -622,9 +622,9 @@ ts_file.apply_incremental_edit(start_byte, end_byte, new_text);
 - Incremental: ~1-5ms for typical edits
 - Full reparse: ~50-200ms for large files
 
-#### 3. Path Security
+#### 3. Path Containment Validation
 
-All file saves validate against path traversal:
+All file saves validate that paths remain within the working directory:
 
 ```rust
 // Validates path is contained within base_dir
@@ -632,11 +632,11 @@ let validator = PathSecurityValidator::new(base_dir)?;
 let safe_path = validator.validate_path_containment(user_path)?;
 ```
 
-Prevents attacks like:
+This ensures file operations stay within the project scope and prevents:
 
-- `../../../../etc/passwd`
-- Symlink escapes
-- Relative path manipulation
+- Accidental writes outside the project directory (e.g., `../../../../outside`)
+- Symlink paths that escape the working directory
+- Relative path manipulation that would write to unintended locations
 
 #### 4. Feature-Gated UI
 

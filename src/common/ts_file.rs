@@ -147,8 +147,47 @@ impl TSFile {
     }
   }
 
-  pub fn from_file(path: &Path, language: SupportedLanguage) -> std::io::Result<Self> {
-    let source_code = fs::read_to_string(path)?;
+  /// Load a file from disk with working directory validation
+  ///
+  /// This method ensures that the file path is contained within the specified working directory,
+  /// preventing loading of files outside the current project scope.
+  ///
+  /// # Arguments
+  /// * `path` - The file path to load
+  /// * `cwd` - The working directory that must contain the file
+  /// * `language` - The programming language for parsing
+  ///
+  /// # Returns
+  /// * `Ok(TSFile)` - If the file was successfully loaded and is within the working directory
+  /// * `Err(std::io::Error)` - If path validation fails or file loading fails
+  ///
+  /// # Examples
+  /// ```no_run
+  /// use std::path::Path;
+  /// use syntaxpresso_core::common::ts_file::TSFile;
+  /// use syntaxpresso_core::common::supported_language::SupportedLanguage;
+  ///
+  /// # fn main() -> std::io::Result<()> {
+  /// let cwd = Path::new("/home/user/project");
+  /// let file_path = Path::new("/home/user/project/src/Main.java");
+  ///
+  /// let ts_file = TSFile::from_file(file_path, cwd, SupportedLanguage::Java)?;
+  /// # Ok(())
+  /// # }
+  /// ```
+  pub fn from_file(path: &Path, cwd: &Path, language: SupportedLanguage) -> std::io::Result<Self> {
+    // Validate path is within working directory
+    let validator = PathSecurityValidator::new(cwd)
+      .map_err(|e| std::io::Error::other(format!("Failed to create path validator: {}", e)))?;
+    let validated_path = validator.validate_path_containment(path).map_err(|e| {
+      std::io::Error::other(format!(
+        "Cannot load file outside working directory.\nFile: {}\nWorking directory: {}\nError: {}",
+        path.display(),
+        cwd.display(),
+        e
+      ))
+    })?;
+    let source_code = fs::read_to_string(&validated_path)?;
     let mut parser = Parser::new();
     let ts_language = language.tree_sitter_language();
     parser.set_language(&ts_language).expect("Error loading parser");
@@ -156,7 +195,7 @@ impl TSFile {
     Ok(TSFile {
       language: ts_language,
       parser,
-      file: Some(path.to_path_buf()),
+      file: Some(validated_path),
       tree,
       source_code,
       new_path: None,
@@ -222,24 +261,24 @@ impl TSFile {
     Ok(())
   }
 
-  /// Save to a new file path with security validation against a base directory
+  /// Save to a new file path with containment validation against a base directory
   ///
   /// This method ensures that the target path is contained within the specified base directory,
-  /// preventing path traversal attacks and ensuring files are only saved within allowed locations.
+  /// preventing accidental file operations outside the working directory scope.
   ///
   /// # Arguments
   /// * `path` - The target file path to save to
   /// * `base_path` - The base directory that must contain the target path
   ///
   /// # Returns
-  /// * `Ok(())` - If the file was successfully saved within the allowed directory
-  /// * `Err(std::io::Error)` - If security validation fails or file save fails
+  /// * `Ok(())` - If the file was successfully saved within the base directory
+  /// * `Err(std::io::Error)` - If path containment validation fails or file save fails
   ///
-  /// # Security Features
+  /// # Path Validation
   /// - Validates path containment within base directory
-  /// - Prevents path traversal attacks (e.g., "../../../etc/passwd")
-  /// - Resolves symbolic links to prevent symlink attacks
-  /// - Canonicalizes paths for accurate security checking
+  /// - Rejects paths that escape the base directory (e.g., "../../outside")
+  /// - Resolves symbolic links to determine the actual file location
+  /// - Canonicalizes paths for accurate containment checking
   ///
   /// # Examples
   /// ```
@@ -275,23 +314,24 @@ impl TSFile {
     Ok(())
   }
 
-  /// Save to an existing file path without security validation
+  /// Save to an existing file path with working directory validation
   ///
-  /// This method is intended for overwriting existing files that were passed in from external sources
-  /// (e.g., when editing a file opened by the user). It does NOT perform path traversal validation
-  /// and should only be used when the path comes from a trusted source.
+  /// This method ensures that the target path is contained within the specified working directory,
+  /// preventing modifications to files outside the current project scope.
   ///
   /// # Arguments
   /// * `path` - The target file path to save to (must be absolute)
+  /// * `cwd` - The working directory that must contain the target path
   ///
   /// # Returns
-  /// * `Ok(())` - If the file was successfully saved
-  /// * `Err(std::io::Error)` - If the file save fails
+  /// * `Ok(())` - If the file was successfully saved within the working directory
+  /// * `Err(std::io::Error)` - If path validation fails or file save fails
   ///
-  /// # Safety Considerations
-  /// - This method bypasses security validation
-  /// - Only use for paths that come from trusted sources (e.g., user-opened files)
-  /// - The path should be absolute to avoid ambiguity
+  /// # Validation Features
+  /// - Validates path containment within working directory
+  /// - Prevents modifications outside project scope
+  /// - Resolves symbolic links to prevent symlink confusion
+  /// - Requires absolute paths for clarity
   ///
   /// # Examples
   /// ```
@@ -305,11 +345,11 @@ impl TSFile {
   /// let temp_dir = std::env::temp_dir();
   /// let existing_file = temp_dir.join("Example.java");
   ///
-  /// ts_file.save_to_existing_file(&existing_file)?;
+  /// ts_file.save_to_existing_file(&existing_file, &temp_dir)?;
   /// # Ok(())
   /// # }
   /// ```
-  pub fn save_to_existing_file(&mut self, path: &Path) -> std::io::Result<()> {
+  pub fn save_to_existing_file(&mut self, path: &Path, cwd: &Path) -> std::io::Result<()> {
     // Validate that the path is absolute for safety
     if !path.is_absolute() {
       return Err(std::io::Error::other(format!(
@@ -317,20 +357,58 @@ impl TSFile {
         path.display()
       )));
     }
+    // Create security validator
+    let validator = PathSecurityValidator::new(cwd)
+      .map_err(|e| std::io::Error::other(format!("Failed to create path validator: {}", e)))?;
+    // Validate path containment within working directory
+    let validated_path = validator.validate_path_containment(path).map_err(|e| {
+      std::io::Error::other(format!(
+        "Cannot save file outside working directory.\nFile: {}\nWorking directory: {}\nError: {}",
+        path.display(),
+        cwd.display(),
+        e
+      ))
+    })?;
     // Create parent directories if they don't exist
-    if let Some(parent) = path.parent() {
+    if let Some(parent) = validated_path.parent() {
       fs::create_dir_all(parent)?;
     }
-    fs::write(path, &self.source_code)?;
-    self.file = Some(path.to_path_buf());
+    fs::write(&validated_path, &self.source_code)?;
+    self.file = Some(validated_path);
     self.modified = false;
     Ok(())
   }
 
-  /// Move file to new destination
-  pub fn move_file(&mut self, destination: &Path) {
-    self.new_path = Some(destination.to_path_buf());
+  /// Move file to new destination with working directory validation
+  ///
+  /// This method validates that the destination path is within the working directory
+  /// before scheduling the move operation.
+  ///
+  /// # Arguments
+  /// * `destination` - The new file path
+  /// * `cwd` - The working directory that must contain the destination
+  ///
+  /// # Returns
+  /// * `Ok(())` - If the destination is valid and within the working directory
+  /// * `Err(std::io::Error)` - If validation fails
+  ///
+  /// # Note
+  /// The actual move happens when `save()` is called.
+  pub fn move_file(&mut self, destination: &Path, cwd: &Path) -> std::io::Result<()> {
+    // Validate destination is within working directory
+    let validator = PathSecurityValidator::new(cwd)
+      .map_err(|e| std::io::Error::other(format!("Failed to create path validator: {}", e)))?;
+    let validated_destination = validator.validate_path_containment(destination).map_err(|e| {
+      std::io::Error::other(format!(
+        "Cannot move file outside working directory.\nDestination: {}\nWorking directory: {}\nError: {}",
+        destination.display(),
+        cwd.display(),
+        e
+      ))
+    })?;
+    self.new_path = Some(validated_destination);
     self.modified = true;
+    Ok(())
   }
 
   /// Rename file in current directory

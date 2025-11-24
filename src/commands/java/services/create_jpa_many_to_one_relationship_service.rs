@@ -60,16 +60,16 @@ fn find_inverse_entity(cwd: &Path, class_name: &str) -> Result<PathBuf, String> 
   Err(format!("Unable to find entity with class name: {}", class_name))
 }
 
-fn extract_owning_entity_class_name(file_path: &Path) -> Result<String, String> {
-  let ts_file = TSFile::from_file(file_path, SupportedLanguage::Java)
+fn extract_owning_entity_class_name(file_path: &Path, cwd: &Path) -> Result<String, String> {
+  let ts_file = TSFile::from_file(file_path, cwd, SupportedLanguage::Java)
     .map_err(|_| "Unable to parse owning side entity file".to_string())?;
   ts_file
     .get_file_name_without_ext()
     .ok_or_else(|| "Unable to extract owning entity class name".to_string())
 }
 
-fn get_entity_package_name(entity_file_path: &Path) -> Result<String, String> {
-  let entity_ts_file = TSFile::from_file(entity_file_path, SupportedLanguage::Java)
+fn get_entity_package_name(entity_file_path: &Path, cwd: &Path) -> Result<String, String> {
+  let entity_ts_file = TSFile::from_file(entity_file_path, cwd, SupportedLanguage::Java)
     .map_err(|_| "Unable to parse entity file".to_string())?;
   let package_node = get_package_declaration_node(&entity_ts_file)
     .ok_or_else(|| "Unable to get entity's package node".to_string())?;
@@ -83,11 +83,12 @@ fn get_entity_package_name(entity_file_path: &Path) -> Result<String, String> {
 fn parse_entity_file(
   entity_file_b64_src: Option<&str>,
   entity_file_path: Option<&Path>,
+  cwd: &Path,
 ) -> Result<TSFile, String> {
   if let Some(b64_src) = entity_file_b64_src {
     Ok(TSFile::from_base64_source_code(b64_src, SupportedLanguage::Java))
   } else if let Some(f_path) = entity_file_path {
-    TSFile::from_file(f_path, SupportedLanguage::Java)
+    TSFile::from_file(f_path, cwd, SupportedLanguage::Java)
       .map_err(|_| "Unable to parse Entity file".to_string())
   } else {
     Err("Unable to parse Entity file".to_string())
@@ -124,6 +125,7 @@ fn build_import_map(
   target_entity_type: &str,
   target_entity_file_path: &Path,
   annotation_config: &AnnotationConfig,
+  cwd: &Path,
 ) -> Result<HashMap<String, String>, String> {
   let mut import_map = HashMap::new();
 
@@ -157,7 +159,7 @@ fn build_import_map(
   }
 
   // Add target entity import
-  let target_entity_package = get_entity_package_name(target_entity_file_path)?;
+  let target_entity_package = get_entity_package_name(target_entity_file_path, cwd)?;
   add_to_import_map(&mut import_map, &target_entity_package, target_entity_type);
 
   Ok(import_map)
@@ -349,8 +351,10 @@ fn process_inverse_side_entity(
 }
 
 fn process_entity_side(params: ProcessEntitySideParams) -> Result<FileResponse, String> {
+  let cwd = params.cwd.unwrap();
   // Step 1: Parse entity file
-  let mut entity_ts_file = parse_entity_file(params.entity_file_b64_src, params.entity_file_path)?;
+  let mut entity_ts_file =
+    parse_entity_file(params.entity_file_b64_src, params.entity_file_path, cwd)?;
   // Step 2: Build annotation config
   let annotation_config = build_annotation_config(
     params.field_config,
@@ -362,6 +366,7 @@ fn process_entity_side(params: ProcessEntitySideParams) -> Result<FileResponse, 
     params.target_entity_type,
     params.target_entity_file_path,
     &annotation_config,
+    cwd,
   )?;
   // Step 4: Add relationship field and annotations
   add_relationship_field_and_annotations(
@@ -389,7 +394,8 @@ pub fn run(
   // Step 1: Find inverse entity by class name
   let inverse_entity_file_path = find_inverse_entity(cwd, &field_config.inverse_field_type)?;
   // Step 2: Extract owning entity class name for inverse side
-  let owning_entity_class_name = extract_owning_entity_class_name(owning_side_entity_file_path)?;
+  let owning_entity_class_name =
+    extract_owning_entity_class_name(owning_side_entity_file_path, cwd)?;
   // Step 3: Process owning side entity (ManyToOne side)
   let owning_response = process_owning_side_entity(
     cwd,
