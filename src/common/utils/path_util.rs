@@ -41,7 +41,7 @@ pub fn parse_all_files(cwd: &Path, source_directory_type: &JavaSourceDirectoryTy
       let path = entry.path();
       if let Some(ext) = path.extension()
         && ext.to_string_lossy().eq_ignore_ascii_case(extension)
-        && let Ok(ts_file) = TSFile::from_file(path, SupportedLanguage::Java)
+        && let Ok(ts_file) = TSFile::from_file(path, cwd, SupportedLanguage::Java)
       {
         files.push(ts_file);
       }

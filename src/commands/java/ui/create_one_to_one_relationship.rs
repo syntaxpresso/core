@@ -130,7 +130,7 @@ impl CreateOneToOneRelationshipForm {
   ) -> Self {
     // Fetch current entity info
     let (current_entity_name, current_entity_package) =
-      Self::fetch_current_entity_info(&entity_file_path, &entity_file_b64_src);
+      Self::fetch_current_entity_info(&cwd, &entity_file_path, &entity_file_b64_src);
 
     // Fetch all JPA entities and filter out the current one
     let entity_types =
@@ -192,10 +192,11 @@ impl CreateOneToOneRelationshipForm {
 
   /// Fetch current entity information
   fn fetch_current_entity_info(
+    cwd: &Path,
     entity_file_path: &Path,
     entity_file_b64_src: &str,
   ) -> (String, String) {
-    match get_jpa_entity_info_service::run(Some(entity_file_path), Some(entity_file_b64_src)) {
+    match get_jpa_entity_info_service::run(Some(entity_file_path), Some(entity_file_b64_src), cwd) {
       Ok(entity_info) => (entity_info.entity_type, entity_info.entity_package_name),
       Err(_) => {
         // Fallback to unknown if service fails

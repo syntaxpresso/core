@@ -214,9 +214,10 @@ fn get_package_for_type(type_name: &str) -> String {
 fn create_ts_file(
   entity_file_path: Option<&Path>,
   b64_source_code: Option<&str>,
+  cwd: &Path,
 ) -> Result<TSFile, String> {
   if let Some(path) = entity_file_path {
-    Ok(TSFile::from_file(path, SupportedLanguage::Java).map_err(|e| e.to_string())?)
+    Ok(TSFile::from_file(path, cwd, SupportedLanguage::Java).map_err(|e| e.to_string())?)
   } else if let Some(b64) = b64_source_code {
     let bytes = decode_base64_to_bytes(b64)?;
     let source = bytes_to_string(&bytes)?;
@@ -249,9 +250,10 @@ fn get_entity_table_name(ts_file: &TSFile, class_declaration_node: &Node) -> Opt
 pub fn run(
   entity_file_path: Option<&Path>,
   b64_source_code: Option<&str>,
+  cwd: &Path,
 ) -> Result<GetJpaEntityInfoResponse, String> {
   // Step 1: Create TSFile
-  let ts_file = create_ts_file(entity_file_path, b64_source_code)?;
+  let ts_file = create_ts_file(entity_file_path, b64_source_code, cwd)?;
   // Step 2: Get public class node
   let public_class_node = get_public_class_node(&ts_file)?;
   // Step 3: Check if class is JPA entity

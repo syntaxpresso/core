@@ -92,7 +92,7 @@ fn create_and_extend_jpa_repository(
     create_repository_file(cwd, entity_ts_file, entity_file_path)?;
   let jpa_repository_path = PathBuf::from(&create_repository_file_response.file_path);
   let mut jpa_repository_ts_file =
-    TSFile::from_file(jpa_repository_path.as_path(), SupportedLanguage::Java)
+    TSFile::from_file(jpa_repository_path.as_path(), cwd, SupportedLanguage::Java)
       .map_err(|e| format!("Unable to parse newly created repository file: {}", e))?;
   extend_jpa_repository(
     &mut jpa_repository_ts_file,
@@ -142,8 +142,9 @@ fn extend_jpa_repository(
 fn step_get_jpa_entity_info(
   entity_file_path: Option<&Path>,
   b64_source_code: Option<&str>,
+  cwd: &Path,
 ) -> Result<GetJpaEntityInfoResponse, String> {
-  get_jpa_entity_info_service::run(entity_file_path, b64_source_code)
+  get_jpa_entity_info_service::run(entity_file_path, b64_source_code, cwd)
 }
 
 fn step_process_entity_without_superclass(
@@ -244,7 +245,7 @@ pub fn run_with_manual_id(
   let jpa_repository_path = PathBuf::from(&create_repository_file_response.file_path);
   // Step 4: Parse and extend repository file
   let mut jpa_repository_ts_file =
-    TSFile::from_file(jpa_repository_path.as_path(), SupportedLanguage::Java)
+    TSFile::from_file(jpa_repository_path.as_path(), cwd, SupportedLanguage::Java)
       .map_err(|e| format!("Unable to parse newly created repository file: {}", e))?;
   extend_jpa_repository(
     &mut jpa_repository_ts_file,
@@ -274,7 +275,7 @@ pub fn run(
 
   if b64_superclass_source.is_none() {
     // Step 3: Get JPA entity info from entity file
-    let jpa_entity_info = step_get_jpa_entity_info(Some(entity_file_path), None)?;
+    let jpa_entity_info = step_get_jpa_entity_info(Some(entity_file_path), None, cwd)?;
     // Step 4: Process entity without superclass
     step_process_entity_without_superclass(
       cwd,
@@ -285,7 +286,7 @@ pub fn run(
     )
   } else {
     // Step 3: Get JPA entity info from superclass source
-    let jpa_entity_info = step_get_jpa_entity_info(None, b64_superclass_source)?;
+    let jpa_entity_info = step_get_jpa_entity_info(None, b64_superclass_source, cwd)?;
     // Step 4: Process entity with superclass
     step_process_entity_with_superclass(
       cwd,

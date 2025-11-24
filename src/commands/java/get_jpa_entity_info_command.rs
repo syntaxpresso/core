@@ -27,7 +27,7 @@ pub fn execute(
     }
   }
 
-  match run(entity_file_path, b64_source_code) {
+  match run(entity_file_path, b64_source_code, cwd) {
     Ok(response) => Response::success(cmd_name, cwd_string, response),
     Err(error_msg) => Response::error(cmd_name, cwd_string, error_msg),
   }
