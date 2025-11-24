@@ -354,64 +354,73 @@ The core is compiled in two variants to support different integration approaches
 - Need both programmatic CLI access AND interactive forms
 - Want ready-to-use TUI without implementing your own interface
 
-# Features & Command Reference
+# Features & Capabilities
 
-All commands are now namespaced by language. Use `syntaxpresso-core java <command>` for Java operations.
+Syntaxpresso Core provides language-specific tooling for code generation and manipulation. Each language module implements capabilities tailored to its ecosystem.
 
-### Discovery & Information Commands
+## Core Capabilities
 
-- **`java get-all-jpa-entities`**: Scans project for all JPA entity classes (annotated with `@Entity`)
-- **`java get-all-jpa-mapped-superclasses`**: Finds all JPA mapped superclasses (annotated with `@MappedSuperclass`)
-- **`java get-jpa-entity-info`**: Extracts detailed metadata from an entity (fields, relationships, annotations)
-- **`java get-all-packages`**: Lists all Java package names in the project by scanning directory structure
-- **`java get-java-basic-types`**: Returns supported Java basic field types, optionally filtered for ID types
-- **`java get-java-files`**: Lists Java files by type (class, interface, enum, etc.)
+All language modules provide:
 
-### File Generation Commands
+- **Discovery**: Scan projects for language-specific constructs (classes, entities, modules, types)
+- **File Generation**: Create files (classes, interfaces, enums, types, etc.)
+- **Code Manipulation**: Add/modify fields, methods, and properties in existing code
+- **Relationship Management**: Establish connections between types/entities
+- **Interactive UI**: Terminal forms for guided generation (UI-enabled binary)
 
-- **`java create-jpa-entity`**: Generates a new JPA entity class with package declaration and `@Entity` annotation
-- **`java create-java-file`**: Creates basic Java files (classes, interfaces, enums, records, annotations)
-- **`java create-jpa-repository`**: Generates Spring Data JPA repository interfaces extending `JpaRepository<Entity, ID>`
+## Currently Supported: Java
 
-### Field Generation Commands
+The Java module provides comprehensive JPA/Spring tooling.
 
-- **`java create-jpa-entity-basic-field`**: Adds basic fields to entities with JPA column annotations
-- **`java create-jpa-entity-id-field`**: Creates ID fields with generation strategies (AUTO, IDENTITY, SEQUENCE, UUID)
-- **`java create-jpa-entity-enum-field`**: Adds enum fields with `@Enumerated` annotation and mapping type
-
-### Relationship Management Commands
-
-- **`java create-jpa-one-to-one-relationship`**: Establishes bidirectional one-to-one entity relationships
-- **`java create-jpa-many-to-one-relationship`**: Creates many-to-one relationships with cascade and fetch type options
-
-### UI Commands (UI-enabled binary only, `--features ui`)
-
-The UI-enabled binary includes interactive terminal forms for common operations. UI commands use the `-ui` suffix:
-
-- **`java create-java-file-ui`**: Interactive form to create Java files
-- **`java create-jpa-entity-ui`**: Interactive form to create JPA entities
-- **`java create-jpa-entity-basic-field-ui`**: Interactive form to add fields to entities
-- **`java create-jpa-one-to-one-relationship-ui`**: Interactive form to create entity relationships
-- **`java create-jpa-repository-ui`**: Interactive form to create JPA repositories
-
-**Example Usage:**
+### Command Pattern
 
 ```bash
-# Launch interactive UI for creating a Java file
-./syntaxpresso-core java create-java-file-ui --cwd /path/to/project
-
-# Launch UI to add a field to an entity
-./syntaxpresso-core java create-jpa-entity-basic-field-ui \
-  --cwd /path/to/project \
-  --entity-file-path /path/to/User.java \
-  --entity-file-b64-src <base64-encoded-source>
-
-# Launch UI to create a JPA repository for an entity
-./syntaxpresso-core java create-jpa-repository-ui \
-  --cwd /path/to/project \
-  --entity-file-path /path/to/User.java \
-  --entity-file-b64-src <base64-encoded-source>
+syntaxpresso-core java <command> [args]
 ```
+
+### Available Commands
+
+**Discovery & Information:**
+
+- `get-all-jpa-entities` - Scan for JPA entities (`@Entity`)
+- `get-all-jpa-mapped-superclasses` - Find mapped superclasses (`@MappedSuperclass`)
+- `get-jpa-entity-info` - Extract entity metadata (fields, relationships, annotations)
+- `get-all-packages` - List Java package names
+- `get-java-basic-types` - Get supported field types (optionally filtered for ID types)
+- `get-java-files` - List Java files by type (class, interface, enum, etc.)
+
+**File Generation:**
+
+- `create-jpa-entity` - Generate JPA entity classes with `@Entity` annotation
+- `create-java-file` - Create classes, interfaces, enums, records, annotations
+- `create-jpa-repository` - Generate Spring Data JPA repositories extending `JpaRepository<Entity, ID>`
+
+**Field & Relationship Management:**
+
+- `create-jpa-entity-basic-field` - Add basic fields with JPA column annotations
+- `create-jpa-entity-id-field` - Create ID fields with generation strategies (AUTO, IDENTITY, SEQUENCE, UUID)
+- `create-jpa-entity-enum-field` - Add enum fields with `@Enumerated` annotation
+- `create-jpa-one-to-one-relationship` - Establish bidirectional one-to-one relationships
+- `create-jpa-many-to-one-relationship` - Create many-to-one relationships with cascade/fetch options
+
+**Interactive UI** (UI-enabled binary only):
+
+- `create-java-file-ui` - Interactive form to create Java files
+- `create-jpa-entity-ui` - Interactive form to create JPA entities
+- `create-jpa-entity-basic-field-ui` - Interactive form to add fields
+- `create-jpa-one-to-one-relationship-ui` - Interactive form for relationships
+- `create-jpa-repository-ui` - Interactive form to create repositories
+
+For detailed usage: `syntaxpresso-core java <command> --help`
+
+## Roadmap: Additional Languages
+
+- **Python**: Class/module generation, type hints, dataclasses
+- **TypeScript**: Interface/type generation, React components
+- **Go**: Struct/interface generation
+- **Rust**: Struct/enum/trait generation
+
+> **Note**: The architecture is designed to easily add new languages. Each language module follows the same patterns established by the Java implementation.
 
 ## Installation for Developers
 
