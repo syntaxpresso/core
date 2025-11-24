@@ -13,6 +13,7 @@ use crate::commands::java::treesitter::types::java_basic_types::FieldInsertionPo
 use crate::commands::java::treesitter::types::java_field_temporal::JavaFieldTemporal;
 use crate::commands::java::treesitter::types::java_field_time_zone_storage::JavaFieldTimeZoneStorage;
 use crate::commands::java::treesitter::types::java_visibility_modifier::JavaVisibilityModifier;
+use crate::common::supported_language::SupportedLanguage;
 use crate::common::ts_file::TSFile;
 use crate::common::utils::case_util::{self, CaseType};
 use std::collections::{HashMap, HashSet};
@@ -201,7 +202,8 @@ pub fn run(
   // Step 1: Process field config
   let processed_field_config = process_field_config(field_config);
   // Step 2: Parse entity file
-  let mut entity_ts_file = TSFile::from_base64_source_code(entity_file_b64_src);
+  let mut entity_ts_file =
+    TSFile::from_base64_source_code(entity_file_b64_src, SupportedLanguage::Java);
   // Step 3: Process imports
   let mut import_map: HashMap<String, String> = HashMap::new();
   process_imports(&mut import_map, &processed_field_config, field_config);

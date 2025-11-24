@@ -18,6 +18,7 @@ use crate::commands::java::treesitter::types::java_visibility_modifier::JavaVisi
 use crate::commands::java::treesitter::types::many_to_one_field_config::ManyToOneFieldConfig;
 use crate::commands::java::treesitter::types::mapping_type::MappingType;
 use crate::commands::java::treesitter::types::other_type::OtherType;
+use crate::common::supported_language::SupportedLanguage;
 use crate::common::ts_file::TSFile;
 use crate::common::utils::case_util::{self, CaseType};
 use crate::common::utils::path_util::parse_all_files;
@@ -60,7 +61,7 @@ fn find_inverse_entity(cwd: &Path, class_name: &str) -> Result<PathBuf, String> 
 }
 
 fn extract_owning_entity_class_name(file_path: &Path) -> Result<String, String> {
-  let ts_file = TSFile::from_file(file_path)
+  let ts_file = TSFile::from_file(file_path, SupportedLanguage::Java)
     .map_err(|_| "Unable to parse owning side entity file".to_string())?;
   ts_file
     .get_file_name_without_ext()
@@ -68,8 +69,8 @@ fn extract_owning_entity_class_name(file_path: &Path) -> Result<String, String> 
 }
 
 fn get_entity_package_name(entity_file_path: &Path) -> Result<String, String> {
-  let entity_ts_file =
-    TSFile::from_file(entity_file_path).map_err(|_| "Unable to parse entity file".to_string())?;
+  let entity_ts_file = TSFile::from_file(entity_file_path, SupportedLanguage::Java)
+    .map_err(|_| "Unable to parse entity file".to_string())?;
   let package_node = get_package_declaration_node(&entity_ts_file)
     .ok_or_else(|| "Unable to get entity's package node".to_string())?;
   let package_scope_node = get_package_scope_node(&entity_ts_file, package_node);
@@ -84,9 +85,10 @@ fn parse_entity_file(
   entity_file_path: Option<&Path>,
 ) -> Result<TSFile, String> {
   if let Some(b64_src) = entity_file_b64_src {
-    Ok(TSFile::from_base64_source_code(b64_src))
+    Ok(TSFile::from_base64_source_code(b64_src, SupportedLanguage::Java))
   } else if let Some(f_path) = entity_file_path {
-    TSFile::from_file(f_path).map_err(|_| "Unable to parse Entity file".to_string())
+    TSFile::from_file(f_path, SupportedLanguage::Java)
+      .map_err(|_| "Unable to parse Entity file".to_string())
   } else {
     Err("Unable to parse Entity file".to_string())
   }

@@ -1,10 +1,11 @@
 #[cfg(test)]
 mod interface_declaration_service_tests {
   use syntaxpresso_core::commands::java::treesitter::services::interface_declaration_service::*;
+  use syntaxpresso_core::common::supported_language::SupportedLanguage;
   use syntaxpresso_core::common::ts_file::TSFile;
 
   fn create_ts_file(content: &str) -> TSFile {
-    TSFile::from_source_code(content)
+    TSFile::from_source_code(content, SupportedLanguage::Java)
   }
 
   const SIMPLE_INTERFACE: &str = r#"

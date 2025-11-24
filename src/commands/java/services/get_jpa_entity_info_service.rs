@@ -18,6 +18,7 @@ use crate::commands::java::treesitter::services::package_declaration_service::{
 use crate::commands::java::treesitter::services::{
   annotation_service, class_declaration_service, field_declaration_service,
 };
+use crate::common::supported_language::SupportedLanguage;
 use crate::common::ts_file::TSFile;
 
 fn decode_base64_to_bytes(b64: &str) -> Result<Vec<u8>, String> {
@@ -215,11 +216,11 @@ fn create_ts_file(
   b64_source_code: Option<&str>,
 ) -> Result<TSFile, String> {
   if let Some(path) = entity_file_path {
-    Ok(TSFile::from_file(path).map_err(|e| e.to_string())?)
+    Ok(TSFile::from_file(path, SupportedLanguage::Java).map_err(|e| e.to_string())?)
   } else if let Some(b64) = b64_source_code {
     let bytes = decode_base64_to_bytes(b64)?;
     let source = bytes_to_string(&bytes)?;
-    Ok(TSFile::from_source_code(&source))
+    Ok(TSFile::from_source_code(&source, SupportedLanguage::Java))
   } else {
     Err("No source provided".to_string())
   }
