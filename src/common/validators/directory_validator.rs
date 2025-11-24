@@ -1,8 +1,9 @@
 use crate::common::utils::path_security_util::PathSecurityValidator;
 use std::path::PathBuf;
 
-/// Validates a file path with security checks to ensure it's within the specified base directory.
-/// This function prevents path traversal attacks and ensures files can only be accessed within allowed scope.
+/// Validates that a file path is contained within the specified base directory (cwd).
+/// This ensures all file operations stay within the user's chosen working directory,
+/// preventing accidental writes outside the project scope.
 ///
 /// # Arguments
 /// * `file_path` - The file path string to validate
@@ -10,30 +11,31 @@ use std::path::PathBuf;
 ///
 /// # Returns
 /// * `Ok(PathBuf)` - The canonicalized, validated file path
-/// * `Err(String)` - If the file path is invalid or outside the allowed scope
+/// * `Err(String)` - If the file path is invalid or outside the base directory
 ///
-/// # Security Features
-/// - Prevents path traversal attacks (e.g., "../../../etc/passwd")
-/// - Resolves symbolic links to prevent symlink attacks
-/// - Ensures file path stays within the specified base directory
-/// - Handles both existing and non-existent files
+/// # Validation Rules
+/// - File path must resolve to a location within the base directory
+/// - Resolves symbolic links to determine the actual file location
+/// - Works with both existing and non-existent file paths
+/// - Rejects paths that would escape the working directory (e.g., "../../outside")
 ///
 pub fn validate_file_path_within_base(
   file_path: &str,
   base_path: &std::path::Path,
 ) -> Result<PathBuf, String> {
   let path = PathBuf::from(file_path);
-  // Security validation - ensure the file path is within allowed scope
+  // Path containment validation - ensure the file path is within the cwd
   let validator = PathSecurityValidator::new(base_path)
-    .map_err(|e| format!("Security validation setup failed: {}", e))?;
+    .map_err(|e| format!("Path containment validation setup failed: {}", e))?;
   validator
     .validate_path_containment(&path)
-    .map_err(|e| format!("File path security validation failed: {}", e))
+    .map_err(|e| format!("File path must be within working directory: {}", e))
 }
 
-/// Validates that a directory exists and is accessible, without security restrictions.
+/// Validates that a directory exists and is accessible, without containment restrictions.
 /// This function is designed for the --cwd parameter to allow users to work on any project
-/// they have access to. Security validation happens WITHIN the chosen directory, not on the directory itself.
+/// they have access to. Path containment validation happens WITHIN the chosen directory,
+/// not on the directory selection itself.
 ///
 /// # Arguments
 /// * `s` - The directory path string to validate
@@ -42,9 +44,9 @@ pub fn validate_file_path_within_base(
 /// * `Ok(PathBuf)` - The canonicalized directory path
 /// * `Err(String)` - If the directory is invalid or doesn't exist
 ///
-/// # Security Philosophy
+/// # Design Philosophy
 /// - The --cwd parameter should accept any valid directory (user's project root)
-/// - Security restrictions apply to operations WITHIN the chosen cwd, not to the cwd selection itself
+/// - Path containment restrictions apply to operations WITHIN the chosen cwd, not to the cwd selection itself
 /// - Users should be able to work on projects anywhere they have filesystem access
 pub fn validate_directory_unrestricted(s: &str) -> Result<PathBuf, String> {
   let path = PathBuf::from(s);

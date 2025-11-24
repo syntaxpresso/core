@@ -1,26 +1,26 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// A security validator that ensures all file operations stay within a designated base directory.
-/// This prevents path traversal attacks and ensures files can only be created/modified within
-/// the allowed directory scope.
+/// A path validator that ensures all file operations stay within a designated base directory.
+/// This enforces path containment to keep operations within the user's chosen working directory,
+/// preventing accidental file modifications outside the project scope.
 #[derive(Debug)]
 pub struct PathSecurityValidator {
   base_path: PathBuf,
 }
 
-/// Security event types for audit logging
+/// Path validation event types for logging
 #[derive(Debug)]
 pub enum SecurityEvent {
   PathValidationSuccess { target_path: String, base_path: String },
   PathValidationFailure { target_path: String, base_path: String, reason: String },
-  PathTraversalAttempt { target_path: String, base_path: String },
+  PathOutsideBase { target_path: String, base_path: String },
   SymlinkDetected { target_path: String, resolved_path: String },
 }
 
-/// Log a security event to stderr for audit purposes
+/// Log a path validation event to stderr for tracking purposes
 /// This provides a simple audit trail without requiring external logging dependencies
-/// Note: Only logs failures and security concerns, not successful validations (to avoid noise)
+/// Note: Only logs failures and warnings, not successful validations (to avoid noise)
 fn log_security_event(event: &SecurityEvent) {
   let timestamp = std::time::SystemTime::now()
     .duration_since(std::time::UNIX_EPOCH)
@@ -29,23 +29,23 @@ fn log_security_event(event: &SecurityEvent) {
   match event {
     SecurityEvent::PathValidationSuccess { .. } => {
       // Don't log successful validations to avoid cluttering output
-      // Uncomment for debugging: eprintln!("[SECURITY] [{}] Path validation SUCCESS: '{}' within base '{}'", timestamp, target_path, base_path);
+      // Uncomment for debugging: eprintln!("[PATH] [{}] Path validation SUCCESS: '{}' within base '{}'", timestamp, target_path, base_path);
     }
     SecurityEvent::PathValidationFailure { target_path, base_path, reason } => {
       eprintln!(
-        "[SECURITY] [{}] Path validation FAILURE: '{}' within base '{}' - {}",
+        "[PATH] [{}] Path validation FAILURE: '{}' within base '{}' - {}",
         timestamp, target_path, base_path, reason
       );
     }
-    SecurityEvent::PathTraversalAttempt { target_path, base_path } => {
+    SecurityEvent::PathOutsideBase { target_path, base_path } => {
       eprintln!(
-        "[SECURITY] [{}] PATH TRAVERSAL ATTEMPT BLOCKED: '{}' outside base '{}'",
+        "[PATH] [{}] Path outside base directory: '{}' is not within '{}'",
         timestamp, target_path, base_path
       );
     }
     SecurityEvent::SymlinkDetected { target_path, resolved_path } => {
       eprintln!(
-        "[SECURITY] [{}] Symlink detected and resolved: '{}' -> '{}'",
+        "[PATH] [{}] Symlink detected and resolved: '{}' -> '{}'",
         timestamp, target_path, resolved_path
       );
     }
@@ -83,8 +83,8 @@ impl PathSecurityValidator {
   }
 
   /// Validates that a target path is contained within the base path.
-  /// This method prevents path traversal attacks by ensuring the resolved path
-  /// is within the allowed directory scope.
+  /// This ensures the resolved path stays within the working directory,
+  /// preventing accidental file operations outside the project scope.
   ///
   /// # Arguments
   /// * `target_path` - The path to validate for containment
@@ -93,11 +93,11 @@ impl PathSecurityValidator {
   /// * `Ok(PathBuf)` - The canonicalized path if it's within the base directory
   /// * `Err(String)` - If the path is outside the base directory or invalid
   ///
-  /// # Security Features
-  /// - Resolves symbolic links to prevent symlink attacks
+  /// # Validation Rules
+  /// - Resolves symbolic links to determine the actual file location
   /// - Handles both existing and non-existing paths
-  /// - Prevents directory traversal with `../` sequences
-  /// - Blocks absolute paths that escape the base directory
+  /// - Rejects paths with `../` sequences that escape the base directory
+  /// - Rejects absolute paths that are outside the base directory
   ///
   /// # Examples
   /// ```
@@ -120,7 +120,7 @@ impl PathSecurityValidator {
           .to_path_buf()
       } else {
         return Err(format!(
-          "Absolute path '{}' is outside allowed directory '{}'",
+          "Absolute path '{}' is outside working directory '{}'",
           target_path.display(),
           self.base_path.display()
         ));
@@ -142,13 +142,13 @@ impl PathSecurityValidator {
     };
     // Verify containment after canonicalization
     if !canonical_target.starts_with(&self.base_path) {
-      let event = SecurityEvent::PathTraversalAttempt {
+      let event = SecurityEvent::PathOutsideBase {
         target_path: target_path.display().to_string(),
         base_path: self.base_path.display().to_string(),
       };
       log_security_event(&event);
       return Err(format!(
-        "Path traversal detected: '{}' resolves to '{}' which is outside allowed directory '{}'",
+        "Path escapes working directory: '{}' resolves to '{}' which is outside '{}'",
         target_path.display(),
         canonical_target.display(),
         self.base_path.display()
@@ -163,7 +163,7 @@ impl PathSecurityValidator {
     Ok(canonical_target)
   }
 
-  /// Validates that a path intended for directory creation is safe.
+  /// Validates that a path intended for directory creation is within the base directory.
   /// This is a specialized version of path validation for directory operations.
   pub fn validate_directory_creation(&self, target_path: &Path) -> Result<PathBuf, String> {
     let validated_path = self.validate_path_containment(target_path)?;

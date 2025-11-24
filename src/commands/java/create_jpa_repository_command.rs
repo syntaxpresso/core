@@ -18,13 +18,13 @@ pub fn execute(
 ) -> Response<CreateJPARepositoryResponse> {
   let cwd_string = cwd.display().to_string();
   let cmd_name = String::from("create-jpa-repository");
-  // Security validation: ensure entity file path is within the cwd
+  // Path containment validation: ensure entity file path is within the cwd
   let file_path_str = entity_file_path.display().to_string();
   if let Err(error_msg) = validate_file_path_within_base(&file_path_str, cwd) {
     return Response::error(
       cmd_name,
       cwd_string,
-      format!("Entity file path security validation failed: {}", error_msg),
+      format!("Entity file path must be within working directory: {}", error_msg),
     );
   }
 
@@ -45,13 +45,13 @@ pub fn execute_with_manual_id(
 ) -> Response<FileResponse> {
   let cwd_string = cwd.display().to_string();
   let cmd_name = String::from("create-jpa-repository-manual");
-  // Security validation: ensure entity file path is within the cwd
+  // Path containment validation: ensure entity file path is within the cwd
   let file_path_str = entity_file_path.display().to_string();
   if let Err(error_msg) = validate_file_path_within_base(&file_path_str, cwd) {
     return Response::error(
       cmd_name,
       cwd_string,
-      format!("Entity file path security validation failed: {}", error_msg),
+      format!("Entity file path must be within working directory: {}", error_msg),
     );
   }
 

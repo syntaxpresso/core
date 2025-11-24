@@ -202,7 +202,7 @@ mod path_security_attack_tests {
 
     let result = validator.validate_path_containment(Path::new("../root_file.txt"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 
   #[test]
@@ -212,7 +212,7 @@ mod path_security_attack_tests {
 
     let result = validator.validate_path_containment(Path::new("../../root_file.txt"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 
   #[test]
@@ -222,7 +222,7 @@ mod path_security_attack_tests {
 
     let result = validator.validate_path_containment(Path::new("/etc/passwd"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 
   #[test]
@@ -232,7 +232,7 @@ mod path_security_attack_tests {
 
     let result = validator.validate_path_containment(Path::new("nested/../../root_file.txt"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 
   #[test]
@@ -261,7 +261,7 @@ mod path_security_attack_tests {
     for path in malicious_paths {
       let result = validator.validate_path_containment(Path::new(path));
       assert!(result.is_err(), "Path should be rejected: {}", path);
-      assert!(result.unwrap_err().contains("outside allowed directory"));
+      assert!(result.unwrap_err().contains("outside"));
     }
   }
 
@@ -314,7 +314,7 @@ mod path_security_attack_tests {
 
     let result = validator.validate_path_containment(Path::new("../../../root_file.txt"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 }
 
@@ -340,7 +340,7 @@ mod path_security_symlink_tests {
 
     let result = validator.validate_path_containment(Path::new("src/malicious_symlink.txt"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 
   #[test]
@@ -440,7 +440,7 @@ mod path_security_directory_tests {
 
     let result = validator.validate_directory_creation(Path::new("../malicious_dir"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 
   #[test]
@@ -475,7 +475,7 @@ mod path_security_convenience_tests {
 
     let result = validate_path_within_base(&base_path, Path::new("../root_file.txt"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 
   #[test]
@@ -485,7 +485,7 @@ mod path_security_convenience_tests {
 
     let result = validate_path_within_base(base_path, Path::new("/etc/passwd"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 
   #[test]
@@ -507,7 +507,7 @@ mod path_security_convenience_tests {
 
     let result = validate_directory_creation_within_base(&base_path, Path::new("../malicious_dir"));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("outside allowed directory"));
+    assert!(result.unwrap_err().contains("outside"));
   }
 
   #[test]

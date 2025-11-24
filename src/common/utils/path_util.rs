@@ -41,7 +41,7 @@ pub fn parse_all_files(cwd: &Path, source_directory_type: &JavaSourceDirectoryTy
       let path = entry.path();
       if let Some(ext) = path.extension()
         && ext.to_string_lossy().eq_ignore_ascii_case(extension)
-        && let Ok(ts_file) = TSFile::from_file(path, SupportedLanguage::Java)
+        && let Ok(ts_file) = TSFile::from_file(path, cwd, SupportedLanguage::Java)
       {
         files.push(ts_file);
       }
@@ -66,9 +66,9 @@ pub fn parse_all_files(cwd: &Path, source_directory_type: &JavaSourceDirectoryTy
 /// # Returns
 /// A `Result<PathBuf, String>` containing the resolved package directory path, or an error message
 ///
-/// # Security Features
+/// # Path Validation
 /// - Validates that the resolved path stays within the root directory
-/// - Prevents path traversal attacks through package names
+/// - Rejects package names that would escape the project structure
 /// - Ensures directory creation is safe and contained
 ///
 /// # Examples
