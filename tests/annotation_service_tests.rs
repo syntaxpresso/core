@@ -2,10 +2,11 @@
 mod annotation_service_tests {
   use syntaxpresso_core::commands::java::treesitter::services::annotation_service::*;
   use syntaxpresso_core::commands::java::treesitter::types::annotation_types::AnnotationInsertionPosition;
+  use syntaxpresso_core::common::supported_language::SupportedLanguage;
   use syntaxpresso_core::common::ts_file::TSFile;
 
   fn create_ts_file(content: &str) -> TSFile {
-    TSFile::from_source_code(content)
+    TSFile::from_source_code(content, SupportedLanguage::Java)
   }
 
   const SIMPLE_JAVA_CLASS: &str = "@Entity\npublic class User {\n    @Id\n    private Long id;\n}";
@@ -279,7 +280,7 @@ public class User {
 
   #[test]
   fn test_get_all_annotation_nodes_no_tree() {
-    let mut ts_file_no_tree = TSFile::from_source_code("");
+    let mut ts_file_no_tree = TSFile::from_source_code("", SupportedLanguage::Java);
     ts_file_no_tree.tree = None;
 
     let ts_file = create_ts_file("public class Test {}");

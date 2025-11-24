@@ -12,6 +12,7 @@ use crate::commands::java::treesitter::types::import_types::ImportInsertionPosit
 use crate::commands::java::treesitter::types::java_basic_types::FieldInsertionPosition;
 use crate::commands::java::treesitter::types::java_enum_type::JavaEnumType;
 use crate::commands::java::treesitter::types::java_visibility_modifier::JavaVisibilityModifier;
+use crate::common::supported_language::SupportedLanguage;
 use crate::common::ts_file::TSFile;
 use crate::common::utils::case_util::{self, CaseType};
 use std::collections::HashMap;
@@ -115,7 +116,8 @@ pub fn run(
   field_config: EnumFieldConfig,
 ) -> Result<FileResponse, String> {
   // Step 1: Parse the entity file
-  let mut entity_ts_file = TSFile::from_base64_source_code(entity_file_b64_src);
+  let mut entity_ts_file =
+    TSFile::from_base64_source_code(entity_file_b64_src, SupportedLanguage::Java);
   // Step 2: Prepare import map for required imports
   let mut import_map = HashMap::new();
   // Step 3: Add field and annotations to the entity

@@ -13,6 +13,7 @@ use crate::commands::java::treesitter::types::java_basic_types::FieldInsertionPo
 use crate::commands::java::treesitter::types::java_id_generation::JavaIdGeneration;
 use crate::commands::java::treesitter::types::java_id_generation_type::JavaIdGenerationType;
 use crate::commands::java::treesitter::types::java_visibility_modifier::JavaVisibilityModifier;
+use crate::common::supported_language::SupportedLanguage;
 use crate::common::ts_file::TSFile;
 use crate::common::utils::case_util::{self, CaseType};
 use std::collections::HashMap;
@@ -169,7 +170,8 @@ pub fn run(
   field_config: IdFieldConfig,
 ) -> Result<FileResponse, String> {
   // Step 1: Parse the entity file
-  let mut entity_ts_file = TSFile::from_base64_source_code(entity_file_b64_src);
+  let mut entity_ts_file =
+    TSFile::from_base64_source_code(entity_file_b64_src, SupportedLanguage::Java);
   // Step 2: Prepare import map for required imports
   let mut import_map = HashMap::new();
   // Step 3: Add field and annotations to the entity
