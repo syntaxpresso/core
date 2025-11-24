@@ -2,6 +2,7 @@
 // This module contains comprehensive tests for all package declaration service functions
 
 use syntaxpresso_core::commands::java::treesitter::services::package_declaration_service::*;
+use syntaxpresso_core::common::supported_language::SupportedLanguage;
 use syntaxpresso_core::common::ts_file::TSFile;
 
 #[cfg(test)]
@@ -14,7 +15,10 @@ mod package_declaration_tests {
 
     #[test]
     fn test_valid_multi_component_package() {
-      let ts_file = TSFile::from_source_code("package com.example.myapp;\n\npublic class Test {}");
+      let ts_file = TSFile::from_source_code(
+        "package com.example.myapp;\n\npublic class Test {}",
+        SupportedLanguage::Java,
+      );
       let result = get_package_declaration_node(&ts_file);
 
       assert!(result.is_some(), "Should find package declaration node");
@@ -28,7 +32,8 @@ mod package_declaration_tests {
 
     #[test]
     fn test_valid_single_component_package() {
-      let ts_file = TSFile::from_source_code("package myapp;\n\npublic class Test {}");
+      let ts_file =
+        TSFile::from_source_code("package myapp;\n\npublic class Test {}", SupportedLanguage::Java);
       let result = get_package_declaration_node(&ts_file);
 
       assert!(result.is_some(), "Should find single component package declaration");
@@ -39,7 +44,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_no_package_declaration() {
-      let ts_file = TSFile::from_source_code("public class Test {}");
+      let ts_file = TSFile::from_source_code("public class Test {}", SupportedLanguage::Java);
       let result = get_package_declaration_node(&ts_file);
 
       assert!(result.is_none(), "Should return None when no package declaration exists");
@@ -47,7 +52,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_empty_file() {
-      let ts_file = TSFile::from_source_code("");
+      let ts_file = TSFile::from_source_code("", SupportedLanguage::Java);
       let result = get_package_declaration_node(&ts_file);
 
       assert!(result.is_none(), "Should return None for empty file");
@@ -55,8 +60,10 @@ mod package_declaration_tests {
 
     #[test]
     fn test_package_with_whitespace() {
-      let ts_file =
-        TSFile::from_source_code("   package    com.example.myapp   ;\n\npublic class Test {}");
+      let ts_file = TSFile::from_source_code(
+        "   package    com.example.myapp   ;\n\npublic class Test {}",
+        SupportedLanguage::Java,
+      );
       let result = get_package_declaration_node(&ts_file);
 
       assert!(result.is_some(), "Should handle whitespace around package declaration");
@@ -75,6 +82,7 @@ mod package_declaration_tests {
                 // Some comment
                 public class Test {}
             "#,
+        SupportedLanguage::Java,
       );
 
       let result = get_package_declaration_node(&ts_file);
@@ -83,8 +91,10 @@ mod package_declaration_tests {
 
     #[test]
     fn test_deep_nested_package() {
-      let ts_file =
-        TSFile::from_source_code("package com.company.project.module.submodule.feature;");
+      let ts_file = TSFile::from_source_code(
+        "package com.company.project.module.submodule.feature;",
+        SupportedLanguage::Java,
+      );
       let result = get_package_declaration_node(&ts_file);
 
       assert!(result.is_some(), "Should handle deeply nested package declarations");
@@ -98,7 +108,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_invalid_java_syntax() {
-      let ts_file = TSFile::from_source_code("invalid java syntax here");
+      let ts_file = TSFile::from_source_code("invalid java syntax here", SupportedLanguage::Java);
       let result = get_package_declaration_node(&ts_file);
 
       assert!(result.is_none(), "Should return None for invalid Java syntax");
@@ -111,7 +121,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_multi_component_package_class_name() {
-      let ts_file = TSFile::from_source_code("package com.example.myapp;");
+      let ts_file = TSFile::from_source_code("package com.example.myapp;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_name_node(&ts_file, package_node);
 
@@ -123,8 +133,10 @@ mod package_declaration_tests {
 
     #[test]
     fn test_deep_nested_package_class_name() {
-      let ts_file =
-        TSFile::from_source_code("package com.company.project.module.submodule.feature;");
+      let ts_file = TSFile::from_source_code(
+        "package com.company.project.module.submodule.feature;",
+        SupportedLanguage::Java,
+      );
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_name_node(&ts_file, package_node);
 
@@ -136,7 +148,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_single_component_package_class_name() {
-      let ts_file = TSFile::from_source_code("package myapp;");
+      let ts_file = TSFile::from_source_code("package myapp;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_name_node(&ts_file, package_node);
 
@@ -147,7 +159,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_two_component_package_class_name() {
-      let ts_file = TSFile::from_source_code("package com.myapp;");
+      let ts_file = TSFile::from_source_code("package com.myapp;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_name_node(&ts_file, package_node);
 
@@ -159,7 +171,8 @@ mod package_declaration_tests {
 
     #[test]
     fn test_class_name_with_whitespace() {
-      let ts_file = TSFile::from_source_code("package   com.example.myapp   ;");
+      let ts_file =
+        TSFile::from_source_code("package   com.example.myapp   ;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_name_node(&ts_file, package_node);
 
@@ -176,7 +189,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_multi_component_package_scope() {
-      let ts_file = TSFile::from_source_code("package com.example.myapp;");
+      let ts_file = TSFile::from_source_code("package com.example.myapp;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_scope_node(&ts_file, package_node);
 
@@ -188,8 +201,10 @@ mod package_declaration_tests {
 
     #[test]
     fn test_deep_nested_package_scope() {
-      let ts_file =
-        TSFile::from_source_code("package com.company.project.module.submodule.feature;");
+      let ts_file = TSFile::from_source_code(
+        "package com.company.project.module.submodule.feature;",
+        SupportedLanguage::Java,
+      );
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_scope_node(&ts_file, package_node);
 
@@ -204,7 +219,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_two_component_package_scope() {
-      let ts_file = TSFile::from_source_code("package com.myapp;");
+      let ts_file = TSFile::from_source_code("package com.myapp;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_scope_node(&ts_file, package_node);
 
@@ -216,7 +231,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_single_component_package_scope() {
-      let ts_file = TSFile::from_source_code("package myapp;");
+      let ts_file = TSFile::from_source_code("package myapp;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_scope_node(&ts_file, package_node);
 
@@ -226,7 +241,8 @@ mod package_declaration_tests {
 
     #[test]
     fn test_scope_with_whitespace() {
-      let ts_file = TSFile::from_source_code("package   com.example.myapp   ;");
+      let ts_file =
+        TSFile::from_source_code("package   com.example.myapp   ;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_class_scope_node(&ts_file, package_node);
 
@@ -243,7 +259,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_complete_multi_component_identifier() {
-      let ts_file = TSFile::from_source_code("package com.example.myapp;");
+      let ts_file = TSFile::from_source_code("package com.example.myapp;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_scope_node(&ts_file, package_node);
 
@@ -255,8 +271,10 @@ mod package_declaration_tests {
 
     #[test]
     fn test_complete_deep_nested_identifier() {
-      let ts_file =
-        TSFile::from_source_code("package com.company.project.module.submodule.feature;");
+      let ts_file = TSFile::from_source_code(
+        "package com.company.project.module.submodule.feature;",
+        SupportedLanguage::Java,
+      );
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_scope_node(&ts_file, package_node);
 
@@ -271,7 +289,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_complete_two_component_identifier() {
-      let ts_file = TSFile::from_source_code("package com.myapp;");
+      let ts_file = TSFile::from_source_code("package com.myapp;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_scope_node(&ts_file, package_node);
 
@@ -283,7 +301,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_single_component_identifier() {
-      let ts_file = TSFile::from_source_code("package myapp;");
+      let ts_file = TSFile::from_source_code("package myapp;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_scope_node(&ts_file, package_node);
 
@@ -299,7 +317,8 @@ mod package_declaration_tests {
 
     #[test]
     fn test_complete_identifier_with_whitespace() {
-      let ts_file = TSFile::from_source_code("package   com.example.myapp   ;");
+      let ts_file =
+        TSFile::from_source_code("package   com.example.myapp   ;", SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
       let result = get_package_scope_node(&ts_file, package_node);
 
@@ -316,8 +335,10 @@ mod package_declaration_tests {
 
     #[test]
     fn test_comprehensive_package_parsing() {
-      let ts_file =
-        TSFile::from_source_code("package com.company.project.myapp;\n\npublic class MyClass {}");
+      let ts_file = TSFile::from_source_code(
+        "package com.company.project.myapp;\n\npublic class MyClass {}",
+        SupportedLanguage::Java,
+      );
 
       // Get package declaration
       let package_node = get_package_declaration_node(&ts_file);
@@ -347,7 +368,7 @@ mod package_declaration_tests {
 
     #[test]
     fn test_minimal_valid_package() {
-      let ts_file = TSFile::from_source_code("package a.b;");
+      let ts_file = TSFile::from_source_code("package a.b;", SupportedLanguage::Java);
 
       let package_node = get_package_declaration_node(&ts_file);
       assert!(package_node.is_some(), "Should find minimal package declaration");
@@ -391,7 +412,7 @@ mod package_declaration_tests {
                 }
             "#;
 
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let package_node = get_package_declaration_node(&ts_file).unwrap();
 
       // Verify all parsing functions work with complex file
@@ -422,7 +443,7 @@ mod package_declaration_tests {
       ];
 
       for (code, description) in test_cases {
-        let ts_file = TSFile::from_source_code(code);
+        let ts_file = TSFile::from_source_code(code, SupportedLanguage::Java);
         let package_node = get_package_declaration_node(&ts_file);
 
         if package_node.is_none() {

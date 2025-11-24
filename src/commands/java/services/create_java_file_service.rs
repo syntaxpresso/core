@@ -8,6 +8,7 @@ use crate::{
     },
   },
   common::{
+    supported_language::SupportedLanguage,
     ts_file::TSFile,
     utils::{case_util, path_security_util::PathSecurityValidator},
   },
@@ -22,7 +23,7 @@ pub fn generate_file_template(
 }
 
 pub fn create_ts_file(file_template: &str) -> TSFile {
-  TSFile::from_source_code(file_template)
+  TSFile::from_source_code(file_template, SupportedLanguage::Java)
 }
 
 pub fn correct_java_file_name(file_name: &str) -> String {

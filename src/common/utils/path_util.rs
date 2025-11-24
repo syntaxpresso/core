@@ -7,7 +7,10 @@ use walkdir::WalkDir;
 
 use crate::{
   commands::java::treesitter::types::java_source_directory_type::JavaSourceDirectoryType,
-  common::{ts_file::TSFile, utils::path_security_util::PathSecurityValidator},
+  common::{
+    supported_language::SupportedLanguage, ts_file::TSFile,
+    utils::path_security_util::PathSecurityValidator,
+  },
 };
 
 /// Recursively searches for a directory with the given name within the root directory.
@@ -38,7 +41,7 @@ pub fn parse_all_files(cwd: &Path, source_directory_type: &JavaSourceDirectoryTy
       let path = entry.path();
       if let Some(ext) = path.extension()
         && ext.to_string_lossy().eq_ignore_ascii_case(extension)
-        && let Ok(ts_file) = TSFile::from_file(path)
+        && let Ok(ts_file) = TSFile::from_file(path, SupportedLanguage::Java)
       {
         files.push(ts_file);
       }

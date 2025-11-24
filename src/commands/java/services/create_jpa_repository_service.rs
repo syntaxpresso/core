@@ -15,6 +15,7 @@ use crate::commands::java::treesitter::services::package_declaration_service::{
 use crate::commands::java::treesitter::types::import_types::ImportInsertionPosition;
 use crate::commands::java::treesitter::types::java_file_type::JavaFileType;
 use crate::commands::java::treesitter::types::java_source_directory_type::JavaSourceDirectoryType;
+use crate::common::supported_language::SupportedLanguage;
 use crate::common::ts_file::TSFile;
 
 fn create_repository_file(
@@ -90,8 +91,9 @@ fn create_and_extend_jpa_repository(
   let create_repository_file_response =
     create_repository_file(cwd, entity_ts_file, entity_file_path)?;
   let jpa_repository_path = PathBuf::from(&create_repository_file_response.file_path);
-  let mut jpa_repository_ts_file = TSFile::from_file(jpa_repository_path.as_path())
-    .map_err(|e| format!("Unable to parse newly created repository file: {}", e))?;
+  let mut jpa_repository_ts_file =
+    TSFile::from_file(jpa_repository_path.as_path(), SupportedLanguage::Java)
+      .map_err(|e| format!("Unable to parse newly created repository file: {}", e))?;
   extend_jpa_repository(
     &mut jpa_repository_ts_file,
     entity_type,
@@ -229,7 +231,8 @@ pub fn run_with_manual_id(
   id_field_package_name: &str,
 ) -> Result<FileResponse, String> {
   // Step 1: Parse JPA Entity file
-  let entity_ts_file = TSFile::from_base64_source_code(entity_file_b64_src);
+  let entity_ts_file =
+    TSFile::from_base64_source_code(entity_file_b64_src, SupportedLanguage::Java);
   // Step 2: Extract entity type from file path
   let entity_type = entity_file_path
     .file_stem()
@@ -240,8 +243,9 @@ pub fn run_with_manual_id(
     create_repository_file(cwd, &entity_ts_file, entity_file_path)?;
   let jpa_repository_path = PathBuf::from(&create_repository_file_response.file_path);
   // Step 4: Parse and extend repository file
-  let mut jpa_repository_ts_file = TSFile::from_file(jpa_repository_path.as_path())
-    .map_err(|e| format!("Unable to parse newly created repository file: {}", e))?;
+  let mut jpa_repository_ts_file =
+    TSFile::from_file(jpa_repository_path.as_path(), SupportedLanguage::Java)
+      .map_err(|e| format!("Unable to parse newly created repository file: {}", e))?;
   extend_jpa_repository(
     &mut jpa_repository_ts_file,
     entity_type,
@@ -260,7 +264,8 @@ pub fn run(
   b64_superclass_source: Option<&str>,
 ) -> Result<CreateJPARepositoryResponse, String> {
   // Step 1: Parse JPA Entity file
-  let entity_ts_file = TSFile::from_base64_source_code(entity_file_b64_src);
+  let entity_ts_file =
+    TSFile::from_base64_source_code(entity_file_b64_src, SupportedLanguage::Java);
   // Step 2: Extract entity type from file path
   let entity_type = entity_file_path
     .file_stem()

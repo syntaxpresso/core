@@ -3,6 +3,7 @@
 
 use syntaxpresso_core::commands::java::treesitter::services::import_declaration_service::*;
 use syntaxpresso_core::commands::java::treesitter::types::import_types::ImportInsertionPosition;
+use syntaxpresso_core::common::supported_language::SupportedLanguage;
 use syntaxpresso_core::common::ts_file::TSFile;
 
 #[cfg(test)]
@@ -22,7 +23,7 @@ import java.util.List;
 
 public class Test {}
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       assert_eq!(imports.len(), 1, "Should find exactly one import declaration");
@@ -41,7 +42,7 @@ import com.example.service.MyService;
 
 public class Test {}
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       assert_eq!(imports.len(), 4, "Should find exactly four import declarations");
@@ -61,7 +62,7 @@ package com.example;
 
 public class Test {}
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       assert!(imports.is_empty(), "Should return empty vector when no imports exist");
@@ -76,7 +77,7 @@ import java.util.*;
 
 public class Test {}
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       assert_eq!(imports.len(), 1, "Should find wildcard import declaration");
@@ -93,7 +94,7 @@ import static java.util.Collections.*;
 
 public class Test {}
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       assert_eq!(imports.len(), 2, "Should find both static import declarations");
@@ -108,7 +109,7 @@ public class Test {}
 
     #[test]
     fn test_empty_file() {
-      let ts_file = TSFile::from_source_code("");
+      let ts_file = TSFile::from_source_code("", SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       assert!(imports.is_empty(), "Should return empty vector for empty file");
@@ -116,7 +117,7 @@ public class Test {}
 
     #[test]
     fn test_invalid_syntax() {
-      let ts_file = TSFile::from_source_code("invalid java syntax here");
+      let ts_file = TSFile::from_source_code("invalid java syntax here", SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       assert!(imports.is_empty(), "Should return empty vector for invalid syntax");
@@ -130,7 +131,7 @@ public class Test {}
     #[test]
     fn test_multi_component_import_scope() {
       let java_code = "import com.example.service.MyService;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
       assert!(!imports.is_empty(), "Should have at least one import");
 
@@ -146,7 +147,7 @@ public class Test {}
     #[test]
     fn test_deep_nested_import_scope() {
       let java_code = "import com.company.project.module.submodule.feature.MyClass;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
       assert!(!imports.is_empty(), "Should have at least one import");
 
@@ -163,7 +164,7 @@ public class Test {}
     #[test]
     fn test_single_component_import() {
       let java_code = "import MyClass;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       if !imports.is_empty() {
@@ -177,7 +178,7 @@ public class Test {}
     #[test]
     fn test_wildcard_import_scope() {
       let java_code = "import java.util.*;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
       assert!(!imports.is_empty(), "Should have wildcard import");
 
@@ -193,7 +194,7 @@ public class Test {}
     #[test]
     fn test_invalid_node_type() {
       let java_code = "package com.example;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let root = ts_file.tree.as_ref().unwrap().root_node();
 
       let result = get_import_declaration_relative_import_scope_node(&ts_file, root);
@@ -208,7 +209,7 @@ public class Test {}
     #[test]
     fn test_multi_component_import_class_name() {
       let java_code = "import com.example.service.MyService;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
       assert!(!imports.is_empty(), "Should have at least one import");
 
@@ -222,7 +223,7 @@ public class Test {}
     #[test]
     fn test_deep_nested_import_class_name() {
       let java_code = "import com.company.project.module.submodule.feature.MyClass;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
       assert!(!imports.is_empty(), "Should have at least one import");
 
@@ -236,7 +237,7 @@ public class Test {}
     #[test]
     fn test_two_component_import_class_name() {
       let java_code = "import java.List;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       if !imports.is_empty() {
@@ -251,7 +252,7 @@ public class Test {}
     #[test]
     fn test_single_component_import_class_name() {
       let java_code = "import MyClass;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       if !imports.is_empty() {
@@ -264,7 +265,7 @@ public class Test {}
     #[test]
     fn test_wildcard_import_class_name() {
       let java_code = "import java.util.*;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
       assert!(!imports.is_empty(), "Should have wildcard import");
 
@@ -280,7 +281,7 @@ public class Test {}
     #[test]
     fn test_invalid_node_type() {
       let java_code = "package com.example;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let root = ts_file.tree.as_ref().unwrap().root_node();
 
       let result = get_import_declaration_class_name_node(&ts_file, root);
@@ -295,7 +296,7 @@ public class Test {}
     #[test]
     fn test_complete_multi_component_import() {
       let java_code = "import com.example.service.MyService;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
       assert!(!imports.is_empty(), "Should have at least one import");
 
@@ -312,7 +313,7 @@ public class Test {}
     #[test]
     fn test_complete_deep_nested_import() {
       let java_code = "import com.company.project.module.submodule.feature.MyClass;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
       assert!(!imports.is_empty(), "Should have at least one import");
 
@@ -329,7 +330,7 @@ public class Test {}
     #[test]
     fn test_wildcard_import_full_scope() {
       let java_code = "import java.util.*;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
       assert!(!imports.is_empty(), "Should have wildcard import");
 
@@ -343,7 +344,7 @@ public class Test {}
     #[test]
     fn test_single_component_import_full_scope() {
       let java_code = "import MyClass;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let imports = get_all_import_declaration_nodes(&ts_file);
 
       if !imports.is_empty() {
@@ -359,7 +360,7 @@ public class Test {}
     #[test]
     fn test_invalid_node_type() {
       let java_code = "package com.example;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
       let root = ts_file.tree.as_ref().unwrap().root_node();
 
       let result = get_import_declaration_full_import_scope_node(&ts_file, root);
@@ -382,7 +383,7 @@ import java.io.File;
 
 public class Test {}
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result = find_import_declaration_node(&ts_file, "com.example.service", "MyService");
       assert!(result.is_some(), "Should find existing import declaration");
@@ -405,7 +406,7 @@ import com.example.service.MyService;
 
 public class Test {}
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       // For wildcard imports, the class_name parameter represents the wildcard package
       let result = find_import_declaration_node(&ts_file, "java.util", "*");
@@ -428,7 +429,7 @@ import com.example.service.MyService;
 
 public class Test {}
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result = find_import_declaration_node(&ts_file, "com.nonexistent", "NonExistent");
       assert!(result.is_none(), "Should return None for non-existent import");
@@ -439,7 +440,7 @@ public class Test {}
       let java_code = r#"
 import java.util.List;
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result1 = find_import_declaration_node(&ts_file, "", "List");
       assert!(result1.is_none(), "Should return None for empty package scope");
@@ -455,7 +456,7 @@ package com.example;
 
 public class Test {}
       "#;
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result = find_import_declaration_node(&ts_file, "java.util", "List");
       assert!(result.is_none(), "Should return None when no imports exist");
@@ -464,7 +465,7 @@ public class Test {}
     #[test]
     fn test_find_with_case_sensitivity() {
       let java_code = "import com.example.service.MyService;";
-      let ts_file = TSFile::from_source_code(java_code);
+      let ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result1 = find_import_declaration_node(&ts_file, "com.example.service", "MyService");
       assert!(result1.is_some(), "Should find exact case match");
@@ -483,7 +484,7 @@ public class Test {}
       let java_code = r#"package com.example;
 
 public class Test {}"#;
-      let mut ts_file = TSFile::from_source_code(java_code);
+      let mut ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result = add_import(
         &mut ts_file,
@@ -509,7 +510,7 @@ public class Test {}"#;
 import java.io.File;
 
 public class Test {}"#;
-      let mut ts_file = TSFile::from_source_code(java_code);
+      let mut ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result =
         add_import(&mut ts_file, &ImportInsertionPosition::BeforeFirstImport, "java.util", "List");
@@ -527,7 +528,7 @@ import java.util.List;
 import java.io.File;
 
 public class Test {}"#;
-      let mut ts_file = TSFile::from_source_code(java_code);
+      let mut ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result =
         add_import(&mut ts_file, &ImportInsertionPosition::AfterLastImport, "java.util", "Map");
@@ -544,7 +545,7 @@ public class Test {}"#;
 import java.util.List;
 
 public class Test {}"#;
-      let mut ts_file = TSFile::from_source_code(java_code);
+      let mut ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result =
         add_import(&mut ts_file, &ImportInsertionPosition::AfterLastImport, "java.util", "List");
@@ -556,7 +557,7 @@ public class Test {}"#;
 
     #[test]
     fn test_add_import_to_empty_file() {
-      let mut ts_file = TSFile::from_source_code("");
+      let mut ts_file = TSFile::from_source_code("", SupportedLanguage::Java);
 
       let result = add_import(
         &mut ts_file,
@@ -573,7 +574,7 @@ public class Test {}"#;
 
     #[test]
     fn test_add_import_with_empty_parameters() {
-      let mut ts_file = TSFile::from_source_code("package com.example;");
+      let mut ts_file = TSFile::from_source_code("package com.example;", SupportedLanguage::Java);
 
       let result1 =
         add_import(&mut ts_file, &ImportInsertionPosition::AfterPackageDeclaration, "", "List");
@@ -597,7 +598,7 @@ public class Test {}"#;
       let java_code = r#"import java.io.File;
 
 public class Test {}"#;
-      let mut ts_file = TSFile::from_source_code(java_code);
+      let mut ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result =
         add_import(&mut ts_file, &ImportInsertionPosition::BeforeFirstImport, "java.util", "List");
@@ -617,7 +618,7 @@ public class Test {}"#;
 import java.util.List;
 
 public class Test {}"#;
-      let mut ts_file = TSFile::from_source_code(java_code);
+      let mut ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       let result =
         add_import(&mut ts_file, &ImportInsertionPosition::AfterLastImport, "java.io", "File");
@@ -651,7 +652,7 @@ import java.io.File;
 import com.example.service.MyService;
 
 public class MyClass {}"#;
-      let mut ts_file = TSFile::from_source_code(java_code);
+      let mut ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       // Test finding existing imports
       let existing_import = find_import_declaration_node(&ts_file, "java.util", "List");
@@ -716,7 +717,7 @@ import com.example.repository.UserRepository;
 public class UserServiceImpl implements UserService {
     // Implementation details
 }"#;
-      let mut ts_file = TSFile::from_source_code(java_code);
+      let mut ts_file = TSFile::from_source_code(java_code, SupportedLanguage::Java);
 
       // Test finding various types of imports
       let _wildcard_import = find_import_declaration_node(&ts_file, "java.util", "*");
@@ -754,7 +755,7 @@ public class UserServiceImpl implements UserService {
       ];
 
       for (code, description) in test_cases {
-        let mut ts_file = TSFile::from_source_code(code);
+        let mut ts_file = TSFile::from_source_code(code, SupportedLanguage::Java);
 
         // Test that all functions handle edge cases gracefully
         let all_imports = get_all_import_declaration_nodes(&ts_file);

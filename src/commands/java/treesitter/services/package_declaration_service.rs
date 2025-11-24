@@ -16,8 +16,9 @@ use tree_sitter::Node;
 /// ```
 /// use syntaxpresso_core::commands::java::treesitter::services::package_declaration_service::get_package_declaration_node;
 /// use syntaxpresso_core::common::ts_file::TSFile;
+/// use syntaxpresso_core::common::supported_language::SupportedLanguage;
 ///
-/// let ts_file = TSFile::from_source_code("package com.example.myapp;");
+/// let ts_file = TSFile::from_source_code("package com.example.myapp;", SupportedLanguage::Java);
 /// let package_node = get_package_declaration_node(&ts_file);
 /// // Returns the entire package_declaration node
 /// ```
@@ -43,8 +44,9 @@ pub fn get_package_declaration_node(ts_file: &TSFile) -> Option<Node<'_>> {
 /// ```
 /// use syntaxpresso_core::commands::java::treesitter::services::package_declaration_service::{get_package_class_name_node, get_package_declaration_node};
 /// use syntaxpresso_core::common::ts_file::TSFile;
+/// use syntaxpresso_core::common::supported_language::SupportedLanguage;
 ///
-/// let ts_file = TSFile::from_source_code("package com.example.myapp;");
+/// let ts_file = TSFile::from_source_code("package com.example.myapp;", SupportedLanguage::Java);
 /// let package_node = get_package_declaration_node(&ts_file).unwrap();
 /// let class_name_node = get_package_class_name_node(&ts_file, package_node);
 /// if let Some(node) = class_name_node {
@@ -90,8 +92,9 @@ pub fn get_package_class_name_node<'a>(
 /// ```
 /// use syntaxpresso_core::commands::java::treesitter::services::package_declaration_service::{get_package_class_scope_node, get_package_declaration_node};
 /// use syntaxpresso_core::common::ts_file::TSFile;
+/// use syntaxpresso_core::common::supported_language::SupportedLanguage;
 ///
-/// let ts_file = TSFile::from_source_code("package com.example.myapp;");
+/// let ts_file = TSFile::from_source_code("package com.example.myapp;", SupportedLanguage::Java);
 /// let package_node = get_package_declaration_node(&ts_file).unwrap();
 /// let scope_node = get_package_class_scope_node(&ts_file, package_node);
 /// if let Some(node) = scope_node {
@@ -137,8 +140,9 @@ pub fn get_package_class_scope_node<'a>(
 /// ```
 /// use syntaxpresso_core::commands::java::treesitter::services::package_declaration_service::{get_package_scope_node, get_package_declaration_node};
 /// use syntaxpresso_core::common::ts_file::TSFile;
+/// use syntaxpresso_core::common::supported_language::SupportedLanguage;
 ///
-/// let ts_file = TSFile::from_source_code("package com.example.myapp;");
+/// let ts_file = TSFile::from_source_code("package com.example.myapp;", SupportedLanguage::Java);
 /// let package_node = get_package_declaration_node(&ts_file).unwrap();
 /// let scope_node = get_package_scope_node(&ts_file, package_node);
 /// if let Some(node) = scope_node {

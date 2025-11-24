@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use crate::common::{query::TSQueryBuilder, utils::path_security_util::PathSecurityValidator};
+use crate::common::{
+  query::TSQueryBuilder, supported_language::SupportedLanguage,
+  utils::path_security_util::PathSecurityValidator,
+};
 use base64::Engine;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -104,9 +107,9 @@ impl TSFile {
     self.apply_incremental_edit(start_byte, old_end_byte, new_text)
   }
 
-  pub fn from_base64_source_code(base64_source_code: &str) -> Self {
+  pub fn from_base64_source_code(base64_source_code: &str, language: SupportedLanguage) -> Self {
     let mut parser = Parser::new();
-    let language = tree_sitter_java::LANGUAGE;
+    let ts_language = language.tree_sitter_language();
     let converted_source_code =
       match base64::engine::general_purpose::STANDARD.decode(base64_source_code) {
         Ok(bytes) => match String::from_utf8(bytes) {
@@ -115,10 +118,10 @@ impl TSFile {
         },
         Err(_) => "Invalid source code".to_string(),
       };
-    parser.set_language(&language.into()).expect("Error loading Java parser");
+    parser.set_language(&ts_language).expect("Error loading parser");
     let tree = parser.parse(&converted_source_code, None);
     TSFile {
-      language: language.into(),
+      language: ts_language,
       parser,
       file: None,
       tree,
@@ -128,13 +131,13 @@ impl TSFile {
     }
   }
 
-  pub fn from_source_code(source_code: &str) -> Self {
+  pub fn from_source_code(source_code: &str, language: SupportedLanguage) -> Self {
     let mut parser = Parser::new();
-    let language = tree_sitter_java::LANGUAGE;
-    parser.set_language(&language.into()).expect("Error loading Java parser");
+    let ts_language = language.tree_sitter_language();
+    parser.set_language(&ts_language).expect("Error loading parser");
     let tree = parser.parse(source_code, None);
     TSFile {
-      language: language.into(),
+      language: ts_language,
       parser,
       file: None,
       tree,
@@ -144,14 +147,14 @@ impl TSFile {
     }
   }
 
-  pub fn from_file(path: &Path) -> std::io::Result<Self> {
+  pub fn from_file(path: &Path, language: SupportedLanguage) -> std::io::Result<Self> {
     let source_code = fs::read_to_string(path)?;
     let mut parser = Parser::new();
-    let language = tree_sitter_java::LANGUAGE;
-    parser.set_language(&language.into()).expect("Error loading Java parser");
+    let ts_language = language.tree_sitter_language();
+    parser.set_language(&ts_language).expect("Error loading parser");
     let tree = parser.parse(&source_code, None);
     Ok(TSFile {
-      language: language.into(),
+      language: ts_language,
       parser,
       file: Some(path.to_path_buf()),
       tree,
@@ -242,9 +245,10 @@ impl TSFile {
   /// ```
   /// use std::path::Path;
   /// use syntaxpresso_core::common::ts_file::TSFile;
+  /// use syntaxpresso_core::common::supported_language::SupportedLanguage;
   ///
   /// # fn main() -> std::io::Result<()> {
-  /// let mut ts_file = TSFile::from_source_code("public class Example {}");
+  /// let mut ts_file = TSFile::from_source_code("public class Example {}", SupportedLanguage::Java);
   /// let base_dir = Path::new("/tmp");
   /// let target = Path::new("Example.java");
   ///
@@ -292,9 +296,10 @@ impl TSFile {
   /// # Examples
   /// ```
   /// use syntaxpresso_core::common::ts_file::TSFile;
+  /// use syntaxpresso_core::common::supported_language::SupportedLanguage;
   ///
   /// # fn main() -> std::io::Result<()> {
-  /// let mut ts_file = TSFile::from_source_code("public class Example {}");
+  /// let mut ts_file = TSFile::from_source_code("public class Example {}", SupportedLanguage::Java);
   ///
   /// // Use system temp directory for portability
   /// let temp_dir = std::env::temp_dir();
