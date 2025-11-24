@@ -28,6 +28,24 @@ The primary goal is to serve as a universal backend for IDE plugins and programm
 - **Incremental Parsing**: Leverages Tree-Sitter's incremental parsing for fast, efficient code updates
 - **Dual Interface**: Supports both programmatic CLI usage (for IDE integration) and interactive TUI (for standalone use)
 
+## Core Technologies
+
+- **Tree-Sitter**: Powers the AST parsing and manipulation engine
+  - Incremental parsing for fast updates
+  - Precise byte-level node positioning
+  - Error-resilient parsing (can work with incomplete code)
+- **Rust**: Ensures memory safety and high performance
+- **Clap**: Provides type-safe CLI argument parsing
+- **Serde**: Handles JSON serialization/deserialization
+
+## Design Philosophy
+
+- **AST-First Approach**: All code modifications are performed through Tree-Sitter AST manipulation, not string concatenation or regex
+- **Incremental Updates**: Uses Tree-Sitter's incremental parsing to efficiently update only affected portions of the syntax tree
+- **Path Containment**: All file operations validate that paths stay within the working directory using canonicalization and containment checks
+- **Type Safety**: Strongly-typed commands and responses prevent runtime errors
+- **Separation of Concerns**: Clear layering between CLI, commands, services, and Tree-Sitter operations
+
 # Quick Reference
 
 **For Plugin Developers:**
@@ -276,11 +294,10 @@ The structure is designed to **isolate development**, reduce the learning curve,
 - **Generic**: Prevents path traversal attacks, validates directories
 - **Language-Specific**: Enforces naming conventions (e.g., Java class and package naming rules)
 
-# Communication Model
-
-## Stateless Request-Response
+# Communication Model (Stateless Request-Response)
 
 **Ephemeral Process Model:**
+
 - **One Process Per Command**: Each execution (e.g., creating an entity) spawns a new OS process, executes the task, and terminates immediately after returning the response
 - **Zero Memory Persistence**: No background server or daemon consuming idle RAM - each execution starts with a clean slate, eliminating bugs from previous runs (memory leaks or corrupted state)
 
@@ -295,34 +312,17 @@ Communication is standardized to ensure language-agnostic integration (the "Univ
   - Exit Code `1`: Failure (JSON contains `errorReason`)
 
 **Architecture Benefits:**
+
 - **Reliability**: Process isolation prevents state corruption
 - **Simplicity**: No complex IPC or socket communication required
 - **Language Agnostic**: Any language that can spawn processes and parse JSON can integrate
 - **Resource Efficiency**: No background processes consuming memory when idle
 
-### Core Technologies
-
-- **Tree-Sitter**: Powers the AST parsing and manipulation engine
-  - Incremental parsing for fast updates
-  - Precise byte-level node positioning
-  - Error-resilient parsing (can work with incomplete code)
-- **Rust**: Ensures memory safety and high performance
-- **Clap**: Provides type-safe CLI argument parsing
-- **Serde**: Handles JSON serialization/deserialization
-
-### Design Philosophy
-
-1. **AST-First Approach**: All code modifications are performed through Tree-Sitter AST manipulation, not string concatenation or regex
-2. **Incremental Updates**: Uses Tree-Sitter's incremental parsing to efficiently update only affected portions of the syntax tree
-3. **Path Containment**: All file operations validate that paths stay within the working directory using canonicalization and containment checks
-4. **Type Safety**: Strongly-typed commands and responses prevent runtime errors
-5. **Separation of Concerns**: Clear layering between CLI, commands, services, and Tree-Sitter operations
-
-## Binary Variants
+# Binary Variants
 
 The core is compiled in two variants to support different integration approaches:
 
-### CLI-only (Default) - `syntaxpresso-core-{platform}-{arch}`
+## CLI-only (Default) - `syntaxpresso-core-{platform}-{arch}`
 
 **Target Use Case**: Build IDE plugins with custom UI or programmatic code manipulation
 
@@ -338,7 +338,7 @@ The core is compiled in two variants to support different integration approaches
 - Integrating into build pipelines or CI/CD systems
 - Need only JSON-based programmatic access
 
-### UI-enabled - `syntaxpresso-core-ui-{platform}-{arch}`
+## UI-enabled - `syntaxpresso-core-ui-{platform}-{arch}`
 
 **Target Use Case**: Build IDE plugins using the built-in TUI or standalone terminal usage
 
@@ -354,7 +354,7 @@ The core is compiled in two variants to support different integration approaches
 - Need both programmatic CLI access AND interactive forms
 - Want ready-to-use TUI without implementing your own interface
 
-## Features & Command Reference
+# Features & Command Reference
 
 All commands are now namespaced by language. Use `syntaxpresso-core java <command>` for Java operations.
 
