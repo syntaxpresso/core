@@ -13,6 +13,13 @@ use crate::commands::java::{
 };
 use crate::common::ui::form_trait::{FormBehavior, FormState, InputMode, button_helpers, helpers};
 
+/// Represents a mapped superclass with its full package information
+#[derive(Debug, Clone)]
+struct SuperclassInfo {
+  class_name: String,
+  package_name: String,
+}
+
 /// Represents which field is currently focused
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum FocusedField {
@@ -40,7 +47,7 @@ pub struct CreateJpaEntityForm {
   show_package_autocomplete: bool,
 
   // Superclass selection (list)
-  superclass_list: Vec<String>, // All available mapped superclasses
+  superclass_list: Vec<SuperclassInfo>, // All available mapped superclasses with package info
   superclass_state: ListState,
 
   // Text input states
@@ -69,7 +76,8 @@ impl CreateJpaEntityForm {
     let mut superclass_list = Self::fetch_superclasses(&cwd).unwrap_or_else(|_| vec![]);
 
     // Add "None" as the first option
-    superclass_list.insert(0, "None".to_string());
+    superclass_list
+      .insert(0, SuperclassInfo { class_name: "None".to_string(), package_name: String::new() });
 
     // Find the package with the smallest string length (shortest name)
     let default_package = package_list
@@ -115,13 +123,16 @@ impl CreateJpaEntityForm {
   }
 
   /// Fetch mapped superclasses from syntaxpresso-core
-  fn fetch_superclasses(cwd: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+  fn fetch_superclasses(cwd: &Path) -> Result<Vec<SuperclassInfo>, Box<dyn std::error::Error>> {
     let response = get_all_jpa_mapped_superclasses::execute(cwd);
 
     let mut superclasses = Vec::new();
     if let Some(data) = response.data {
       for file in data.files {
-        superclasses.push(file.file_type);
+        superclasses.push(SuperclassInfo {
+          class_name: file.file_type,
+          package_name: file.file_package_name,
+        });
       }
     }
 
@@ -408,9 +419,8 @@ impl CreateJpaEntityForm {
         if idx > 0 && idx < self.superclass_list.len() {
           // Selected a real superclass (not "None")
           let superclass = &self.superclass_list[idx];
-          // For now, we'll assume the superclass is in the same package
-          // In a more sophisticated implementation, you'd fetch the actual package
-          (Some(superclass.as_str()), Some(self.package_name.as_str()))
+          // Use the actual package from the superclass
+          (Some(superclass.class_name.as_str()), Some(superclass.package_name.as_str()))
         } else {
           // Selected "None"
           (None, None)
@@ -476,10 +486,10 @@ impl CreateJpaEntityForm {
       .superclass_list
       .iter()
       .enumerate()
-      .map(|(i, superclass)| {
+      .map(|(i, superclass_info)| {
         let is_selected = self.superclass_state.selected() == Some(i);
         let prefix = if is_selected { "●" } else { "○" };
-        ListItem::new(format!(" {} {}", prefix, superclass))
+        ListItem::new(format!(" {} {}", prefix, superclass_info.class_name))
       })
       .collect();
 
