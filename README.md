@@ -236,50 +236,65 @@ The structure is designed to **isolate development**, reduce the learning curve,
 ```
 
 **Entry Layer** (Frontend & Parser):
+
 - **Frontend (Client)**: Acts as the trigger only - doesn't process logic, just invokes the binary with arguments and awaits JSON on stdout. IDE-agnostic (Neovim, VSCode, or shell).
 - **Clap CLI Parser** (`main.rs`): The gatekeeper - validates argument syntax before any domain memory is allocated, rejecting invalid commands immediately.
 
 **Routing Layer**:
+
 - **Commands Router** (`commands/mod.rs`): Global dispatcher - identifies language context ("Is this a Java command?") and forwards to the correct module, without knowing which specific command will execute.
 - **Language Dispatcher** (`java/commands.rs`): Language-specific router - knows available commands (e.g., `create-entity`, `create-repository`) and directs to the correct executor.
 
 **Dual Interface Layer**:
+
 - **UI Path (TUI)**: When enabled, takes control of stdin to render interactive forms, guiding users in building arguments.
 - **Programmatic Path (CLI)**: Direct execution path ("headless"), optimized for speed and automation scripts or third-party interfaces.
 
 **Command Layer** (`java/*_command.rs`):
+
 - Acts as the controller - orchestrates specific operations
 - Triggers semantic validators (e.g., "Is the package name valid?")
 - Calls necessary services
 - Builds standardized `Response<T>` objects
 
 **Service Layer** (`java/services/`, `java/treesitter/services/`):
+
 - The heart of business logic
 - Holds domain knowledge (e.g., structure of `@Entity` annotations, how to inject fields into classes)
 - Translates command intent ("create a field") into syntax tree operations
 
 **Infrastructure Layer** (`common/ts_file.rs`):
+
 - The only layer permitted to touch code bytes
 - Performs incremental parsing
 - Executes queries to locate nodes (e.g., find where class begins)
 - Applies surgical text edits to AST without corrupting the rest of the file
 
 **Validation Layer** (`common/validators/`, `java/validators/`):
+
 - Ensures integrity and safety
 - **Generic**: Prevents path traversal attacks, validates directories
 - **Language-Specific**: Enforces naming conventions (e.g., Java class and package naming rules)
 
-### Communication Model
+# Communication Model
 
-Syntaxpresso Core follows a **stateless request-response model**:
+## Stateless Request-Response
 
-1. **One Process Per Request**: Each invocation spawns a new process that handles a single command and exits
-2. **JSON I/O**: All responses are emitted as JSON to stdout for easy parsing by IDE plugins
-3. **Exit Codes**: Process exits with code 0 (success) or 1 (error)
-4. **No Session State**: Each request is completely independent; no background daemon or persistent state
+**Ephemeral Process Model:**
+- **One Process Per Command**: Each execution (e.g., creating an entity) spawns a new OS process, executes the task, and terminates immediately after returning the response
+- **Zero Memory Persistence**: No background server or daemon consuming idle RAM - each execution starts with a clean slate, eliminating bugs from previous runs (memory leaks or corrupted state)
 
-This architecture ensures:
+**The Protocol: JSON over Standard Streams**
 
+Communication is standardized to ensure language-agnostic integration (the "Universal Backend" principle):
+
+- **Input**: CLI arguments (or stdin for TUI)
+- **Output**: JSON emitted to stdout
+- **Error Signaling**:
+  - Exit Code `0`: Success (JSON contains data)
+  - Exit Code `1`: Failure (JSON contains `errorReason`)
+
+**Architecture Benefits:**
 - **Reliability**: Process isolation prevents state corruption
 - **Simplicity**: No complex IPC or socket communication required
 - **Language Agnostic**: Any language that can spawn processes and parse JSON can integrate
