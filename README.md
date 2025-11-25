@@ -4,7 +4,7 @@
 
 <div align="center">
   <img alt="rust" src="https://img.shields.io/badge/built%20with-Rust-orange?logo=rust" />
-  <img alt="GitHub branch check runs" src="https://img.shields.io/github/check-runs/syntaxpresso/core/develop">
+  <img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/syntaxpresso/core/develop.yml?branch=develop&label=CI&logo=github">
   <img alt="GitHub Downloads (all assets, latest release)" src="https://img.shields.io/github/downloads/syntaxpresso/core/latest/total">
 </div>
 
