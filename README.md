@@ -48,8 +48,6 @@ The primary goal is to serve as a universal backend for IDE plugins and programm
 
 # Quick Reference
 
-**For Plugin Developers:**
-
 - [Architecture](#architecture) - Understand the design and data flow
 - [Communication Model](#communication-model-stateless-request-response) - How Core interacts with clients
 - [Core Components](#core-components) - TSFile, DirectoryValidator, Commands Router
@@ -57,13 +55,8 @@ The primary goal is to serve as a universal backend for IDE plugins and programm
 - [Features & Capabilities](#features--capabilities) - Available commands and language support
 - [Installation](#installation-for-developers) - Download or build from source
 - [Plugin Integration Guide](#plugin-integration-guide) - Integrate with Neovim, VSCode, etc.
-- [Performance Benchmarks](#performance-benchmarks) - Typical operation timings
-
-**For Core Contributors:**
-
-- [Core Components](#core-components) - Understanding TSFile and validation layers
-- [Installation](#installation-for-developers) - Build from source
 - [Running Tests](#running-tests) - Test the codebase
+- [Performance Benchmarks](#performance-benchmarks) - Typical operation timings
 - [Contributing](#contributing) - Guidelines and process
 
 # Architecture
