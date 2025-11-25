@@ -340,7 +340,7 @@ let ts_file = TSFile::from_source_code("public class User {}", tree_sitter_java:
 let ts_file = TSFile::from_base64_source_code(base64_str, tree_sitter_java::language())?;
 ```
 
-**2. Query:** TSFile abstracts Tree-Sitter's cursor and iterator complexity.
+**2. Query:** TSFile abstracts Tree-Sitter's cursor and iterator complexity. Think of it as "database search" for code.
 
 ```rust
 // Most powerful method: LISP-style query returns exact nodes
@@ -361,11 +361,13 @@ ts_file.update_source_code("public class UpdatedUser {}");
 ts_file.replace_text_by_range(0, 10, "private");
 
 // Replace content of specific syntax element (most common)
+// Automatically calculates start/end bytes from node and applies incremental edit
 let class_node = ts_file.query("(class_declaration) @class")?.first().unwrap();
 ts_file.replace_text_by_node(&class_node, "public class NewName { }");
 
 // Insert text at position (pushes existing content forward)
-// Internally calls apply_incremental_edit(position, position, text)
+// Zero-width replacement: calls apply_incremental_edit(position, position, text)
+// Useful for: adding methods to classes, imports at file top, or injecting annotations
 ts_file.insert_text(50, "\n    private String name;");
 ```
 
@@ -414,7 +416,7 @@ let safe_path = DirectoryValidator::validate_file_path_within_base(
 
 **Methods:**
 
-- `validate_file_path_within_base`: Protects during command execution - rejects paths with `..` that escape the root
+- `validate_file_path_within_base`: Protects during command execution - rejects paths with `..` that escape the root. Used in all creation commands (`create_java_file`, `create_jpa_entity`, etc.) to ensure generated files stay within the project.
 - `validate_directory_unrestricted`: Used by Clap for `--cwd` validation - only checks if directory exists
 
 ## Commands Router (`src/commands/mod.rs`)
@@ -472,7 +474,7 @@ pub fn execute_create_jpa_entity(
 }
 ```
 
-**Isolation:** `commands.rs` stays clean with only routing logic. Business logic lives in services.
+**Isolation:** This pattern keeps `commands.rs` clean with only routing logic ("where do I send this?"), while business logic lives in services.
 
 # Binary Variants
 
