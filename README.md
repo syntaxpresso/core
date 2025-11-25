@@ -52,6 +52,7 @@ The primary goal is to serve as a universal backend for IDE plugins and programm
 
 - [Architecture](#architecture) - Understand the design and data flow
 - [Communication Model](#communication-model-stateless-request-response) - How Core interacts with clients
+- [Core Components](#core-components) - TSFile, DirectoryValidator, Commands Router
 - [Binary Variants](#binary-variants) - CLI-only vs UI-enabled binaries
 - [Features & Capabilities](#features--capabilities) - Available commands and language support
 - [Installation](#installation-for-developers) - Download or build from source
@@ -60,6 +61,7 @@ The primary goal is to serve as a universal backend for IDE plugins and programm
 
 **For Core Contributors:**
 
+- [Core Components](#core-components) - Understanding TSFile and validation layers
 - [Installation](#installation-for-developers) - Build from source
 - [Running Tests](#running-tests) - Test the codebase
 - [Contributing](#contributing) - Guidelines and process
@@ -319,6 +321,165 @@ Communication is standardized to ensure language-agnostic integration (the "Univ
 - **Simplicity**: No complex IPC or socket communication required
 - **Language Agnostic**: Any language that can spawn processes and parse JSON can integrate
 - **Resource Efficiency**: No background processes consuming memory when idle
+
+# Core Components
+
+The following components form the foundation of Syntaxpresso's architecture, handling everything from AST manipulation to security validation.
+
+## TSFile (`src/common/ts_file.rs`)
+
+Every operation in Syntaxpresso begins and ends with `TSFile`. It abstracts Tree-Sitter functionality and file system operations into a cohesive API.
+
+**Responsibility:** Maintain the consistency triangle: **Source Code (String) ↔ Syntax Tree (Tree) ↔ Parser (Language)**. When one changes, TSFile ensures the others update instantly.
+
+### Lifecycle
+
+**1. Initialization:**
+
+```rust
+// Load from disk (standard for existing files)
+let ts_file = TSFile::from_file(Path::new("User.java"), tree_sitter_java::language())?;
+
+// Load from string (essential for unit tests or in-memory generation)
+let ts_file = TSFile::from_source_code("public class User {}", tree_sitter_java::language())?;
+
+// Decode from Base64 (critical for CLI arguments - avoids terminal escaping issues)
+let ts_file = TSFile::from_base64_source_code(base64_str, tree_sitter_java::language())?;
+```
+
+**2. Query:** TSFile abstracts Tree-Sitter's cursor and iterator complexity.
+
+```rust
+// Most powerful method: LISP-style query returns exact nodes
+let nodes = ts_file.query("(class_declaration name: (identifier) @name)")?;
+
+for node in nodes {
+    println!("Found class: {}", ts_file.node_text(&node));
+}
+```
+
+**3. Mutation:** All modifications use incremental parsing for performance.
+
+```rust
+// Replace entire source code (forces complete reparse)
+ts_file.update_source_code("public class UpdatedUser {}");
+
+// Replace text by byte range (start and end indices)
+ts_file.replace_text_by_range(0, 10, "private");
+
+// Replace content of specific syntax element (most common)
+let class_node = ts_file.query("(class_declaration) @class")?.first().unwrap();
+ts_file.replace_text_by_node(&class_node, "public class NewName { }");
+
+// Insert text at position (pushes existing content forward)
+// Internally calls apply_incremental_edit(position, position, text)
+ts_file.insert_text(50, "\n    private String name;");
+```
+
+**4. Persistence:** Save with path security validation.
+
+```rust
+// Validates path stays within base_path before writing
+ts_file.save_as(
+    Path::new("src/main/java/User.java"),
+    Path::new("/project/root") // Base path for security check
+)?;
+```
+
+## DirectoryValidator (`src/common/validators/`)
+
+Ensures Syntaxpresso only writes to permitted locations.
+
+**Objective:** Prevent commands from overwriting files outside the user-specified working directory (CWD).
+
+**Solution:** Enforces **Path Containment** - all write operations must resolve to a child path of the working directory.
+
+```rust
+// Used in command execution to protect file creation
+pub fn validate_file_path_within_base(
+    file_path: &Path,
+    base_path: &Path,
+) -> Result<PathBuf, String> {
+    let canonical_file = file_path.canonicalize()
+        .map_err(|_| "Invalid file path")?;
+    let canonical_base = base_path.canonicalize()
+        .map_err(|_| "Invalid base path")?;
+
+    if !canonical_file.starts_with(&canonical_base) {
+        return Err("Path escapes working directory".to_string());
+    }
+
+    Ok(canonical_file)
+}
+
+// Example usage in create_jpa_entity command
+let safe_path = DirectoryValidator::validate_file_path_within_base(
+    &entity_file_path,
+    &cwd
+)?;
+```
+
+**Methods:**
+
+- `validate_file_path_within_base`: Protects during command execution - rejects paths with `..` that escape the root
+- `validate_directory_unrestricted`: Used by Clap for `--cwd` validation - only checks if directory exists
+
+## Commands Router (`src/commands/mod.rs`)
+
+Receives user intent (e.g., "create an entity") and routes to the correct command handler.
+
+**Responsibilities:**
+
+- **Routing & Delegation**: Doesn't execute logic, only decides who should execute
+- **Language Dispatch**: `java` argument → Java module, `python` argument → Python module
+- **Open/Closed Principle**: New languages can be added without modifying existing code
+
+```rust
+#[derive(Subcommand)]
+pub enum Commands {
+    /// Java language commands
+    Java(JavaCommands),
+    
+    /// Python language commands (future)
+    // Python(PythonCommands),
+}
+
+impl Commands {
+    pub fn execute(&self) -> Result<String, Box<dyn std::error::Error>> {
+        match self {
+            Commands::Java(cmd) => cmd.execute(),
+            // Commands::Python(cmd) => cmd.execute(),
+        }
+    }
+}
+```
+
+**Flow:** `main.rs` → `cli.command.execute()` → descends enum tree → reaches leaf command (e.g., `create_jpa_entity_command.rs`)
+
+## Command Implementation (`src/commands/java/*_command.rs`)
+
+Each command file acts as a **Controller**:
+
+```rust
+pub fn execute_create_jpa_entity(
+    cwd: &Path,
+    package_name: &str,
+    file_name: &str,
+) -> Response<FileResponse> {
+    // 1. Validate inputs
+    if let Err(e) = PackageNameValidator::validate(package_name) {
+        return Response::error("create-jpa-entity", cwd, e);
+    }
+
+    // 2. Call service layer
+    match CreateJpaEntityService::create(cwd, package_name, file_name) {
+        Ok(file_info) => Response::success("create-jpa-entity", cwd, file_info),
+        Err(e) => Response::error("create-jpa-entity", cwd, e),
+    }
+}
+```
+
+**Isolation:** `commands.rs` stays clean with only routing logic. Business logic lives in services.
 
 # Binary Variants
 
