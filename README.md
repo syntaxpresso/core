@@ -382,235 +382,18 @@ The Java module provides comprehensive JPA/Spring tooling including:
 syntaxpresso-core java --help
 ```
 
+For standalone terminal usage, the UI-enabled binary provides interactive forms. Just add `-ui` suffix for UI commands:
+
 **Example command:**
 
 ```bash
-syntaxpresso-core java create-jpa-entity \
-  --cwd /path/to/project \
-  --package-name com.example.domain \
-  --file-name User
+syntaxpresso-core java create-jpa-entity-ui \
+  --cwd /path/to/project
 ```
 
-## Roadmap: Additional Languages
+## Response
 
-- **Python**: Class/module generation, type hints, dataclasses
-- **TypeScript**: Interface/type generation, React components
-- **Go**: Struct/interface generation
-- **Rust**: Struct/enum/trait generation
-
-> **Note**: The architecture is designed to easily add new languages. Each language module follows the same patterns established by the Java implementation.
-
-## Installation for Developers
-
-### Option 1: Download Pre-built Binaries
-
-Download from [GitHub Releases](https://github.com/syntaxpresso/core/releases):
-
-**CLI-only binaries** (recommended for IDE integration):
-
-- `syntaxpresso-core-linux-amd64` - Linux x86_64
-- `syntaxpresso-core-macos-amd64` - macOS Intel
-- `syntaxpresso-core-macos-arm64` - macOS Apple Silicon
-- `syntaxpresso-core-windows-amd64.exe` - Windows x86_64
-
-**UI-enabled binaries** (for standalone use):
-
-- `syntaxpresso-core-ui-linux-amd64` - Linux x86_64
-- `syntaxpresso-core-ui-macos-amd64` - macOS Intel
-- `syntaxpresso-core-ui-macos-arm64` - macOS Apple Silicon
-- `syntaxpresso-core-ui-windows-amd64.exe` - Windows x86_64
-
-### Option 2: Build from Source
-
-Requires Rust 2024 Edition toolchain.
-
-**CLI-only:**
-
-```bash
-cargo build --release
-```
-
-**UI-enabled:**
-
-```bash
-cargo build --release --features ui
-```
-
-Binary location: `target/release/syntaxpresso-core`
-
-## Usage Examples
-
-### CLI Interface (Programmatic)
-
-All commands follow a consistent pattern with JSON responses suitable for parsing by IDE plugins. Commands are now namespaced by language:
-
-```bash
-# Discover all JPA entities in project
-./syntaxpresso-core java get-all-jpa-entities --cwd /path/to/project
-
-# Get supported Java types
-./syntaxpresso-core java get-java-basic-types --basic-type-kind all-types
-
-# Create a JPA entity
-./syntaxpresso-core java create-jpa-entity \
-  --cwd /path/to/project \
-  --package-name com.example.domain \
-  --file-name User
-
-# Add a field to existing entity
-./syntaxpresso-core java create-jpa-entity-basic-field \
-  --cwd /path/to/project \
-  --entity-file-path /absolute/path/to/User.java \
-  --entity-file-b64-src <base64-encoded-source> \
-  --field-name email \
-  --field-type String \
-  --field-unique \
-  --field-nullable false
-
-# Create bidirectional one-to-one relationship
-./syntaxpresso-core java create-jpa-one-to-one-relationship \
-  --cwd /path/to/project \
-  --owning-side-entity-file-path /absolute/path/to/User.java \
-  --owning-side-entity-file-b64-src <base64-encoded-source> \
-  --owning-side-field-name profile \
-  --inverse-side-field-name user \
-  --inverse-field-type UserProfile
-```
-
-**JSON Response Format:**
-
-Success:
-
-```json
-{
-  "command": "create-jpa-entity",
-  "cwd": "/path/to/project",
-  "succeed": true,
-  "data": {
-    "fileType": "User",
-    "filePackageName": "com.example.domain",
-    "filePath": "/path/to/project/src/main/java/com/example/domain/User.java"
-  }
-}
-```
-
-Error:
-
-```json
-{
-  "command": "create-jpa-entity",
-  "cwd": "/path/to/project",
-  "succeed": false,
-  "errorReason": "Package name 'invalid..package' contains invalid characters"
-}
-```
-
-### Interactive UI Interface (UI-enabled binary only)
-
-For standalone terminal usage, the UI-enabled binary provides interactive forms. Note the `-ui` suffix for UI commands:
-
-```bash
-# Interactive Java file creation
-./syntaxpresso-core java create-java-file-ui --cwd /path/to/project
-
-# Interactive entity creation
-./syntaxpresso-core java create-jpa-entity-ui --cwd /path/to/project
-
-# Interactive field addition (requires existing entity)
-./syntaxpresso-core java create-jpa-entity-basic-field-ui \
-  --cwd /path/to/project \
-  --entity-file-path /path/to/User.java \
-  --entity-file-b64-src $(base64 -w 0 /path/to/User.java)
-
-# Interactive repository generation
-./syntaxpresso-core java create-jpa-repository-ui \
-  --cwd /path/to/project \
-  --entity-file-path /path/to/User.java \
-  --entity-file-b64-src $(base64 -w 0 /path/to/User.java)
-```
-
-**UI Navigation:**
-
-- `Tab` / `Shift+Tab` - Navigate fields
-- `Enter` - Submit / Select
-- `Esc` - Cancel/close
-- `↑↓` - Navigate lists
-- `i` / `a` - Enter insert mode
-
-## Development
-
-### System Requirements
-
-- **Rust Toolchain**: Rust 2024 Edition or later
-- **Cargo**: Latest stable version
-- **Platform**: Linux, macOS, or Windows
-
-### Key Components
-
-#### TSFile (`src/common/ts_file.rs`)
-
-The core abstraction for Tree-Sitter file operations:
-
-```rust
-pub struct TSFile {
-    pub language: Language,
-    parser: Parser,
-    pub tree: Option<Tree>,
-    pub source_code: String,
-    // ...
-}
-```
-
-**Key capabilities:**
-
-- **Incremental Parsing**: `apply_incremental_edit()` updates AST efficiently
-- **Query API**: Fluent query builder for Tree-Sitter queries
-- **Node Manipulation**: `replace_text_by_node()`, `insert_text()`
-- **Path Containment**: `save_as()` validates paths stay within base directory
-- **Multiple Constructors**: Load from file, string, or base64-encoded source
-
-**Example usage:**
-
-```rust
-// Parse a Java file
-let mut ts_file = TSFile::from_file(Path::new("User.java"))?;
-
-// Query for class declaration
-let nodes = ts_file.query("(class_declaration name: (identifier) @name)")?;
-
-// Modify a node efficiently (incremental parse)
-if let Some(node) = nodes.first() {
-    ts_file.replace_text_by_node(&node, "new content");
-}
-
-// Save with path containment validation
-ts_file.save_as(Path::new("output.java"), Path::new("/safe/base/dir"))?;
-```
-
-#### Service Layer Pattern
-
-Services encapsulate Tree-Sitter operations for specific Java constructs:
-
-**Example: `ClassDeclarationService`**
-
-```rust
-impl ClassDeclarationService {
-    pub fn insert_field_in_class_body(
-        ts_file: &mut TSFile,
-        class_node: &Node,
-        field_code: &str,
-    ) -> Result<(), String>
-}
-```
-
-Each service:
-
-- Operates on `TSFile` instances
-- Uses Tree-Sitter queries to locate nodes
-- Performs incremental updates
-- Returns domain objects or errors
-
-#### Response Types (`src/responses/`)
+### Response Types (`src/responses/`)
 
 All commands return a standardized `Response<T>` structure:
 
@@ -652,73 +435,51 @@ Error response:
 }
 ```
 
-### Design Patterns
+# Installation for Developers
 
-#### 1. Stateless Execution
+## System Requirements
 
-Each invocation is independent:
+- **Rust Toolchain**: Rust 2024 Edition or later
+- **Cargo**: Latest stable version
+- **Platform**: Linux, macOS, or Windows
 
-- No shared state between invocations
-- No background daemons
-- Process spawns → executes → outputs JSON → exits
+## Option 1: Download Pre-built Binaries
 
-**Benefits:**
+Download from [GitHub Releases](https://github.com/syntaxpresso/core/releases):
 
-- Simple integration model
-- No state corruption
-- Easy to test and debug
+**CLI-only binaries** (recommended for IDE integration):
 
-#### 2. Incremental Parsing
+- `syntaxpresso-core-linux-amd64` - Linux x86_64
+- `syntaxpresso-core-macos-amd64` - macOS Intel
+- `syntaxpresso-core-macos-arm64` - macOS Apple Silicon
+- `syntaxpresso-core-windows-amd64.exe` - Windows x86_64
 
-All AST modifications use Tree-Sitter's incremental parsing:
+**UI-enabled binaries** (for standalone use):
 
-```rust
-// DON'T: Full reparse (slow)
-ts_file.source_code.replace_range(start..end, new_text);
-ts_file.tree = parser.parse(&ts_file.source_code, None);
+- `syntaxpresso-core-ui-linux-amd64` - Linux x86_64
+- `syntaxpresso-core-ui-macos-amd64` - macOS Intel
+- `syntaxpresso-core-ui-macos-arm64` - macOS Apple Silicon
+- `syntaxpresso-core-ui-windows-amd64.exe` - Windows x86_64
 
-// DO: Incremental update (fast)
-ts_file.apply_incremental_edit(start_byte, end_byte, new_text);
+## Option 2: Build from Source
+
+Requires Rust 2024 Edition toolchain.
+
+**CLI-only:**
+
+```bash
+cargo build --release
 ```
 
-**Performance impact:**
+**UI-enabled:**
 
-- Incremental: ~1-5ms for typical edits
-- Full reparse: ~50-200ms for large files
-
-#### 3. Path Containment Validation
-
-All file saves validate that paths remain within the working directory:
-
-```rust
-// Validates path is contained within base_dir
-let validator = PathSecurityValidator::new(base_dir)?;
-let safe_path = validator.validate_path_containment(user_path)?;
+```bash
+cargo build --release --features ui
 ```
 
-This ensures file operations stay within the project scope and prevents:
+Binary location: `target/release/syntaxpresso-core`
 
-- Accidental writes outside the project directory (e.g., `../../../../outside`)
-- Symlink paths that escape the working directory
-- Relative path manipulation that would write to unintended locations
-
-#### 4. Feature-Gated UI
-
-UI code is feature-gated to minimize binary size:
-
-```rust
-#[cfg(feature = "ui")]
-pub mod ui;
-```
-
-**Build flags:**
-
-- Default: `cargo build` → CLI-only (~3.4MB)
-- With UI: `cargo build --features ui` → Full (~4.0MB)
-
-### Development Workflow
-
-#### Building from Source
+## Building from Source
 
 **CLI-only variant:**
 
@@ -734,7 +495,7 @@ cargo build --release --features ui
 
 Output: `target/release/syntaxpresso-core`
 
-#### Running Tests
+## Running Tests
 
 ```bash
 # Run all tests
@@ -747,119 +508,9 @@ cargo test --test class_declaration_service_tests
 cargo test -- --nocapture
 ```
 
-Test coverage includes:
+# Plugin Integration Guide
 
-- Tree-Sitter service operations
-- Path security validation
-- Import declaration management
-- Annotation handling
-
-Still creating tests.
-
-#### Code Quality Checks
-
-The project follows custom formatting parameters defined in rustfmt.toml.
-
-### Adding New Commands
-
-Follow these steps to add a new command to the Java language support:
-
-1. **Define Response Type** (`src/commands/java/responses/`)
-
-```rust
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MyCommandResponse {
-    pub field: String,
-}
-```
-
-2. **Implement Command** (`src/commands/java/`)
-
-```rust
-pub fn my_command(args: Args) -> Response<MyCommandResponse> {
-    // Call service layer
-    match my_service::do_work(&args) {
-        Ok(result) => Response::success("my-command", &args.cwd, result),
-        Err(e) => Response::error("my-command", &args.cwd, e.to_string()),
-    }
-}
-```
-
-3. **Add CLI Binding** (`src/commands/java/commands.rs`)
-
-```rust
-#[derive(Subcommand)]
-pub enum JavaCommands {
-    // ... existing commands ...
-
-    MyCommand {
-        #[arg(long, value_parser = validate_directory_unrestricted)]
-        cwd: PathBuf,
-
-        #[arg(long)]
-        my_arg: String,
-    },
-}
-
-impl JavaCommands {
-    pub fn execute(&self) -> Result<String, Box<dyn std::error::Error>> {
-        match self {
-            // ... existing handlers ...
-
-            JavaCommands::MyCommand { cwd, my_arg } => {
-                let response = my_command::execute(cwd.as_path(), my_arg);
-                response.to_json_pretty().map_err(|e| e.into())
-            }
-        }
-    }
-}
-```
-
-4. **Implement Service** (`src/commands/java/services/`)
-
-```rust
-pub fn do_work(args: &Args) -> Result<MyCommandResponse, String> {
-    let mut ts_file = TSFile::from_file(&args.file)?;
-    // Use Tree-Sitter to manipulate AST
-    // ...
-    Ok(MyCommandResponse { field: "result".to_string() })
-}
-```
-
-5. **Usage:**
-
-```bash
-./syntaxpresso-core java my-command --cwd /path --my-arg value
-```
-
-### Integration Testing
-
-Create a test Java project structure:
-
-```rust
-use tempfile::TempDir;
-use std::fs;
-
-#[test]
-fn test_entity_creation() {
-    let temp_dir = TempDir::new().unwrap();
-    let project_path = temp_dir.path();
-
-    // Create package structure
-    let entity_dir = project_path.join("src/main/java/com/example/entities");
-    fs::create_dir_all(&entity_dir).unwrap();
-
-    // Test command
-    let result = create_jpa_entity_command::execute(/* ... */);
-
-    assert!(result.succeed);
-    assert!(entity_dir.join("User.java").exists());
-}
-```
-
-### Plugin Integration Guide
-
-#### Neovim Plugin Development
+## Neovim Plugin Development
 
 To develop or integrate with the Neovim plugin:
 
@@ -872,46 +523,21 @@ To develop or integrate with the Neovim plugin:
 2. **Configure plugin to use local build:**
 
    ```lua
-   require("syntaxpresso").setup({
-     executable_path = "/absolute/path/to/target/release/syntaxpresso-core",
-   })
+   {
+       "syntaxpresso/syntaxpresso.nvim",
+       dir = "/path/to/syntaxpresso.nvim/",
+       opts = {
+           executable_path = "/path/to/target/release/syntaxpresso-core",
+           auto_update = {
+               enabled = true, -- Auto-update enabled
+               frequency = "always", -- Check on every Neovim start
+               prompt = true, -- Prompt before installing updates
+           },
+       },
+   }
    ```
 
-3. **Integration pattern:**
-
-   ```lua
-   -- Spawn process and capture JSON output
-   local handle = vim.system({
-     executable_path,
-     "java",  -- Language namespace
-     "create-jpa-entity",
-     "--cwd", cwd,
-     "--package-name", package,
-     "--file-name", filename
-   })
-
-   local result = handle:wait()
-   local response = vim.json.decode(result.stdout)
-
-   if response.succeed then
-     -- Process response.data
-   else
-     -- Handle response.errorReason
-   end
-   ```
-
-4. **For UI commands (with --features ui):**
-   ```lua
-   -- Launch interactive form in floating terminal
-   local handle = vim.fn.termopen({
-     executable_path,
-     "java",
-     "create-java-file-ui",  -- Note: -ui suffix
-     "--cwd", cwd
-   })
-   ```
-
-#### VSCode / Other IDE Integration
+## VSCode / Other IDE Integration
 
 The CLI interface is language-agnostic. Example in TypeScript:
 
@@ -947,7 +573,7 @@ const response = await executeCommand([
 ]);
 ```
 
-### Performance Benchmarks
+# Performance Benchmarks
 
 Typical operation timings on modern hardware:
 
@@ -960,7 +586,7 @@ Typical operation timings on modern hardware:
 | JSON serialization         | <1ms      | Negligible overhead               |
 | Total command execution    | ~20-50ms  | End-to-end for typical operations |
 
-## Contributing
+# Contributing
 
 Contributions are welcome!
 
@@ -968,7 +594,7 @@ This project follows standard Rust development practices.
 
 Always code for interfaces.
 
-### Pull Request Process
+## Pull Request Process
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -978,15 +604,6 @@ Always code for interfaces.
 6. Commit your changes
 7. Push to your fork
 8. Open a Pull Request with a clear description
-
-### Areas for Contribution
-
-- **New Commands**: Additional JPA features, validation, etc.
-- **Performance**: Optimize Tree-Sitter queries or parsing logic
-- **Code improvements**: This project is far for perfect and you can make it better.
-- **Testing**: Increase test coverage
-- **Documentation**: Improve docs, add examples
-- **UI/UX**: Enhance interactive forms
 
 ## Technical Support & Resources
 
