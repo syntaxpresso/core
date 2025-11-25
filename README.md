@@ -18,7 +18,7 @@ Unlike traditional tools that treat code as plain text, Syntaxpresso Core unders
 
 The primary goal is to serve as a universal backend for IDE plugins and programmatic code automation. Syntaxpresso Core centralizes complex refactoring logic into a single portable binary, eliminating the need to reimplement business rules for each text editor.
 
-> **Developer-Focused Documentation**: This README contains basic technical architecture, implementation details, and integration guides for developers building IDE plugins or extending Core's. If you want to use the plugin on your IDE, refer to these repositories:
+> **Developer-Focused Documentation**: This README contains basic technical architecture, implementation details, and integration guides for developers building IDE plugins or extending Core's functionalities. If you want to use the plugin on your IDE, refer to these repositories:
 
 - [Neovim](https://github.com/syntaxpresso/syntaxpresso.nvim)
 
@@ -50,7 +50,7 @@ The primary goal is to serve as a universal backend for IDE plugins and programm
 
 - [Architecture](#architecture) - Understand the design and data flow
 - [Communication Model](#communication-model-stateless-request-response) - How Core interacts with clients
-- [Core Components](#core-components) - TSFile, DirectoryValidator, Commands Router
+- [Core Components](#core-components) - TSFile, Query Builder, DirectoryValidator, Commands Router
 - [Binary Variants](#binary-variants) - CLI-only vs UI-enabled binaries
 - [Features & Capabilities](#features--capabilities) - Available commands and language support
 - [Installation](#installation-for-developers) - Download or build from source
@@ -380,6 +380,110 @@ ts_file.save_as(
     Path::new("/project/root") // Base path for security check
 )?;
 ```
+
+## Query Builder (`src/common/query.rs`)
+
+A fluent API for constructing and executing Tree-Sitter queries with powerful result filtering and extraction.
+
+**Objective:** Abstract Tree-Sitter's query complexity into an ergonomic, chainable API that handles common query patterns.
+
+### Core Features
+
+**1. Fluent Query Construction:**
+
+```rust
+// Basic query - returns all matched nodes
+let nodes = ts_file
+    .query("(class_declaration name: (identifier) @name)")
+    .nodes()?;
+
+// Query within a specific scope (search only inside a node)
+let methods = ts_file
+    .query("(method_declaration) @method")
+    .within(class_node)
+    .nodes()?;
+
+// Return only a specific capture
+let class_names = ts_file
+    .query("(class_declaration name: (identifier) @name)")
+    .returning("name")
+    .nodes()?;
+
+// Return multiple specific captures
+let nodes = ts_file
+    .query("(method_declaration name: (identifier) @name parameters: (formal_parameters) @params)")
+    .returning_captures(&["name", "params"])
+    .nodes()?;
+```
+
+**2. Result Extraction Modes:**
+
+```rust
+// Get first node (Option<Node>)
+let first_class = ts_file
+    .query("(class_declaration) @class")
+    .first_node()?;
+
+// Expect exactly one result (fails if 0 or >1)
+let single_class = ts_file
+    .query("(class_declaration) @class")
+    .single_node()?;  // Returns Result<Node, QueryError::NotSingleResult>
+
+// Get all captures with metadata
+let result = ts_file
+    .query("(method_declaration name: (identifier) @name body: (block) @body)")
+    .execute()?;
+
+for capture in result.captures() {
+    if let Some(name_node) = capture.get("name") {
+        println!("Method: {}", ts_file.node_text(name_node));
+    }
+}
+```
+
+**3. Advanced Filtering:**
+
+```rust
+// Filter results with predicate
+let public_methods = ts_file
+    .query("(method_declaration modifiers: (modifiers) @mods) @method")
+    .execute()?
+    .filter(|capture| {
+        capture.get("mods")
+            .map(|n| ts_file.node_text(n).contains("public"))
+            .unwrap_or(false)
+    });
+
+// Map results to custom types
+let method_names: Vec<String> = ts_file
+    .query("(method_declaration name: (identifier) @name)")
+    .execute()?
+    .map(|capture| {
+        capture.get("name")
+            .map(|n| ts_file.node_text(n).to_string())
+            .unwrap_or_default()
+    });
+```
+
+**4. Error Handling:**
+
+```rust
+use crate::common::query::QueryError;
+
+match ts_file.query("(invalid syntax").execute() {
+    Err(QueryError::CompilationError(e)) => println!("Query syntax error: {}", e),
+    Err(QueryError::NoTree) => println!("File not parsed"),
+    Err(QueryError::NotSingleResult { found }) => println!("Expected 1, found {}", found),
+    Ok(result) => { /* process */ }
+}
+```
+
+**Key Benefits:**
+
+- **Type-safe**: Compile-time guarantees for query structure
+- **Ergonomic**: Chainable API reduces boilerplate
+- **Flexible**: Multiple return modes (nodes, captures, filtered results)
+- **Error-resilient**: Clear error types for debugging
 
 ## DirectoryValidator (`src/common/validators/`)
 
