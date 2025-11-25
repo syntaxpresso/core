@@ -50,16 +50,18 @@ The primary goal is to serve as a universal backend for IDE plugins and programm
 
 **For Plugin Developers:**
 
-- [Architecture](#technical-architecture) - Understand the design and data flow
-- [Installation](#installation-for-developers) - Get the binary or build from source
-- [Usage Examples](#usage-examples) - CLI command patterns and JSON responses
+- [Architecture](#architecture) - Understand the design and data flow
+- [Communication Model](#communication-model-stateless-request-response) - How Core interacts with clients
+- [Binary Variants](#binary-variants) - CLI-only vs UI-enabled binaries
+- [Features & Capabilities](#features--capabilities) - Available commands and language support
+- [Installation](#installation-for-developers) - Download or build from source
 - [Plugin Integration Guide](#plugin-integration-guide) - Integrate with Neovim, VSCode, etc.
+- [Performance Benchmarks](#performance-benchmarks) - Typical operation timings
 
 **For Core Contributors:**
 
-- [Development Setup](#development) - Build, test, and contribute
-- [Adding New Commands](#adding-new-commands) - Extend functionality
-- [Tree-Sitter Patterns](#tree-sitter-query-examples) - Query examples
+- [Installation](#installation-for-developers) - Build from source
+- [Running Tests](#running-tests) - Test the codebase
 - [Contributing](#contributing) - Guidelines and process
 
 # Architecture
