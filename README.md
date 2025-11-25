@@ -365,53 +365,31 @@ All language modules provide:
 - **Discovery**: Scan projects for language-specific constructs (classes, entities, modules, types)
 - **File Generation**: Create files (classes, interfaces, enums, types, etc.)
 - **Code Manipulation**: Add/modify fields, methods, and properties in existing code
-- **Relationship Management**: Establish connections between types/entities
 - **Interactive UI**: Terminal forms for guided generation (UI-enabled binary)
 
 ## Currently Supported: Java
 
-The Java module provides comprehensive JPA/Spring tooling.
+The Java module provides comprehensive JPA/Spring tooling including:
 
-### Command Pattern
+- **Discovery**: JPA entities, mapped superclasses, packages, and file scanning
+- **File Generation**: JPA entities, repositories, classes, interfaces, enums, records
+- **Code Manipulation**: Basic fields, ID fields, enum fields, entity relationships
+- **Interactive UI**: Terminal forms for all generation commands (UI-enabled binary)
+
+**View all available commands:**
 
 ```bash
-syntaxpresso-core java <command> [args]
+syntaxpresso-core java --help
 ```
 
-### Available Commands
+**Example command:**
 
-**Discovery & Information:**
-
-- `get-all-jpa-entities` - Scan for JPA entities (`@Entity`)
-- `get-all-jpa-mapped-superclasses` - Find mapped superclasses (`@MappedSuperclass`)
-- `get-jpa-entity-info` - Extract entity metadata (fields, relationships, annotations)
-- `get-all-packages` - List Java package names
-- `get-java-basic-types` - Get supported field types (optionally filtered for ID types)
-- `get-java-files` - List Java files by type (class, interface, enum, etc.)
-
-**File Generation:**
-
-- `create-jpa-entity` - Generate JPA entity classes with `@Entity` annotation
-- `create-java-file` - Create classes, interfaces, enums, records, annotations
-- `create-jpa-repository` - Generate Spring Data JPA repositories extending `JpaRepository<Entity, ID>`
-
-**Field & Relationship Management:**
-
-- `create-jpa-entity-basic-field` - Add basic fields with JPA column annotations
-- `create-jpa-entity-id-field` - Create ID fields with generation strategies (AUTO, IDENTITY, SEQUENCE, UUID)
-- `create-jpa-entity-enum-field` - Add enum fields with `@Enumerated` annotation
-- `create-jpa-one-to-one-relationship` - Establish bidirectional one-to-one relationships
-- `create-jpa-many-to-one-relationship` - Create many-to-one relationships with cascade/fetch options
-
-**Interactive UI** (UI-enabled binary only):
-
-- `create-java-file-ui` - Interactive form to create Java files
-- `create-jpa-entity-ui` - Interactive form to create JPA entities
-- `create-jpa-entity-basic-field-ui` - Interactive form to add fields
-- `create-jpa-one-to-one-relationship-ui` - Interactive form for relationships
-- `create-jpa-repository-ui` - Interactive form to create repositories
-
-For detailed usage: `syntaxpresso-core java <command> --help`
+```bash
+syntaxpresso-core java create-jpa-entity \
+  --cwd /path/to/project \
+  --package-name com.example.domain \
+  --file-name User
+```
 
 ## Roadmap: Additional Languages
 
