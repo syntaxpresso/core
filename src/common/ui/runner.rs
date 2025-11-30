@@ -43,14 +43,15 @@ fn run_app<B: ratatui::backend::Backend, F: FormBehavior>(
     if let Event::Key(key) = event::read()?
       && key.kind == KeyEventKind::Press
     {
-      if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
-        if app.handle_input(KeyCode::Char('c')) {
-          return Ok(());
-        }
-        continue;
-      }
+      // Treat Ctrl+C the same as Esc - delegate to form's escape handler
+      let key_code =
+        if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+          KeyCode::Esc
+        } else {
+          key.code
+        };
 
-      if app.handle_input(key.code) {
+      if app.handle_input(key_code) {
         return Ok(());
       }
     }

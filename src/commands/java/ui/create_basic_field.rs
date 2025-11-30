@@ -87,6 +87,7 @@ pub struct CreateBasicFieldForm {
 
   // Focus management
   focused_field: FocusedField,
+  precision_scale_sub_focus: usize, // 0 = precision, 1 = scale
 
   // Integration with syntaxpresso-core
   cwd: PathBuf,
@@ -169,6 +170,7 @@ impl CreateBasicFieldForm {
       other_extra_hidden: false,
       other_hidden: true,
       focused_field: FocusedField::FieldType,
+      precision_scale_sub_focus: 0,
       cwd,
       entity_file_b64_src,
       entity_file_path,
@@ -392,6 +394,13 @@ impl CreateBasicFieldForm {
         FocusedField::FieldLength => {
           self.field_length_cursor = self.field_length.len();
         }
+        FocusedField::PrecisionAndScale => {
+          if self.precision_scale_sub_focus == 0 {
+            self.field_precision_cursor = self.field_precision.len();
+          } else {
+            self.field_scale_cursor = self.field_scale.len();
+          }
+        }
         _ => {}
       }
     }
@@ -586,22 +595,50 @@ impl CreateBasicFieldForm {
   }
 
   fn handle_precision_scale_input(&mut self, key: KeyCode) {
-    // For simplicity, we'll handle both precision and scale together
-    // In a more sophisticated implementation, you could track which one is focused
+    // Determine which field to edit based on sub-focus
+    let (text, cursor) = if self.precision_scale_sub_focus == 0 {
+      (&mut self.field_precision, &mut self.field_precision_cursor)
+    } else {
+      (&mut self.field_scale, &mut self.field_scale_cursor)
+    };
+
     match key {
       KeyCode::Char(c) if c.is_ascii_digit() => {
-        self.field_precision.insert(self.field_precision_cursor, c);
-        self.field_precision_cursor += 1;
+        text.insert(*cursor, c);
+        *cursor += 1;
       }
       KeyCode::Backspace => {
-        if self.field_precision_cursor > 0 {
-          self.field_precision.remove(self.field_precision_cursor - 1);
-          self.field_precision_cursor -= 1;
+        if *cursor > 0 {
+          text.remove(*cursor - 1);
+          *cursor -= 1;
         }
       }
+      KeyCode::Delete => {
+        if *cursor < text.len() {
+          text.remove(*cursor);
+        }
+      }
+      KeyCode::Left => {
+        if *cursor > 0 {
+          *cursor -= 1;
+        }
+      }
+      KeyCode::Right => {
+        if *cursor < text.len() {
+          *cursor += 1;
+        }
+      }
+      KeyCode::Home => {
+        *cursor = 0;
+      }
+      KeyCode::End => {
+        *cursor = text.len();
+      }
       KeyCode::Tab => {
-        // Switch to scale input
-        self.field_scale_cursor = 0;
+        // Switch between precision and scale
+        if !self.field_precision_hidden && !self.field_scale_hidden {
+          self.precision_scale_sub_focus = if self.precision_scale_sub_focus == 0 { 1 } else { 0 };
+        }
       }
       KeyCode::Enter => {
         self.state.input_mode = InputMode::Normal;
@@ -837,20 +874,49 @@ impl CreateBasicFieldForm {
       .split(area);
 
     if !self.field_precision_hidden {
+      let is_precision_focused = is_focused && self.precision_scale_sub_focus == 0;
       let border_style =
-        if is_focused { Style::default().fg(Color::Yellow) } else { Style::default() };
-      let title = self.generate_title("Precision", is_focused);
+        if is_precision_focused { Style::default().fg(Color::Yellow) } else { Style::default() };
+      let title = if is_precision_focused && self.state.input_mode == InputMode::Insert {
+        "Precision -- INSERT --"
+      } else if is_precision_focused {
+        "Precision -- NORMAL --"
+      } else {
+        "Precision"
+      };
       let input = Paragraph::new(self.field_precision.as_str())
         .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style));
       frame.render_widget(input, chunks[0]);
+
+      // Show cursor if focused and in insert mode
+      if is_precision_focused && self.state.input_mode == InputMode::Insert {
+        frame.set_cursor_position((
+          chunks[0].x + self.field_precision_cursor as u16 + 1,
+          chunks[0].y + 1,
+        ));
+      }
     }
 
     if !self.field_scale_hidden {
+      let is_scale_focused = is_focused && self.precision_scale_sub_focus == 1;
       let border_style =
-        if is_focused { Style::default().fg(Color::Yellow) } else { Style::default() };
+        if is_scale_focused { Style::default().fg(Color::Yellow) } else { Style::default() };
+      let title = if is_scale_focused && self.state.input_mode == InputMode::Insert {
+        "Scale -- INSERT --"
+      } else if is_scale_focused {
+        "Scale -- NORMAL --"
+      } else {
+        "Scale"
+      };
       let input = Paragraph::new(self.field_scale.as_str())
-        .block(Block::default().title("Scale").borders(Borders::ALL).border_style(border_style));
+        .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style));
       frame.render_widget(input, chunks[1]);
+
+      // Show cursor if focused and in insert mode
+      if is_scale_focused && self.state.input_mode == InputMode::Insert {
+        frame
+          .set_cursor_position((chunks[1].x + self.field_scale_cursor as u16 + 1, chunks[1].y + 1));
+      }
     }
   }
 
