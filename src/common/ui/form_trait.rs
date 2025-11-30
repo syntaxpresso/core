@@ -162,14 +162,6 @@ pub trait FormBehavior {
       }
       return false;
     }
-    // Handle C-c
-    if let KeyCode::Char('c') = key
-      && self.input_mode() == InputMode::Insert
-    {
-      self.set_input_mode(InputMode::Normal);
-      self.escape_handler_mut().reset();
-      return false;
-    }
     // Reset escape handler on any other key
     self.escape_handler_mut().reset();
     // Dispatch to mode-specific handler
