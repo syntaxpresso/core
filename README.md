@@ -80,12 +80,12 @@ Syntaxpresso follows a **client-backend architecture** with strict separation of
 
 **Communication Model:**
 
-- **Unidirectional**: Client → Core (never Core → Client)
+- **Unidirectional** requests: Client → Core (never Core → Client)
 - **Stateless**: One process per request
 - **Synchronous**: Request → Process → JSON Response → Exit
 
 <div align="center">
-  <img width="600" alt="syntaxpresso-architecture" src="https://private-user-images.githubusercontent.com/32070796/508597349-ddd3cd2d-3f03-4bbf-b855-8fc17248b3c2.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NjM3NjY1MzcsIm5iZiI6MTc2Mzc2NjIzNywicGF0aCI6Ii8zMjA3MDc5Ni81MDg1OTczNDktZGRkM2NkMmQtM2YwMy00YmJmLWI4NTUtOGZjMTcyNDhiM2MyLnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTExMjElMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUxMTIxVDIzMDM1N1omWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWNhMzQwZTRlOWQwZDliYmRhMGM5NDMxNzY3YjI3ZjA0NDNjNmFhMmI5NWZmYmIyMTNmNzEwYTBmYTU0MTM3OTgmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.d1-NEqBU8uHMvDr1fF8qhcJYQOf4b7_E3ois2XCAGVY" />
+  <img width="600" alt="syntaxpresso-architecture" src="https://github.com/user-attachments/assets/cac6329d-1665-4ad2-a689-165d616a61be" />
 </div>
 
 ## Project's Structure
